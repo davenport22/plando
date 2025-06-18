@@ -1,19 +1,27 @@
 
 "use client"; 
 
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MOCK_USER_PROFILE } from "@/types"; 
-import { CalendarDays, MapPinIcon } from "lucide-react";
-
-const MAX_INTERESTS_DISPLAYED = 6;
+import { MOCK_USER_PROFILE, MOCK_TRIPS, type Trip } from "@/types"; 
+import { CalendarDays, MapPinIcon, CheckCircle2 } from "lucide-react";
 
 export default function ProfilePage() {
   const user = MOCK_USER_PROFILE; 
+  const [completedTrips, setCompletedTrips] = useState<Trip[]>([]);
 
-  const interestsToDisplay = user.interests.slice(0, MAX_INTERESTS_DISPLAYED);
-  const remainingInterestsCount = user.interests.length - MAX_INTERESTS_DISPLAYED;
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
+
+    const filteredTrips = MOCK_TRIPS.filter(trip => {
+      const endDate = new Date(trip.endDate);
+      return endDate < today;
+    });
+    setCompletedTrips(filteredTrips);
+  }, []);
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -25,33 +33,57 @@ export default function ProfilePage() {
           </Avatar>
           <CardTitle className="text-3xl font-bold mt-4 font-headline text-foreground">{user.name}</CardTitle>
           <CardDescription className="text-muted-foreground">{user.email}</CardDescription>
-          <p className="text-foreground mt-2 text-center max-w-md">{user.bio}</p>
+          {user.bio && <p className="text-foreground mt-2 text-center max-w-md">{user.bio}</p>}
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
+        <CardContent className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center text-muted-foreground">
-              <MapPinIcon className="mr-3 h-5 w-5 text-primary" />
-              <span>{user.location}</span>
-            </div>
-            <div className="flex items-center text-muted-foreground">
-              <CalendarDays className="mr-3 h-5 w-5 text-primary" />
-              <span>Member since {user.memberSince}</span>
-            </div>
+            {user.location && (
+              <div className="flex items-center text-muted-foreground">
+                <MapPinIcon className="mr-3 h-5 w-5 text-primary" />
+                <span>{user.location}</span>
+              </div>
+            )}
+            {user.memberSince && (
+              <div className="flex items-center text-muted-foreground">
+                <CalendarDays className="mr-3 h-5 w-5 text-primary" />
+                <span>Member since {user.memberSince}</span>
+              </div>
+            )}
           </div>
-          <div>
-            <h3 className="text-lg font-semibold mb-3 text-foreground">Interests</h3>
-            <div className="flex flex-wrap gap-2">
-              {interestsToDisplay.map((interest) => (
-                <Badge key={interest} variant="secondary" className="text-sm px-3 py-1 hover:bg-accent hover:text-accent-foreground cursor-default">
-                  {interest}
-                </Badge>
-              ))}
-              {remainingInterestsCount > 0 && (
-                <Badge variant="outline" className="text-sm px-3 py-1">
-                  +{remainingInterestsCount} more
-                </Badge>
-              )}
+          
+          {user.interests.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3 text-foreground">Interests</h3>
+              <div className="flex flex-wrap gap-2">
+                {user.interests.map((interest) => (
+                  <Badge key={interest} variant="secondary" className="text-sm px-3 py-1 hover:bg-accent hover:text-accent-foreground cursor-default">
+                    {interest}
+                  </Badge>
+                ))}
+              </div>
             </div>
+          )}
+
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-foreground">Completed Trips</h3>
+            {completedTrips.length > 0 ? (
+              <ul className="space-y-3">
+                {completedTrips.map(trip => (
+                  <li key={trip.id} className="p-4 border rounded-lg bg-background shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center mb-1">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
+                      <span className="font-semibold text-md text-foreground">{trip.name}</span>
+                    </div>
+                    <div className="pl-7">
+                      <p className="text-sm text-muted-foreground">{trip.destination}</p>
+                      <p className="text-xs text-muted-foreground">{trip.startDate} to {trip.endDate}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground">No completed trips yet.</p>
+            )}
           </div>
         </CardContent>
       </Card>
