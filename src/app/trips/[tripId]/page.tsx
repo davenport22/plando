@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // Corrected import
 import type { Trip, Activity, Itinerary, ActivityInput } from '@/types';
-import { MOCK_TRIPS, MOCK_SUGGESTED_ACTIVITIES_PARIS, MOCK_USER } from '@/types';
+import { MOCK_TRIPS, MOCK_SUGGESTED_ACTIVITIES_PARIS } from '@/types';
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
 import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
@@ -48,12 +49,9 @@ export default function TripDetailPage() {
   const [isLoadingItinerary, setIsLoadingItinerary] = useState(false);
 
   useEffect(() => {
-    // Fetch trip details and suggested activities
-    // For now, using mock data
     const currentTrip = MOCK_TRIPS.find(t => t.id === tripId);
     if (currentTrip) {
       setTrip(currentTrip);
-      // Simulate fetching activities for this trip type, here hardcoding Paris
       const initialActivities = MOCK_SUGGESTED_ACTIVITIES_PARIS.map(act => ({ ...act, tripId, isLiked: undefined }));
       setUserActivities(initialActivities);
     } else {
@@ -75,23 +73,31 @@ export default function TripDetailPage() {
       ...newActivityData,
       id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Unique ID
       tripId,
-      isLiked: true, // Custom activities are implicitly liked by the adder
-      imageUrl: "https://placehold.co/300x200.png?text=Custom", // Placeholder for custom
+      isLiked: undefined, // Add to voting queue
+      imageUrl: "https://placehold.co/300x200.png?text=Custom", 
     };
-    setUserActivities(prevActivities => [...prevActivities, newActivity]);
-    toast({ title: "Custom activity added!", description: `"${newActivity.name}" has been added to your list.` });
+    setUserActivities(prevActivities => [newActivity, ...prevActivities]); // Add to the beginning of the queue
+    toast({ title: "Custom activity added!", description: `"${newActivity.name}" is ready for voting.` });
   };
 
   const handleGenerateItinerary = async () => {
     if (!trip) return;
     setIsLoadingItinerary(true);
 
-    const activitiesInput: ActivityInput[] = userActivities.map(act => ({
-      name: act.name,
-      duration: act.duration,
-      location: act.location,
-      isLiked: !!act.isLiked, // Ensure boolean
-    }));
+    const activitiesInput: ActivityInput[] = userActivities
+      .filter(act => act.isLiked !== undefined) // Only include voted activities
+      .map(act => ({
+        name: act.name,
+        duration: act.duration,
+        location: act.location,
+        isLiked: !!act.isLiked, 
+      }));
+    
+    if (activitiesInput.filter(act => act.isLiked).length === 0) {
+      toast({ title: "No Liked Activities", description: "Please like some activities before generating an itinerary.", variant: "default" });
+      setIsLoadingItinerary(false);
+      return;
+    }
     
     const result = await suggestItineraryAction(trip.id, activitiesInput, trip.startDate, trip.endDate);
 
@@ -117,6 +123,9 @@ export default function TripDetailPage() {
       </div>
     );
   }
+
+  const unvotedActivities = userActivities.filter(act => act.isLiked === undefined);
+  const currentActivityToVote = unvotedActivities.length > 0 ? unvotedActivities[0] : null;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -146,49 +155,50 @@ export default function TripDetailPage() {
         <div className="lg:col-span-2 space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl font-headline text-primary">Vote on Activities</CardTitle>
+              <CardTitle className="text-2xl font-headline text-primary">
+                {currentActivityToVote ? `Vote: ${currentActivityToVote.name}` : "Activity Voting"}
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              {userActivities.filter(act => !act.id.startsWith('custom-')).length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {userActivities.filter(act => !act.id.startsWith('custom-')).map(activity => (
-                    <ActivityVotingCard key={activity.id} activity={activity} onVote={handleVote} />
-                  ))}
+            <CardContent className="flex flex-col items-center justify-center min-h-[450px] py-8"> {/* Adjusted min-height and padding */}
+              {currentActivityToVote ? (
+                <div className="w-full max-w-xs sm:max-w-sm"> {/* Constrain width of the voting card */}
+                  <ActivityVotingCard
+                    key={currentActivityToVote.id}
+                    activity={currentActivityToVote}
+                    onVote={handleVote}
+                  />
                 </div>
               ) : (
-                <p className="text-muted-foreground">No suggested activities for this destination yet.</p>
+                <div className="text-center text-muted-foreground">
+                  <Wand2 className="h-16 w-16 mx-auto mb-4 text-primary/50" />
+                  {userActivities.length > 0 && userActivities.every(act => act.isLiked !== undefined) ? (
+                    <>
+                      <p className="text-xl mb-2">All activities have been voted on!</p>
+                      <p>Ready to generate your itinerary?</p>
+                    </>
+                  ) : (
+                     <>
+                      <p className="text-xl mb-2">No more activities to vote on right now.</p>
+                      <p>Try adding a custom activity or generate your itinerary if you've liked some options!</p>
+                    </>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
-          
-          {userActivities.filter(act => act.id.startsWith('custom-')).length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl font-headline text-primary">Your Custom Activities</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {userActivities.filter(act => act.id.startsWith('custom-')).map(activity => (
-                      <ActivityVotingCard key={activity.id} activity={activity} onVote={handleVote} />
-                    ))}
-                  </div>
-              </CardContent>
-            </Card>
-          )}
-
         </div>
 
         <div className="lg:col-span-1 space-y-8">
           <CustomActivityForm onAddActivity={handleAddCustomActivity} />
           
-          <Card className="sticky top-24 shadow-lg"> {/* Sticky for easy access */}
+          <Card className="sticky top-24 shadow-lg">
             <CardHeader>
               <CardTitle className="text-2xl font-headline text-primary">Trip Itinerary</CardTitle>
             </CardHeader>
             <CardContent>
               <Button
                 onClick={handleGenerateItinerary}
-                disabled={isLoadingItinerary || userActivities.length === 0}
+                disabled={isLoadingItinerary || userActivities.filter(act => act.isLiked === true).length === 0}
                 className="w-full mb-4 text-lg py-6"
                 size="lg"
               >
@@ -208,3 +218,5 @@ export default function TripDetailPage() {
     </div>
   );
 }
+
+    
