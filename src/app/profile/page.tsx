@@ -14,7 +14,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
+    today.setHours(0, 0, 0, 0); 
 
     const filteredTrips = MOCK_TRIPS.filter(trip => {
       const endDate = new Date(trip.endDate);
@@ -27,7 +27,7 @@ export default function ProfilePage() {
     <div className="container mx-auto py-8 px-4 max-w-4xl">
       <Card className="mb-8 shadow-xl overflow-visible bg-card rounded-xl">
         <CardHeader className="text-center items-center pt-12 pb-6 bg-card relative rounded-t-xl">
-          <Avatar className="w-32 h-32 border-4 border-primary shadow-lg -mt-24">
+          <Avatar className="w-32 h-32 border-4 border-primary shadow-lg -mt-16">
             <AvatarImage src={user.avatarUrl || `https://avatar.vercel.sh/${user.email}.png`} alt={user.name} />
             <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
