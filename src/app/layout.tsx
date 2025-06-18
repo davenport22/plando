@@ -7,7 +7,7 @@ import AppHeader from '@/components/layout/AppHeader';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'PlanGenie - Your AI Trip Planner',
+  title: 'Plando - Your AI Trip Planner',
   description: 'Collaboratively plan your trips with AI-powered suggestions.',
 };
 

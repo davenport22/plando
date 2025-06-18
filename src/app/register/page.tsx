@@ -12,7 +12,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-3xl font-headline">Create Your Account</CardTitle>
-          <CardDescription>Join PlanGenie and start planning your adventures.</CardDescription>
+          <CardDescription>Join Plando and start planning your adventures.</CardDescription>
         </CardHeader>
         <CardContent>
           <RegisterForm />

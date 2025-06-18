@@ -12,7 +12,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-3xl font-headline">Welcome Back!</CardTitle>
-          <CardDescription>Log in to PlanGenie to access your trips.</CardDescription>
+          <CardDescription>Log in to Plando to access your trips.</CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm />

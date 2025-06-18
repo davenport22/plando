@@ -9,7 +9,7 @@ export default function NewTripPage() {
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-headline text-primary">Plan Your Next Adventure</CardTitle>
             <CardDescription className="text-lg">
-              Fill in the details below to start planning your new trip with PlanGenie.
+              Fill in the details below to start planning your new trip with Plando.
             </CardDescription>
           </CardHeader>
           <CardContent>
