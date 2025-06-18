@@ -62,6 +62,10 @@ export default function TripDetailPage() {
       setTrip(currentTrip);
       const initialActivities = MOCK_SUGGESTED_ACTIVITIES_PARIS.map(act => ({ ...act, tripId, isLiked: undefined }));
       setUserActivities(initialActivities);
+      // Simulate loading a pre-existing itinerary if available for this trip
+      // if (currentTrip.id === "trip1" && MOCK_INITIAL_ITINERARY) {
+      //   setGeneratedItinerary(MOCK_INITIAL_ITINERARY);
+      // }
     } else {
       toast({ title: "Trip not found", variant: "destructive" });
       router.push('/');
@@ -81,7 +85,7 @@ export default function TripDetailPage() {
       ...newActivityData,
       id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       tripId,
-      isLiked: undefined,
+      isLiked: undefined, // Custom activities also join the voting queue
       imageUrl: "https://placehold.co/300x200.png?text=Custom",
     };
     setUserActivities(prevActivities => [newActivity, ...prevActivities]);
@@ -93,21 +97,31 @@ export default function TripDetailPage() {
     setIsLoadingItinerary(true);
 
     const activitiesInput: ActivityInput[] = userActivities
-      .filter(act => act.isLiked !== undefined)
+      .filter(act => act.isLiked !== undefined) // Consider all voted activities
       .map(act => ({
         name: act.name,
         duration: act.duration,
         location: act.location,
-        isLiked: !!act.isLiked,
+        isLiked: !!act.isLiked, // Ensure boolean
       }));
 
-    if (activitiesInput.filter(act => act.isLiked).length === 0) {
+    // Only proceed if there are liked activities or if an itinerary already exists (for regeneration)
+    if (activitiesInput.filter(act => act.isLiked).length === 0 && !generatedItinerary) {
       toast({ title: "No Liked Activities", description: "Please like some activities before generating an itinerary.", variant: "default" });
       setIsLoadingItinerary(false);
       return;
     }
+    
+    // If no activities have been liked yet, but user forces generation, use all available activities as 'not explicitly disliked'
+    const finalActivitiesInput = activitiesInput.length > 0 ? activitiesInput : userActivities.map(act => ({
+        name: act.name,
+        duration: act.duration,
+        location: act.location,
+        isLiked: act.isLiked === undefined ? false : !!act.isLiked, // Treat unvoted as not liked for generation if forced
+    }));
 
-    const result = await suggestItineraryAction(trip.id, activitiesInput, trip.startDate, trip.endDate);
+
+    const result = await suggestItineraryAction(trip.id, finalActivitiesInput, trip.startDate, trip.endDate);
 
     if ('error' in result) {
       toast({ title: "Error Generating Itinerary", description: result.error, variant: "destructive" });
@@ -115,8 +129,8 @@ export default function TripDetailPage() {
       const mappedItinerary = mapAiOutputToItinerary(result, trip.id);
       if (mappedItinerary) {
         setGeneratedItinerary(mappedItinerary);
-        toast({ title: "Itinerary Generated!", description: "Your personalized trip itinerary is ready." });
-        setCurrentView('itinerary'); // Switch to itinerary view after generation
+        toast({ title: generatedItinerary ? "Itinerary Updated!" : "Itinerary Generated!", description: "Your personalized trip itinerary is ready." });
+        setCurrentView('itinerary'); 
       } else {
         toast({ title: "Error Generating Itinerary", description: "Received invalid data from AI.", variant: "destructive" });
       }
@@ -135,6 +149,7 @@ export default function TripDetailPage() {
 
   const unvotedActivities = userActivities.filter(act => act.isLiked === undefined);
   const currentActivityToVote = unvotedActivities.length > 0 ? unvotedActivities[0] : null;
+  const likedActivitiesCount = userActivities.filter(act => act.isLiked === true).length;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -169,6 +184,19 @@ export default function TripDetailPage() {
               </CardHeader>
               <CardContent>
                 <ItineraryDisplay itinerary={generatedItinerary} />
+                <Button
+                  onClick={handleGenerateItinerary}
+                  disabled={isLoadingItinerary || (likedActivitiesCount === 0 && !generatedItinerary)}
+                  className="w-full text-lg py-3 mt-6"
+                  size="lg"
+                >
+                  {isLoadingItinerary ? (
+                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                  ) : (
+                    <Wand2 className="mr-2 h-6 w-6" />
+                  )}
+                  {generatedItinerary ? 'Update Itinerary' : 'Generate Itinerary'}
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -195,13 +223,20 @@ export default function TripDetailPage() {
                     {userActivities.length > 0 && userActivities.every(act => act.isLiked !== undefined) ? (
                       <>
                         <p className="text-xl mb-2">All activities have been voted on!</p>
-                        <p>Ready to generate your itinerary?</p>
+                        <p>Ready to generate your itinerary? Switch to the itinerary view.</p>
                       </>
                     ) : (
-                      <>
-                        <p className="text-xl mb-2">No more activities to vote on right now.</p>
-                        <p>Try adding a custom activity or generate your itinerary if you've liked some options!</p>
-                      </>
+                       userActivities.length === 0 ? (
+                        <>
+                          <p className="text-xl mb-2">No activities suggested for this trip yet.</p>
+                          <p>Try adding a custom activity!</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xl mb-2">No more activities to vote on right now.</p>
+                          <p>Try adding a custom activity or generate your itinerary if you've liked some options!</p>
+                        </>
+                      )
                     )}
                   </div>
                 )}
@@ -248,20 +283,6 @@ export default function TripDetailPage() {
                   </DialogContent>
                 </Dialog>
               )}
-
-              <Button
-                onClick={handleGenerateItinerary}
-                disabled={isLoadingItinerary || (userActivities.filter(act => act.isLiked === true).length === 0 && !generatedItinerary)}
-                className="w-full text-lg py-6"
-                size="lg"
-              >
-                {isLoadingItinerary ? (
-                  <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                ) : (
-                  <Wand2 className="mr-2 h-6 w-6" />
-                )}
-                {generatedItinerary ? 'Regenerate Itinerary' : 'Generate Itinerary'}
-              </Button>
             </CardContent>
           </Card>
         </div>
@@ -269,5 +290,3 @@ export default function TripDetailPage() {
     </div>
   );
 }
-
-    
