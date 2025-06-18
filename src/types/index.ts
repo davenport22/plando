@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -21,6 +22,9 @@ export interface Trip {
   ownerId: string;
   participantIds: string[];
   imageUrl?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
 }
 
 export interface Activity {
@@ -30,7 +34,7 @@ export interface Activity {
   description?: string;
   location: string;
   duration: number; // in hours
-  isLiked?: boolean; 
+  isLiked?: boolean;
   imageUrl?: string;
   category?: 'Must Do' | 'Recommended' | 'Optional';
   startTime?: string; // HH:mm
@@ -82,6 +86,9 @@ export const MOCK_TRIPS: Trip[] = [
     ownerId: 'user1',
     participantIds: ['user1', 'user2'],
     imageUrl: 'https://placehold.co/600x400.png',
+    latitude: 48.8566,
+    longitude: 2.3522,
+    placeId: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ',
   },
   {
     id: 'trip2',
@@ -92,6 +99,9 @@ export const MOCK_TRIPS: Trip[] = [
     ownerId: 'user2',
     participantIds: ['user1', 'user2'],
     imageUrl: 'https://placehold.co/600x400.png',
+    latitude: 35.6895,
+    longitude: 139.6917,
+    placeId: 'ChIJXSModoWLGGARILWiCfeuYSo',
   },
 ];
 

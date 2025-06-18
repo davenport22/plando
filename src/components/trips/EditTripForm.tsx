@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DialogClose } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { CalendarIcon, Loader2, Save, Users } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { CalendarIcon, Loader2, Save } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Trip } from "@/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -23,7 +23,9 @@ const editTripFormSchema = z.object({
   destination: z.string().min(2, "Destination must be at least 2 characters.").max(100, "Destination must be at most 100 characters."),
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
-  // participantIds: z.array(z.string()).optional(), // Placeholder for future
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  placeId: z.string().optional(),
 }).refine(data => data.endDate >= data.startDate, {
   message: "End date cannot be before start date.",
   path: ["endDate"],
@@ -33,7 +35,7 @@ type EditTripFormValues = z.infer<typeof editTripFormSchema>;
 
 interface EditTripFormProps {
   currentTrip: Trip;
-  onSubmit: (data: Omit<EditTripFormValues, 'participantIds'>) => Promise<void>;
+  onSubmit: (data: Partial<Omit<Trip, 'id' | 'ownerId' | 'participantIds' | 'imageUrl'>>) => Promise<void>;
 }
 
 export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
@@ -44,8 +46,11 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
     defaultValues: {
       name: currentTrip.name,
       destination: currentTrip.destination,
-      startDate: new Date(currentTrip.startDate),
-      endDate: new Date(currentTrip.endDate),
+      startDate: currentTrip.startDate ? parseISO(currentTrip.startDate) : new Date(),
+      endDate: currentTrip.endDate ? parseISO(currentTrip.endDate) : new Date(),
+      latitude: currentTrip.latitude,
+      longitude: currentTrip.longitude,
+      placeId: currentTrip.placeId,
     },
   });
 
@@ -53,19 +58,30 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
     form.reset({
       name: currentTrip.name,
       destination: currentTrip.destination,
-      startDate: new Date(currentTrip.startDate),
-      endDate: new Date(currentTrip.endDate),
+      startDate: currentTrip.startDate ? parseISO(currentTrip.startDate) : new Date(),
+      endDate: currentTrip.endDate ? parseISO(currentTrip.endDate) : new Date(),
+      latitude: currentTrip.latitude,
+      longitude: currentTrip.longitude,
+      placeId: currentTrip.placeId,
     });
   }, [currentTrip, form]);
 
   async function handleFormSubmit(data: EditTripFormValues) {
     setIsLoading(true);
+    
+    const updatedData = {
+        ...data,
+        // For demonstration: add/update mock geo-data if a destination is provided
+        latitude: data.destination ? (data.latitude ?? 34.0522) : undefined, // Mock LA Latitude
+        longitude: data.destination ? (data.longitude ?? -118.2437) : undefined, // Mock LA Longitude
+        placeId: data.destination ? (data.placeId ?? "mock-place-id-456") : undefined,
+    };
     // The onSubmit prop handles the actual update logic (e.g., API call, state update)
+    // Ensure dates are formatted correctly if the consuming function expects strings
     await onSubmit({ 
-        name: data.name,
-        destination: data.destination,
-        startDate: data.startDate,
-        endDate: data.endDate,
+        ...updatedData,
+        startDate: format(updatedData.startDate, 'yyyy-MM-dd'),
+        endDate: format(updatedData.endDate, 'yyyy-MM-dd'),
     });
     setIsLoading(false);
     // DialogClose will handle closing the dialog
@@ -96,6 +112,9 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
               <FormControl>
                 <Input placeholder="e.g., Rome, Italy" {...field} />
               </FormControl>
+              <FormDescription>
+                Where are you planning to go? In a full implementation, this would use a map-based place selector to get precise location data.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

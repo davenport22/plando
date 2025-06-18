@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,11 +46,17 @@ export function NewTripForm() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    console.log("New Trip Data:", {
+    // For demonstration: add mock geo-data if a destination is provided
+    const tripDataWithGeo = {
       ...data,
       startDate: format(data.startDate, "yyyy-MM-dd"),
       endDate: format(data.endDate, "yyyy-MM-dd"),
-    });
+      latitude: data.destination ? 40.7128 : undefined, // Mock New York Latitude
+      longitude: data.destination ? -74.0060 : undefined, // Mock New York Longitude
+      placeId: data.destination ? "mock-place-id-123" : undefined,
+    };
+
+    console.log("New Trip Data:", tripDataWithGeo);
 
     toast({
       title: "Trip Created!",
@@ -86,7 +93,9 @@ export function NewTripForm() {
               <FormControl>
                 <Input placeholder="e.g., Rome, Italy" {...field} />
               </FormControl>
-              <FormDescription>Where are you planning to go?</FormDescription>
+              <FormDescription>
+                Where are you planning to go? In a full implementation, this would use a map-based place selector to get precise location data.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
