@@ -8,25 +8,25 @@ body {
 
 @layer base {
   :root {
-    --background: 208 100% 97%; /* Alice Blue #F0F8FF */
-    --foreground: 222 47% 11%; /* Dark Slate Blue - for text */
+    --background: 250 30% 98%; /* Light Lavender White */
+    --foreground: 240 10% 25%; /* Dark Grey */
     --card: 0 0% 100%; /* White cards */
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 240 10% 25%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 197 71% 73%; /* Light Sky Blue #87CEEB */
-    --primary-foreground: 222 84% 10%; /* Very dark blue for contrast on primary */
-    --secondary: 197 71% 85%; /* Lighter Sky Blue */
-    --secondary-foreground: 222 84% 10%;
-    --muted: 208 100% 93%; /* Lighter Alice Blue */
-    --muted-foreground: 222 20% 40%; /* Muted text color */
-    --accent: 180 60% 81%; /* Pale Turquoise #AFEEEE */
-    --accent-foreground: 180 60% 25%; /* Darker Turquoise for text on accent */
+    --popover-foreground: 240 10% 25%;
+    --primary: 255 65% 60%; /* Lavender */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
+    --secondary: 255 65% 75%; /* Lighter Lavender */
+    --secondary-foreground: 240 10% 25%; /* Dark Grey text on secondary */
+    --muted: 250 30% 92%; /* Light lavender grey for tab list bg, etc. */
+    --muted-foreground: 240 7% 50%; /* Medium Grey text */
+    --accent: 255 65% 60%; /* Using primary as accent for active tab */
+    --accent-foreground: 0 0% 100%; /* White text on accent */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 197 50% 88%; /* Light blue border */
-    --input: 197 50% 92%; /* Slightly lighter for input bg */
-    --ring: 197 71% 65%; /* Ring around focused elements */
+    --border: 250 20% 88%; /* Light lavender border */
+    --input: 250 20% 90%; /* Slightly lighter for input bg */
+    --ring: 255 65% 55%; /* Ring around focused elements (darker lavender) */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -34,7 +34,7 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    /* Simplified sidebar theme, inherits from main theme or uses specific values if needed */
+    /* Sidebar theme inherits or uses specific values */
     --sidebar-background: hsl(var(--muted));
     --sidebar-foreground: hsl(var(--muted-foreground));
     --sidebar-primary: hsl(var(--primary));
@@ -46,25 +46,25 @@ body {
   }
 
   .dark {
-    --background: 222 47% 11%; /* Dark Slate Blue */
-    --foreground: 208 100% 97%; /* Alice Blue (light text) */
-    --card: 222 47% 15%; /* Slightly lighter dark blue for cards */
-    --card-foreground: 208 100% 97%;
-    --popover: 222 47% 15%;
-    --popover-foreground: 208 100% 97%;
-    --primary: 197 71% 60%; /* Darker Light Sky Blue */
-    --primary-foreground: 222 84% 95%; /* Very light blue/white for text on dark primary */
-    --secondary: 197 71% 40%; /* Darker secondary */
-    --secondary-foreground: 208 100% 97%;
-    --muted: 222 47% 20%; /* Darker muted */
-    --muted-foreground: 208 100% 80%; /* Lighter muted text */
-    --accent: 180 60% 50%; /* Darker Pale Turquoise */
-    --accent-foreground: 180 60% 95%; /* Light text for dark accent */
-    --destructive: 0 62.8% 30.6%;
+    --background: 250 10% 15%; /* Dark Lavender Grey */
+    --foreground: 250 30% 90%; /* Light Lavender Grey text */
+    --card: 250 10% 20%; /* Darker card background */
+    --card-foreground: 250 30% 90%;
+    --popover: 250 10% 20%;
+    --popover-foreground: 250 30% 90%;
+    --primary: 255 65% 60%; /* Lavender (can remain same or be adjusted) */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 255 65% 45%; /* Darker Lavender for dark theme */
+    --secondary-foreground: 250 30% 90%;
+    --muted: 250 10% 25%; /* Darker muted for tab list bg */
+    --muted-foreground: 250 30% 70%; /* Lighter muted text */
+    --accent: 255 65% 60%; /* Using primary as accent for active tab */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 40%;
     --destructive-foreground: 0 0% 98%;
-    --border: 197 50% 30%; /* Dark blue border */
-    --input: 197 50% 25%; /* Darker input bg */
-    --ring: 197 71% 50%;
+    --border: 250 10% 30%; /* Dark lavender border */
+    --input: 250 10% 28%; /* Darker input bg */
+    --ring: 255 65% 55%; /* Ring for focused elements */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;

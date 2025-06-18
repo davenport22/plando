@@ -4,6 +4,14 @@ export interface User {
   email: string;
 }
 
+export interface UserProfile extends User {
+  bio: string;
+  location: string;
+  memberSince: string;
+  interests: string[];
+  avatarUrl?: string;
+}
+
 export interface Trip {
   id: string;
   name: string;
@@ -51,6 +59,17 @@ export const MOCK_USER: User = {
   id: 'user1',
   name: 'Alex Traveler',
   email: 'alex@example.com',
+};
+
+export const MOCK_USER_PROFILE: UserProfile = {
+  id: 'user1',
+  name: 'David Schneiderbauer',
+  email: 'david.m.schneiderbauer@gmail.com',
+  bio: 'Travel enthusiast',
+  location: 'Vienna',
+  memberSince: 'May 2025',
+  interests: ['Outdoors', 'Adventure Sports', 'Mountains', 'Beach', 'Cities', 'Wildlife', 'Hiking', 'Photography'],
+  avatarUrl: 'https://firebasestudio-hosting.intern.goog/images/prototyper/david_schneiderbauer.png',
 };
 
 export const MOCK_TRIPS: Trip[] = [
