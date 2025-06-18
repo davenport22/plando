@@ -11,7 +11,7 @@ import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { suggestItineraryAction } from '@/lib/actions';
-import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks } from 'lucide-react';
+import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from "next/image";
 import {
@@ -21,7 +21,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
+import { EditTripForm } from '@/components/trips/EditTripForm';
+import { format } from 'date-fns';
 
 // Helper to map AI output to our Itinerary type
 const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null => {
@@ -55,6 +58,7 @@ export default function TripDetailPage() {
   const [userActivities, setUserActivities] = useState<Activity[]>([]);
   const [generatedItinerary, setGeneratedItinerary] = useState<Itinerary | null>(null);
   const [isLoadingItinerary, setIsLoadingItinerary] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     const currentTrip = MOCK_TRIPS.find(t => t.id === tripId);
@@ -62,10 +66,6 @@ export default function TripDetailPage() {
       setTrip(currentTrip);
       const initialActivities = MOCK_SUGGESTED_ACTIVITIES_PARIS.map(act => ({ ...act, tripId, isLiked: undefined }));
       setUserActivities(initialActivities);
-      // Simulate loading a pre-existing itinerary if available for this trip
-      // if (currentTrip.id === "trip1" && MOCK_INITIAL_ITINERARY) {
-      //   setGeneratedItinerary(MOCK_INITIAL_ITINERARY);
-      // }
     } else {
       toast({ title: "Trip not found", variant: "destructive" });
       router.push('/');
@@ -85,8 +85,8 @@ export default function TripDetailPage() {
       ...newActivityData,
       id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       tripId,
-      isLiked: undefined, // Custom activities also join the voting queue
-      imageUrl: "https://placehold.co/300x200.png?text=Custom",
+      isLiked: undefined, 
+      imageUrl: "https://placehold.co/300x200.png",
     };
     setUserActivities(prevActivities => [newActivity, ...prevActivities]);
     toast({ title: "Custom activity added!", description: `"${newActivity.name}" is ready for voting.` });
@@ -97,27 +97,25 @@ export default function TripDetailPage() {
     setIsLoadingItinerary(true);
 
     const activitiesInput: ActivityInput[] = userActivities
-      .filter(act => act.isLiked !== undefined) // Consider all voted activities
+      .filter(act => act.isLiked !== undefined) 
       .map(act => ({
         name: act.name,
         duration: act.duration,
         location: act.location,
-        isLiked: !!act.isLiked, // Ensure boolean
+        isLiked: !!act.isLiked, 
       }));
 
-    // Only proceed if there are liked activities or if an itinerary already exists (for regeneration)
     if (activitiesInput.filter(act => act.isLiked).length === 0 && !generatedItinerary) {
       toast({ title: "No Liked Activities", description: "Please like some activities before generating an itinerary.", variant: "default" });
       setIsLoadingItinerary(false);
       return;
     }
     
-    // If no activities have been liked yet, but user forces generation, use all available activities as 'not explicitly disliked'
     const finalActivitiesInput = activitiesInput.length > 0 ? activitiesInput : userActivities.map(act => ({
         name: act.name,
         duration: act.duration,
         location: act.location,
-        isLiked: act.isLiked === undefined ? false : !!act.isLiked, // Treat unvoted as not liked for generation if forced
+        isLiked: act.isLiked === undefined ? false : !!act.isLiked, 
     }));
 
 
@@ -137,6 +135,28 @@ export default function TripDetailPage() {
     }
     setIsLoadingItinerary(false);
   };
+
+  const handleUpdateTripDetails = async (updatedData: Partial<Omit<Trip, 'id' | 'ownerId' | 'participantIds'>>) => {
+    if (!trip) return;
+
+    const updatedTrip = {
+      ...trip,
+      ...updatedData,
+      startDate: updatedData.startDate ? format(new Date(updatedData.startDate), 'yyyy-MM-dd') : trip.startDate,
+      endDate: updatedData.endDate ? format(new Date(updatedData.endDate), 'yyyy-MM-dd') : trip.endDate,
+    };
+    setTrip(updatedTrip);
+    
+    // Simulate updating the MOCK_TRIPS array for persistence across navigation (demo purposes)
+    const tripIndex = MOCK_TRIPS.findIndex(t => t.id === tripId);
+    if (tripIndex !== -1) {
+      MOCK_TRIPS[tripIndex] = updatedTrip;
+    }
+
+    toast({ title: "Trip Updated!", description: `Details for "${updatedTrip.name}" have been saved.`});
+    setIsEditDialogOpen(false); // Close the dialog
+  };
+
 
   if (!trip) {
     return (
@@ -263,6 +283,25 @@ export default function TripDetailPage() {
                   View My Itinerary
                 </Button>
               )}
+              
+              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full py-3 text-md">
+                    <Edit className="mr-2 h-5 w-5" />
+                    Edit Trip Details
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl font-headline text-primary">Edit Trip Details</DialogTitle>
+                    <DialogDescription>
+                      Modify the name, destination, or dates for your trip.
+                    </DialogDescription>
+                  </DialogHeader>
+                  {trip && <EditTripForm currentTrip={trip} onSubmit={handleUpdateTripDetails} />}
+                </DialogContent>
+              </Dialog>
+
 
               {currentView === 'activities' && (
                 <Dialog>
@@ -290,3 +329,4 @@ export default function TripDetailPage() {
     </div>
   );
 }
+
