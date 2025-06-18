@@ -1,20 +1,37 @@
 
+"use client"; // Added "use client" as we'll be handling form state
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // Kept for potential future use in other tabs
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MOCK_USER_PROFILE } from "@/types";
-import { CalendarDays, MapPinIcon, PlusCircle, UserCircle2 } from "lucide-react";
-import Link from "next/link";
+import { MOCK_USER_PROFILE, type UserProfile } from "@/types"; // Ensure UserProfile is imported
+import { CalendarDays, MapPinIcon } from "lucide-react";
+import { ProfileEditForm } from "@/components/profile/ProfileEditForm"; // New import
+import { useToast } from "@/hooks/use-toast"; // For feedback on save
 
 const MAX_INTERESTS_DISPLAYED = 6;
 
 export default function ProfilePage() {
-  const user = MOCK_USER_PROFILE; // In a real app, fetch this data
+  // In a real app, this would come from auth state and be updatable
+  const user = MOCK_USER_PROFILE; 
+  const { toast } = useToast();
 
   const interestsToDisplay = user.interests.slice(0, MAX_INTERESTS_DISPLAYED);
   const remainingInterestsCount = user.interests.length - MAX_INTERESTS_DISPLAYED;
+
+  const handleProfileUpdate = async (data: Partial<UserProfile>) => {
+    // In a real app, you'd send this data to your backend
+    console.log("Profile updated:", data);
+    // Simulate an API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    toast({
+      title: "Profile Updated",
+      description: "Your profile information has been saved.",
+    });
+    // Here you might re-fetch user data or update local state if `user` was a state variable
+  };
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -57,45 +74,25 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <div className="my-8">
-        <Link href="/trips/new" className="w-full">
-          <Button size="lg" className="w-full py-3 text-lg">
-              <PlusCircle className="mr-2 h-5 w-5" /> Create New Trip
-          </Button>
-        </Link>
-      </div>
+      {/* "Create New Trip" button removed from here */}
 
-      <Tabs defaultValue="my-trips" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted p-1 rounded-lg shadow-sm">
-          <TabsTrigger value="my-trips" className="py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-md">My Trips</TabsTrigger>
+      <Tabs defaultValue="profile-details" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted p-1 rounded-lg shadow-sm">
+          {/* "My Trips" TabTrigger removed */}
           <TabsTrigger value="profile-details" className="py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-md">Edit Profile</TabsTrigger>
           <TabsTrigger value="preferences" className="py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-md">Preferences</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="my-trips">
-          <Card className="shadow-lg rounded-xl">
-            <CardHeader>
-              <CardTitle className="text-2xl font-semibold font-headline text-primary">Your Trips</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center py-10">
-              <UserCircle2 className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-              <p className="text-xl text-muted-foreground mb-4">You haven&apos;t planned any trips yet.</p>
-              <Link href="/trips/new">
-                <Button size="lg" variant="default">
-                  <PlusCircle className="mr-2 h-5 w-5" />
-                  Start Your First Trip
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* "My Trips" TabsContent removed */}
+
         <TabsContent value="profile-details">
           <Card className="shadow-lg rounded-xl">
             <CardHeader>
                 <CardTitle className="text-2xl font-semibold font-headline text-primary">Edit Your Profile</CardTitle>
+                <CardDescription>Update your personal information below.</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <p className="text-muted-foreground">Detailed profile information and editing options will be available here. You'll be able to update your name, bio, location, and travel interests.</p>
+              <ProfileEditForm initialData={user} onSubmit={handleProfileUpdate} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -105,7 +102,7 @@ export default function ProfilePage() {
                 <CardTitle className="text-2xl font-semibold font-headline text-primary">Travel Preferences</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <p className="text-muted-foreground">User travel preferences and settings will be managed here, such as preferred budget, travel style (e.g., adventure, relaxation), and accessibility needs.</p>
+              <p className="text-muted-foreground">User travel preferences and settings will be managed here, such as preferred budget, travel style (e.g., adventure, relaxation), and accessibility needs. (Coming soon)</p>
             </CardContent>
           </Card>
         </TabsContent>
