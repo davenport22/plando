@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,12 +9,39 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Info, Mail, LifeBuoy, UserCircle, Palette, ShieldAlert, Trash2, KeyRound } from "lucide-react";
+import { Info, Mail, LifeBuoy, UserCircle, Palette, ShieldAlert, Trash2, KeyRound, Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
+      document.documentElement.classList.add('dark');
+      setIsDarkMode(true);
+    } else {
+      document.documentElement.classList.remove('dark');
+      setIsDarkMode(false);
+    }
+  }, []);
+
+  const handleThemeToggle = (checked: boolean) => {
+    setIsDarkMode(checked);
+    if (checked) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+      toast({ title: "Dark Mode Enabled" });
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+      toast({ title: "Light Mode Enabled" });
+    }
+  };
 
   const handlePlaceholderAction = (actionName: string) => {
     toast({
@@ -40,14 +68,18 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <Label htmlFor="theme-switch" className="text-base font-medium">Dark Mode</Label>
-                <p className="text-sm text-muted-foreground">Toggle between light and dark themes.</p>
+              <div className="flex items-center gap-2">
+                {isDarkMode ? <Moon className="h-5 w-5 text-primary" /> : <Sun className="h-5 w-5 text-primary" />}
+                <div>
+                  <Label htmlFor="theme-switch" className="text-base font-medium">Dark Mode</Label>
+                  <p className="text-sm text-muted-foreground">Toggle between light and dark themes.</p>
+                </div>
               </div>
               <Switch 
                 id="theme-switch" 
                 aria-label="Toggle dark mode" 
-                onCheckedChange={(checked) => handlePlaceholderAction(checked ? "Dark Mode Enabled" : "Light Mode Enabled")}
+                checked={isDarkMode}
+                onCheckedChange={handleThemeToggle}
               />
             </div>
             <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -55,7 +87,7 @@ export default function SettingsPage() {
                 <Label htmlFor="language-select" className="text-base font-medium">Language</Label>
                 <p className="text-sm text-muted-foreground">Choose your preferred language.</p>
               </div>
-              <Select defaultValue="en" onValueChange={(value) => handlePlaceholderAction(`Language changed to ${value}`)}>
+              <Select defaultValue="en" onValueChange={(value) => handlePlaceholderAction(`Language set to ${value} (not implemented)`)}>
                 <SelectTrigger id="language-select" className="w-[180px]">
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
@@ -96,7 +128,7 @@ export default function SettingsPage() {
             </Button>
             <p className="text-xs text-muted-foreground px-1 pt-2">
               <ShieldAlert className="inline-block h-4 w-4 mr-1 relative -top-px" />
-              Deleting your account is permanent and cannot be undone. All your trip data will be lost.
+              Account management features require backend implementation.
             </p>
           </CardContent>
         </Card>
@@ -135,9 +167,9 @@ export default function SettingsPage() {
             <Link href="mailto:support@plando.app" className="flex items-center gap-2 text-primary hover:underline">
               <Mail className="h-5 w-5" /> Email: support@plando.app
             </Link>
-            <Link href="/faq" className="flex items-center gap-2 text-primary hover:underline" onClick={(e) => {e.preventDefault(); handlePlaceholderAction("Navigate to FAQ");}}>
+            <Button variant="link" className="p-0 h-auto flex items-center gap-2 text-primary hover:underline" onClick={(e) => {e.preventDefault(); handlePlaceholderAction("Navigate to FAQ");}}>
               <LifeBuoy className="h-5 w-5" /> Visit our FAQ
-            </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
