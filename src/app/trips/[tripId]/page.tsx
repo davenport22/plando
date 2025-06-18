@@ -146,8 +146,8 @@ export default function TripDetailPage() {
             <Image
               src={trip.imageUrl || "https://placehold.co/1200x400.png"}
               alt={trip.name}
-              layout="fill"
-              objectFit="cover"
+              fill
+              className="object-cover"
               priority
               data-ai-hint="destination panorama"
             />

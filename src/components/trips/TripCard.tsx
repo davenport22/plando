@@ -1,3 +1,4 @@
+
 import type { Trip } from '@/types';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,8 +18,8 @@ export function TripCard({ trip }: TripCardProps) {
           <Image
             src={trip.imageUrl || "https://placehold.co/600x400.png"}
             alt={trip.name}
-            layout="fill"
-            objectFit="cover"
+            fill
+            className="object-cover"
             data-ai-hint="travel landscape"
           />
         </div>
