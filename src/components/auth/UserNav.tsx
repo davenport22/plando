@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -13,11 +14,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
-import { MOCK_USER } from '@/types'; // Assuming MOCK_USER for display
+import { MOCK_USER_PROFILE } from '@/types'; // Changed from MOCK_USER to MOCK_USER_PROFILE
 
 export function UserNav() {
   // In a real app, fetch user data or get from auth context
-  const user = MOCK_USER; // Placeholder
+  const user = MOCK_USER_PROFILE; // Using MOCK_USER_PROFILE
 
   if (!user) {
     return (
@@ -32,7 +33,8 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10 border-2 border-primary">
-            <AvatarImage src={`https://avatar.vercel.sh/${user.email}.png`} alt={user.name} />
+            {/* Use avatarUrl from MOCK_USER_PROFILE if available, otherwise fallback to vercel avatar */}
+            <AvatarImage src={user.avatarUrl || `https://avatar.vercel.sh/${user.email}.png`} alt={user.name} />
             <AvatarFallback>{user.name?.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
         </Button>
