@@ -3,78 +3,82 @@
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), sans-serif;
 }
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --background: 208 100% 97%; /* Alice Blue #F0F8FF */
+    --foreground: 222 47% 11%; /* Dark Slate Blue - for text */
+    --card: 0 0% 100%; /* White cards */
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 197 71% 73%; /* Light Sky Blue #87CEEB */
+    --primary-foreground: 222 84% 10%; /* Very dark blue for contrast on primary */
+    --secondary: 197 71% 85%; /* Lighter Sky Blue */
+    --secondary-foreground: 222 84% 10%;
+    --muted: 208 100% 93%; /* Lighter Alice Blue */
+    --muted-foreground: 222 20% 40%; /* Muted text color */
+    --accent: 180 60% 81%; /* Pale Turquoise #AFEEEE */
+    --accent-foreground: 180 60% 25%; /* Darker Turquoise for text on accent */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --border: 197 50% 88%; /* Light blue border */
+    --input: 197 50% 92%; /* Slightly lighter for input bg */
+    --ring: 197 71% 65%; /* Ring around focused elements */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Simplified sidebar theme, inherits from main theme or uses specific values if needed */
+    --sidebar-background: hsl(var(--muted));
+    --sidebar-foreground: hsl(var(--muted-foreground));
+    --sidebar-primary: hsl(var(--primary));
+    --sidebar-primary-foreground: hsl(var(--primary-foreground));
+    --sidebar-accent: hsl(var(--accent));
+    --sidebar-accent-foreground: hsl(var(--accent-foreground));
+    --sidebar-border: hsl(var(--border));
+    --sidebar-ring: hsl(var(--ring));
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 222 47% 11%; /* Dark Slate Blue */
+    --foreground: 208 100% 97%; /* Alice Blue (light text) */
+    --card: 222 47% 15%; /* Slightly lighter dark blue for cards */
+    --card-foreground: 208 100% 97%;
+    --popover: 222 47% 15%;
+    --popover-foreground: 208 100% 97%;
+    --primary: 197 71% 60%; /* Darker Light Sky Blue */
+    --primary-foreground: 222 84% 95%; /* Very light blue/white for text on dark primary */
+    --secondary: 197 71% 40%; /* Darker secondary */
+    --secondary-foreground: 208 100% 97%;
+    --muted: 222 47% 20%; /* Darker muted */
+    --muted-foreground: 208 100% 80%; /* Lighter muted text */
+    --accent: 180 60% 50%; /* Darker Pale Turquoise */
+    --accent-foreground: 180 60% 95%; /* Light text for dark accent */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --border: 197 50% 30%; /* Dark blue border */
+    --input: 197 50% 25%; /* Darker input bg */
+    --ring: 197 71% 50%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --sidebar-background: hsl(var(--muted));
+    --sidebar-foreground: hsl(var(--muted-foreground));
+    --sidebar-primary: hsl(var(--primary));
+    --sidebar-primary-foreground: hsl(var(--primary-foreground));
+    --sidebar-accent: hsl(var(--accent));
+    --sidebar-accent-foreground: hsl(var(--accent-foreground));
+    --sidebar-border: hsl(var(--border));
+    --sidebar-ring: hsl(var(--ring));
   }
 }
 
