@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Activity } from "@/types";
 import { Loader2, PlusCircle } from "lucide-react";
 import { useState } from "react";
+import { DialogClose } from "@/components/ui/dialog";
 
 const customActivitySchema = z.object({
   name: z.string().min(2, "Activity name is too short.").max(100, "Activity name is too long."),
@@ -43,12 +45,13 @@ export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
     onAddActivity(data);
     form.reset();
     setIsLoading(false);
+    // Dialog will be closed by DialogClose wrapper on the button
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-4 border rounded-lg shadow-sm bg-card">
-        <h3 className="text-xl font-semibold font-headline text-primary">Add Custom Activity</h3>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+        {/* Removed h3 title as DialogTitle will be used */}
         <FormField
           control={form.control}
           name="name"
@@ -103,10 +106,12 @@ export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
-          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-          Add Activity
-        </Button>
+        <DialogClose asChild>
+          <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+            Add Activity to Voting
+          </Button>
+        </DialogClose>
       </form>
     </Form>
   );

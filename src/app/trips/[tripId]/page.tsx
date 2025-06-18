@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation'; // Corrected import
+import { useParams, useRouter } from 'next/navigation'; 
 import type { Trip, Activity, Itinerary, ActivityInput } from '@/types';
 import { MOCK_TRIPS, MOCK_SUGGESTED_ACTIVITIES_PARIS } from '@/types';
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
@@ -11,10 +11,18 @@ import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { suggestItineraryAction } from '@/lib/actions';
-import { ArrowLeft, Loader2, Wand2 } from 'lucide-react';
+import { ArrowLeft, Loader2, PlusCircle, Wand2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Image from "next/image";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Helper to map AI output to our Itinerary type
 const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null => {
@@ -30,7 +38,7 @@ const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null
         duration: act.duration,
         startTime: act.startTime,
         category: act.category,
-        description: act.description || '', // AI might not provide this
+        description: act.description || '', 
       })),
     })),
   };
@@ -44,7 +52,7 @@ export default function TripDetailPage() {
   const tripId = params.tripId as string;
 
   const [trip, setTrip] = useState<Trip | null>(null);
-  const [userActivities, setUserActivities] = useState<Activity[]>([]); // Suggested + custom activities
+  const [userActivities, setUserActivities] = useState<Activity[]>([]); 
   const [generatedItinerary, setGeneratedItinerary] = useState<Itinerary | null>(null);
   const [isLoadingItinerary, setIsLoadingItinerary] = useState(false);
 
@@ -71,12 +79,12 @@ export default function TripDetailPage() {
   const handleAddCustomActivity = (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrl'>) => {
     const newActivity: Activity = {
       ...newActivityData,
-      id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Unique ID
+      id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       tripId,
-      isLiked: undefined, // Add to voting queue
+      isLiked: undefined, 
       imageUrl: "https://placehold.co/300x200.png?text=Custom", 
     };
-    setUserActivities(prevActivities => [newActivity, ...prevActivities]); // Add to the beginning of the queue
+    setUserActivities(prevActivities => [newActivity, ...prevActivities]); 
     toast({ title: "Custom activity added!", description: `"${newActivity.name}" is ready for voting.` });
   };
 
@@ -85,7 +93,7 @@ export default function TripDetailPage() {
     setIsLoadingItinerary(true);
 
     const activitiesInput: ActivityInput[] = userActivities
-      .filter(act => act.isLiked !== undefined) // Only include voted activities
+      .filter(act => act.isLiked !== undefined) 
       .map(act => ({
         name: act.name,
         duration: act.duration,
@@ -159,9 +167,9 @@ export default function TripDetailPage() {
                 {currentActivityToVote ? `Vote: ${currentActivityToVote.name}` : "Activity Voting"}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center min-h-[450px] py-8"> {/* Adjusted min-height and padding */}
+            <CardContent className="flex flex-col items-center justify-center min-h-[450px] py-8">
               {currentActivityToVote ? (
-                <div className="w-full max-w-xs sm:max-w-sm"> {/* Constrain width of the voting card */}
+                <div className="w-full max-w-xs sm:max-w-sm"> 
                   <ActivityVotingCard
                     key={currentActivityToVote.id}
                     activity={currentActivityToVote}
@@ -189,7 +197,23 @@ export default function TripDetailPage() {
         </div>
 
         <div className="lg:col-span-1 space-y-8">
-          <CustomActivityForm onAddActivity={handleAddCustomActivity} />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full py-3 text-md">
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Add Custom Activity
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-headline text-primary">Add Custom Activity</DialogTitle>
+                <DialogDescription>
+                  Fill in the details for your own activity to add to the voting queue.
+                </DialogDescription>
+              </DialogHeader>
+              <CustomActivityForm onAddActivity={handleAddCustomActivity} />
+            </DialogContent>
+          </Dialog>
           
           <Card className="sticky top-24 shadow-lg">
             <CardHeader>
@@ -218,5 +242,3 @@ export default function TripDetailPage() {
     </div>
   );
 }
-
-    
