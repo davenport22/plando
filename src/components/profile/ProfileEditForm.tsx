@@ -12,12 +12,19 @@ import type { UserProfile } from "@/types";
 import { Loader2, Save } from "lucide-react";
 import { useState, useEffect } from "react";
 
+const AVAILABLE_INTERESTS = [
+  'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
+  'Hiking', 'Luxury', 'Mountains', 'Nightlife', 'Outdoors', 'Photography', 
+  'Relaxation', 'Shopping', 'Wildlife', 'Winter Sports'
+];
+
 const profileEditSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").max(50, "Name is too long."),
   bio: z.string().max(500, "Bio is too long.").optional().default(""),
   location: z.string().max(100, "Location is too long.").optional().default(""),
   avatarUrl: z.string().url("Please enter a valid URL.").or(z.literal("")).optional().default(""),
-  interests: z.string().optional().default(""), // Comma-separated string
+  // Interests will be handled by local state, but we can keep schema for potential future direct RHF integration
+  interests: z.array(z.string()).optional().default([]), 
 });
 
 type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
@@ -29,6 +36,7 @@ interface ProfileEditFormProps {
 
 export function ProfileEditForm({ initialData, onSubmit }: ProfileEditFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(initialData.interests || []);
 
   const form = useForm<ProfileEditFormValues>({
     resolver: zodResolver(profileEditSchema),
@@ -37,7 +45,7 @@ export function ProfileEditForm({ initialData, onSubmit }: ProfileEditFormProps)
       bio: initialData.bio || "",
       location: initialData.location || "",
       avatarUrl: initialData.avatarUrl || "",
-      interests: initialData.interests?.join(", ") || "",
+      interests: initialData.interests || [], // RHF keeps a copy, but display/logic uses local state
     },
   });
 
@@ -47,20 +55,28 @@ export function ProfileEditForm({ initialData, onSubmit }: ProfileEditFormProps)
       bio: initialData.bio || "",
       location: initialData.location || "",
       avatarUrl: initialData.avatarUrl || "",
-      interests: initialData.interests?.join(", ") || "",
+      interests: initialData.interests || [],
     });
+    setSelectedInterests(initialData.interests || []);
   }, [initialData, form]);
+
+  const handleInterestToggle = (interest: string) => {
+    setSelectedInterests(prev =>
+      prev.includes(interest)
+        ? prev.filter(item => item !== interest)
+        : [...prev, interest]
+    );
+  };
 
   async function handleSubmit(data: ProfileEditFormValues) {
     setIsLoading(true);
-    const interestsArray = data.interests ? data.interests.split(",").map(s => s.trim()).filter(s => s) : [];
     
     const updateData: Partial<UserProfile> = {
       name: data.name,
       bio: data.bio,
       location: data.location,
       avatarUrl: data.avatarUrl,
-      interests: interestsArray,
+      interests: selectedInterests, // Use local state for interests
     };
     await onSubmit(updateData);
     setIsLoading(false);
@@ -134,20 +150,36 @@ export function ProfileEditForm({ initialData, onSubmit }: ProfileEditFormProps)
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="interests"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Interests</FormLabel>
-              <FormControl>
-                <Textarea placeholder="e.g., Hiking, Photography, Foodie, Beaches" {...field} rows={3} />
-              </FormControl>
-              <FormDescription>Enter your interests, separated by commas.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <FormItem>
+          <FormLabel>Interests</FormLabel>
+          <FormDescription>Select your travel interests.</FormDescription>
+          <div className="flex flex-wrap gap-2 pt-2">
+            {AVAILABLE_INTERESTS.map(interest => (
+              <Button
+                key={interest}
+                type="button"
+                variant={selectedInterests.includes(interest) ? "default" : "outline"}
+                onClick={() => handleInterestToggle(interest)}
+                className="rounded-full px-4 py-2 text-sm"
+              >
+                {interest}
+              </Button>
+            ))}
+          </div>
+           {/* Hidden FormField to satisfy schema if RHF validation is strict, though we use local state primarily */}
+           <FormField
+              control={form.control}
+              name="interests"
+              render={({ field }) => (
+                <FormItem className="hidden">
+                  <FormControl>
+                    <Input type="hidden" {...field} value={selectedInterests.join(',')} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+        </FormItem>
         
         <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
