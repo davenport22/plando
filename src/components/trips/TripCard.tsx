@@ -36,7 +36,7 @@ export function TripCard({ trip }: TripCardProps) {
         </div>
       </CardContent>
       <CardFooter className="p-6 bg-muted/30">
-        <Link href={`/trips/${trip.id}`} passHref legacyBehavior>
+        <Link href={`/trips/${trip.id}`}>
           <Button className="w-full" aria-label={`View details for ${trip.name}`}>
             View Details
           </Button>
