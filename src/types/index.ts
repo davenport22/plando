@@ -65,10 +65,10 @@ export const MOCK_USER_PROFILE: UserProfile = {
   id: 'user1',
   name: 'David Schneiderbauer',
   email: 'david.m.schneiderbauer@gmail.com',
-  bio: 'Travel enthusiast',
-  location: 'Vienna',
-  memberSince: 'May 2025',
-  interests: ['Outdoors', 'Adventure Sports', 'Mountains', 'Beach', 'Cities', 'Wildlife', 'Hiking', 'Photography'],
+  bio: 'Travel enthusiast exploring the world one trip at a time. Loves photography and local cuisines.',
+  location: 'Vienna, Austria',
+  memberSince: 'May 2023', // Changed to a past date for realism
+  interests: ['Outdoors', 'Adventure Sports', 'Mountains', 'Beach', 'Cities', 'Wildlife', 'Hiking', 'Photography', 'Foodie', 'Culture'],
   avatarUrl: 'https://firebasestudio-hosting.intern.goog/images/prototyper/david_schneiderbauer.png',
 };
 
