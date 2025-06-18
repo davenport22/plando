@@ -40,6 +40,8 @@ const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null
         startTime: act.startTime,
         category: act.category,
         description: act.description || '',
+        likes: act.likes !== undefined ? act.likes : 0, // Map likes, default to 0
+        dislikes: act.dislikes !== undefined ? act.dislikes : 0, // Map dislikes, default to 0
       })),
     })),
   };
@@ -87,13 +89,15 @@ export default function TripDetailPage() {
     );
   };
 
-  const handleAddCustomActivity = (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrl'>) => {
+  const handleAddCustomActivity = (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrl' | 'likes' | 'dislikes'>) => {
     const newActivity: Activity = {
       ...newActivityData,
       id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       tripId,
       isLiked: undefined,
       imageUrl: "https://placehold.co/300x200.png",
+      likes: 0,
+      dislikes: 0,
     };
     setUserActivities(prevActivities => [newActivity, ...prevActivities]);
     toast({ title: "Custom activity added!", description: `"${newActivity.name}" is ready for voting.` });
@@ -104,18 +108,18 @@ export default function TripDetailPage() {
     setIsLoadingItinerary(true);
 
     const activitiesInput: ActivityInput[] = userActivities
-      .filter(act => act.isLiked !== undefined)
+      // .filter(act => act.isLiked !== undefined) // We want to send all activities, AI will use isLiked
       .map(act => ({
         name: act.name,
         duration: act.duration,
         location: act.location,
-        isLiked: !!act.isLiked,
+        isLiked: act.isLiked === undefined ? false : !!act.isLiked, // Ensure boolean, treat undefined as false
       }));
 
-    if (activitiesInput.filter(act => act.isLiked).length === 0 && !generatedItinerary) {
-      toast({ title: "No Liked Activities", description: "Please like some activities before generating an itinerary.", variant: "default" });
-      setIsLoadingItinerary(false);
-      return;
+    if (activitiesInput.filter(act => act.isLiked).length === 0 && !generatedItinerary && userActivities.some(act => act.isLiked === undefined)) {
+       toast({ title: "No Voted Activities", description: "Please vote on some activities (like/dislike) before generating an itinerary, or add custom ones.", variant: "default" });
+       setIsLoadingItinerary(false);
+       return;
     }
     
     const finalActivitiesInput = activitiesInput.length > 0 ? activitiesInput : userActivities.map(act => ({
@@ -182,7 +186,7 @@ export default function TripDetailPage() {
 
   const unvotedActivities = userActivities.filter(act => act.isLiked === undefined);
   const currentActivityToVote = unvotedActivities.length > 0 ? unvotedActivities[0] : null;
-  const likedActivitiesCount = userActivities.filter(act => act.isLiked === true).length;
+  const votedActivitiesCount = userActivities.filter(act => act.isLiked !== undefined).length;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -221,7 +225,7 @@ export default function TripDetailPage() {
                 <ItineraryDisplay itinerary={generatedItinerary} />
                 <Button
                   onClick={handleGenerateItinerary}
-                  disabled={isLoadingItinerary || (likedActivitiesCount === 0 && !generatedItinerary)}
+                  disabled={isLoadingItinerary || (votedActivitiesCount === 0 && !generatedItinerary && userActivities.length > 0) }
                   className="w-full text-lg py-3 mt-6"
                   size="lg"
                 >
@@ -232,6 +236,9 @@ export default function TripDetailPage() {
                   )}
                   {generatedItinerary ? 'Update Itinerary' : 'Generate Itinerary'}
                 </Button>
+                 {(votedActivitiesCount === 0 && !generatedItinerary && userActivities.length > 0) && (
+                  <p className="text-sm text-muted-foreground text-center mt-2">Please vote on some activities first to generate an itinerary.</p>
+                )}
               </CardContent>
             </Card>
           )}

@@ -1,7 +1,8 @@
-import type { ItineraryDay, Activity } from '@/types';
+
+import type { ItineraryDay } from '@/types'; // Activity type is implicitly used via ItineraryDay
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin, Tag, GripVertical } from "lucide-react";
+import { Clock, MapPin, ThumbsUp, ThumbsDown, GripVertical } from "lucide-react";
 import { format, parseISO } from 'date-fns';
 
 interface ItineraryDayCardProps {
@@ -19,7 +20,6 @@ export function ItineraryDayCard({ dayData }: ItineraryDayCardProps) {
     try {
       return format(parseISO(dateString), "EEEE, MMMM d, yyyy");
     } catch (error) {
-      // Handle cases where dateString might not be a full ISO string if it's just 'YYYY-MM-DD'
       try {
         return format(new Date(dateString + 'T00:00:00'), "EEEE, MMMM d, yyyy");
       } catch (e) {
@@ -67,7 +67,19 @@ export function ItineraryDayCard({ dayData }: ItineraryDayCardProps) {
                       <MapPin className="h-4 w-4 mr-2 text-accent" />
                       <span>{activity.location}</span>
                     </div>
-                    {activity.description && <p className="pt-1 text-xs">{activity.description}</p>}
+                     {activity.description && <p className="pt-1 text-xs italic">{activity.description}</p>}
+                    {(activity.likes !== undefined || activity.dislikes !== undefined) && (
+                      <div className="flex items-center pt-1 gap-4">
+                        <div className="flex items-center text-green-600">
+                          <ThumbsUp className="h-4 w-4 mr-1" />
+                          <span>{activity.likes ?? 0}</span>
+                        </div>
+                        <div className="flex items-center text-red-600">
+                          <ThumbsDown className="h-4 w-4 mr-1" />
+                          <span>{activity.dislikes ?? 0}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </li>

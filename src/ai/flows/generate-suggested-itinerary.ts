@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview This file defines a Genkit flow for generating a suggested itinerary based on liked activities.
@@ -44,6 +45,9 @@ const GenerateSuggestedItineraryOutputSchema = z.object({
             category: z
               .enum(['Must Do', 'Recommended', 'Optional'])
               .describe('Category based on group votes.'),
+            likes: z.number().describe('Number of participants who liked this activity. Based on input, 1 if liked, 0 otherwise.'),
+            dislikes: z.number().describe('Number of participants who disliked this activity. Based on input, 1 if disliked, 0 otherwise.'),
+            description: z.string().optional().describe('Brief description of the activity.')
           })
         ),
       })
@@ -68,6 +72,12 @@ const prompt = ai.definePrompt({
 
   The itinerary should balance the activity load per day, and consider the start and end dates of the trip.
   Activities should be categorized as Must Do, Recommended, or Optional based on popularity (liked status).
+
+  For each activity you include in the generated itinerary:
+  - If its 'Liked' status in the input is true, set 'likes: 1' and 'dislikes: 0' in the output.
+  - If its 'Liked' status in the input is false, set 'likes: 0' and 'dislikes: 1' in the output.
+  - If 'Liked' status is not clearly true or false (e.g. undefined), set 'likes: 0' and 'dislikes: 0'.
+  - Also include a brief description for each activity if one can be inferred or is commonly known.
 
   Here are the activities:
   {{#each activities}}

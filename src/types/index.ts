@@ -38,6 +38,8 @@ export interface Activity {
   imageUrl?: string;
   category?: 'Must Do' | 'Recommended' | 'Optional';
   startTime?: string; // HH:mm
+  likes?: number; // Number of likes
+  dislikes?: number; // Number of dislikes
 }
 
 // For AI Flow input
