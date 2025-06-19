@@ -137,7 +137,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Montmartre & Sacré-Cœur', 
     location: 'Montmartre District', 
     duration: 3, 
-    imageUrl: 'https://images.unsplash.com/photo-1569229074200-158480730801?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1702375308488-de52189a0ff3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtb250bWFydHJlJTIwc2FjcmV8ZW58MHx8fHwxNzUwMzQ0OTU5fDA&ixlib=rb-4.1.0&q=80&w=1080',
     description: 'Discover the artistic charm of Montmartre and visit the stunning Sacré-Cœur Basilica.' 
   },
 ];
@@ -182,6 +182,8 @@ export const MOCK_DESTINATION_ACTIVITIES: Record<string, Activity[]> = {
   "Tokyo, Japan": MOCK_SUGGESTED_ACTIVITIES_TOKYO,
 };
 
+
+    
 
     
 
