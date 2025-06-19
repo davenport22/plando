@@ -30,7 +30,7 @@ const GenerateActivityDescriptionOutputSchema = z.object({
   bestTimeToVisit: z
     .string()
     .optional()
-    .describe('Recommended time of day (e.g., "Mornings", "Late afternoons") AND/OR season (e.g., "Spring", "Autumn") to visit. Example: "Mornings or late afternoons", "Spring or Autumn"'),
+    .describe('Recommended time of day (e.g., "Mornings", "Late afternoons", "Evenings") AND/OR season (e.g., "Spring", "Autumn") to visit. Example: "Mornings or late afternoons", "Spring (especially April for blossoms) or Autumn (October for foliage)", "Evenings for the light show"'),
   estimatedPriceRange: z
     .string()
     .optional()
@@ -62,7 +62,7 @@ Provide the following information for this activity:
 
 2.  suggestedDurationHours (optional): The typical or suggested duration for this activity in hours (e.g., 2, 3.5). If unknown, omit.
 
-3.  bestTimeToVisit (optional): The best time of day (e.g., "Mornings", "Late afternoon to avoid crowds") AND/OR season (e.g., "Spring for cherry blossoms", "Autumn for foliage") to visit. Be specific. If unknown or not applicable, omit.
+3.  bestTimeToVisit (optional): The best time of day (e.g., "Mornings", "Late afternoon to avoid crowds", "Evenings") AND/OR season (e.g., "Spring for cherry blossoms", "Autumn for foliage") to visit. Be specific. Ensure you include a time of day if applicable. For example: "Mornings or late afternoons in Spring", "Evenings in Summer". If unknown or not applicable, omit.
 
 4.  estimatedPriceRange (optional): An estimated price range (e.g., "Free", "$10-25 per person", "€50 entry", "Varies based on tour"). If unknown or widely variable and hard to summarize, omit.
 
