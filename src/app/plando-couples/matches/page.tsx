@@ -2,10 +2,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { Activity, MatchedActivity } from '@/types'; 
+import type { Activity, MatchedActivity, UserProfile } from '@/types'; 
 import { MOCK_USER_PROFILE } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, HeartCrack, Info, ListChecks } from 'lucide-react';
+import { ArrowLeft, HeartCrack, Info, ListChecks, UserCheck, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MatchedActivityCard } from '@/components/activities/MatchedActivityCard';
@@ -13,26 +13,56 @@ import { useToast } from '@/hooks/use-toast';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 
 const LOCAL_STORAGE_LIKED_ACTIVITIES_KEY = `plandoCouplesLikedActivities_${MOCK_USER_PROFILE.id}`;
+const LOCAL_STORAGE_CONNECTED_PARTNER_KEY = `plandoCouplesConnectedPartner_${MOCK_USER_PROFILE.id}`;
+const JULIA_EMAIL = 'julia.musterfrau@gmail.com';
 
 export default function PlandoCouplesMatchesPage() {
   const [matchedActivities, setMatchedActivities] = useState<MatchedActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [connectedPartner, setConnectedPartner] = useState<UserProfile | null>(null);
 
   const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
   useEffect(() => {
+    // Load connected partner from localStorage
+    const storedPartner = localStorage.getItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
+    if (storedPartner) {
+        try {
+            setConnectedPartner(JSON.parse(storedPartner));
+        } catch (e) {
+            console.error("Error parsing connected partner from localStorage", e);
+            localStorage.removeItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY); 
+        }
+    }
+  }, []);
+
+
+  useEffect(() => {
+    setIsLoading(true);
     try {
       const storedLikedActivities = localStorage.getItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
       if (storedLikedActivities) {
         const parsedActivities: Activity[] = JSON.parse(storedLikedActivities);
-        // Transform to MatchedActivity structure
-        const transformedActivities: MatchedActivity[] = parsedActivities.map(act => ({
-            ...act, // Spread all original activity properties
-            matchedDate: new Date().toISOString(), // Add a mock matched date
-            partnerAlsoLiked: true, // Simulate partner also liked for prototype
-        }));
+        
+        const transformedActivities: MatchedActivity[] = parsedActivities.map(act => {
+            let partnerLikedThisSpecificActivity = true; // Default: partner also liked
+
+            if (connectedPartner && connectedPartner.email === JULIA_EMAIL) {
+                // Apply Julia's specific preferences for Vienna activities
+                if (act.id === 'couples-vienna-1') partnerLikedThisSpecificActivity = true;  // Danube Cruise - Liked
+                else if (act.id === 'couples-vienna-2') partnerLikedThisSpecificActivity = true;  // Belvedere - Liked
+                else if (act.id === 'couples-vienna-3') partnerLikedThisSpecificActivity = false; // Wine Tasting - Disliked
+                // For other activities, it defaults to true (as per previous simulation)
+            }
+
+            return {
+                ...act,
+                matchedDate: new Date().toISOString(), 
+                partnerAlsoLiked: partnerLikedThisSpecificActivity, 
+            };
+        });
         setMatchedActivities(transformedActivities);
       }
     } catch (e) {
@@ -40,7 +70,7 @@ export default function PlandoCouplesMatchesPage() {
       toast({title: "Error", description: "Could not load your liked date ideas.", variant: "destructive"});
     }
     setIsLoading(false);
-  }, [toast]);
+  }, [toast, connectedPartner]); // Re-run when connectedPartner changes
 
   const handleClearMatches = () => {
     localStorage.removeItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
@@ -49,14 +79,9 @@ export default function PlandoCouplesMatchesPage() {
   };
 
   const handleOpenActivityDetail = (activity: MatchedActivity) => {
-    // We need to find the original full Activity object if MOCK_COUPLES_ACTIVITIES_BY_CITY has it
-    // Or construct a basic Activity object from MatchedActivity
-    
-    // For simplicity, we'll assume MatchedActivity has enough info or we can find it
-    // This might need adjustment if MatchedActivity is too lean
     const fullActivity: Activity = {
-        ...activity, // Spread matched activity (which already includes most Activity fields)
-        isLiked: true, // Assuming it's liked if it's in matches
+        ...activity, 
+        isLiked: true, 
     };
     setSelectedActivityForDialog(fullActivity);
     setIsActivityDetailDialogOpen(true);
@@ -80,7 +105,16 @@ export default function PlandoCouplesMatchesPage() {
             Back to Swiping
           </Button>
         </Link>
-        <h1 className="text-3xl font-headline text-primary">Your Liked Date Ideas</h1>
+        <div>
+            <h1 className="text-3xl font-headline text-primary text-center">Your Liked Date Ideas</h1>
+            {connectedPartner && (
+                <p className="text-sm text-muted-foreground text-center mt-1">
+                    <UserCheck className="inline h-4 w-4 mr-1 text-green-500" />
+                    Viewing with {connectedPartner.name}. 
+                    {connectedPartner.email === JULIA_EMAIL && " (Julia's preferences applied)"}
+                </p>
+            )}
+        </div>
         <Button variant="destructive" onClick={handleClearMatches} disabled={matchedActivities.length === 0}>
           <HeartCrack className="mr-2 h-4 w-4" />
           Clear All
@@ -101,7 +135,7 @@ export default function PlandoCouplesMatchesPage() {
             </CardDescription>
             <Link href="/plando-couples" passHref>
               <Button className="mt-6" size="lg">
-                <Info className="mr-2 h-5 w-5" />
+                <Sparkles className="mr-2 h-5 w-5" />
                 Find Date Ideas
               </Button>
             </Link>
