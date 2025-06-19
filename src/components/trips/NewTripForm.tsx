@@ -9,11 +9,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn, calculateTripDuration } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { useState } from "react";
-import { useRouter } from "next/navigation"; // Corrected import
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation"; 
 import { useToast } from "@/hooks/use-toast";
 
 const newTripFormSchema = z.object({
@@ -32,6 +32,7 @@ export function NewTripForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [durationDisplay, setDurationDisplay] = useState<string>("");
 
   const form = useForm<NewTripFormValues>({
     resolver: zodResolver(newTripFormSchema),
@@ -41,18 +42,31 @@ export function NewTripForm() {
     },
   });
 
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
+
+  useEffect(() => {
+    if (startDate && endDate && endDate >= startDate) {
+      const duration = calculateTripDuration(
+        format(startDate, "yyyy-MM-dd"),
+        format(endDate, "yyyy-MM-dd")
+      );
+      setDurationDisplay(duration);
+    } else {
+      setDurationDisplay("");
+    }
+  }, [startDate, endDate]);
+
   async function onSubmit(data: NewTripFormValues) {
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // For demonstration: add mock geo-data if a destination is provided
     const tripDataWithGeo = {
       ...data,
       startDate: format(data.startDate, "yyyy-MM-dd"),
       endDate: format(data.endDate, "yyyy-MM-dd"),
-      latitude: data.destination ? 40.7128 : undefined, // Mock New York Latitude
-      longitude: data.destination ? -74.0060 : undefined, // Mock New York Longitude
+      latitude: data.destination ? 40.7128 : undefined, 
+      longitude: data.destination ? -74.0060 : undefined, 
       placeId: data.destination ? "mock-place-id-123" : undefined,
     };
 
@@ -63,8 +77,7 @@ export function NewTripForm() {
       description: `Your trip "${data.name}" to ${data.destination} has been successfully created.`,
     });
     setIsLoading(false);
-    // In a real app, you'd get the new trip ID and redirect
-    router.push("/"); // Redirect to trips list for now
+    router.push("/"); 
   }
 
   return (
@@ -131,7 +144,7 @@ export function NewTripForm() {
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) } // Disable past dates
+                      disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) } 
                       initialFocus
                     />
                   </PopoverContent>
@@ -180,6 +193,11 @@ export function NewTripForm() {
             )}
           />
         </div>
+        {durationDisplay && (
+          <p className="text-sm text-muted-foreground -mt-4">
+            Trip duration: {durationDisplay}
+          </p>
+        )}
         <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Create Trip

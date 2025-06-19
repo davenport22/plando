@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DialogClose } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, calculateTripDuration } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { CalendarIcon, Loader2, Save } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -40,6 +40,7 @@ interface EditTripFormProps {
 
 export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [durationDisplay, setDurationDisplay] = useState<string>("");
 
   const form = useForm<EditTripFormValues>({
     resolver: zodResolver(editTripFormSchema),
@@ -53,6 +54,35 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
       placeId: currentTrip.placeId,
     },
   });
+  
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
+
+  useEffect(() => {
+    // Initialize duration display when component mounts or currentTrip changes
+    if (currentTrip.startDate && currentTrip.endDate) {
+      const initialDuration = calculateTripDuration(
+        currentTrip.startDate, // These are already strings
+        currentTrip.endDate
+      );
+      setDurationDisplay(initialDuration);
+    }
+  }, [currentTrip.startDate, currentTrip.endDate]);
+
+
+  useEffect(() => {
+    // Update duration display when form dates change
+    if (startDate && endDate && endDate >= startDate) {
+      const duration = calculateTripDuration(
+        format(startDate, "yyyy-MM-dd"),
+        format(endDate, "yyyy-MM-dd")
+      );
+      setDurationDisplay(duration);
+    } else {
+      setDurationDisplay("");
+    }
+  }, [startDate, endDate]);
+
 
   useEffect(() => {
     form.reset({
@@ -71,20 +101,16 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
     
     const updatedData = {
         ...data,
-        // For demonstration: add/update mock geo-data if a destination is provided
-        latitude: data.destination ? (data.latitude ?? 34.0522) : undefined, // Mock LA Latitude
-        longitude: data.destination ? (data.longitude ?? -118.2437) : undefined, // Mock LA Longitude
+        latitude: data.destination ? (data.latitude ?? 34.0522) : undefined, 
+        longitude: data.destination ? (data.longitude ?? -118.2437) : undefined,
         placeId: data.destination ? (data.placeId ?? "mock-place-id-456") : undefined,
     };
-    // The onSubmit prop handles the actual update logic (e.g., API call, state update)
-    // Ensure dates are formatted correctly if the consuming function expects strings
     await onSubmit({ 
         ...updatedData,
         startDate: format(updatedData.startDate, 'yyyy-MM-dd'),
         endDate: format(updatedData.endDate, 'yyyy-MM-dd'),
     });
     setIsLoading(false);
-    // DialogClose will handle closing the dialog
   }
 
   return (
@@ -198,6 +224,12 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
             )}
           />
         </div>
+        
+        {durationDisplay && (
+          <p className="text-sm text-muted-foreground -mt-4 md:col-span-2">
+            Trip duration: {durationDisplay}
+          </p>
+        )}
 
         <Alert variant="default" className="bg-muted/50">
           <Info className="h-5 w-5" />

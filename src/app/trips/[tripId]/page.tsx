@@ -11,6 +11,7 @@ import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { suggestItineraryAction } from '@/lib/actions';
+import { calculateTripDuration } from '@/lib/utils';
 import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from "next/image";
@@ -60,19 +61,21 @@ export default function TripDetailPage() {
   const [generatedItinerary, setGeneratedItinerary] = useState<Itinerary | null>(null);
   const [isLoadingItinerary, setIsLoadingItinerary] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [tripDuration, setTripDuration] = useState<string>("");
+
 
   useEffect(() => {
     const currentTrip = MOCK_TRIPS.find(t => t.id === tripId);
     if (currentTrip) {
-      setTrip(currentTrip);
-      // Ensure dates are correctly formatted if they are already strings
-      // or convert Date objects to string 'yyyy-MM-dd'
       const formattedTrip = {
         ...currentTrip,
         startDate: typeof currentTrip.startDate === 'string' ? currentTrip.startDate : format(currentTrip.startDate, 'yyyy-MM-dd'),
         endDate: typeof currentTrip.endDate === 'string' ? currentTrip.endDate : format(currentTrip.endDate, 'yyyy-MM-dd'),
       };
       setTrip(formattedTrip);
+      if (formattedTrip.startDate && formattedTrip.endDate) {
+        setTripDuration(calculateTripDuration(formattedTrip.startDate, formattedTrip.endDate));
+      }
       const initialActivities = MOCK_SUGGESTED_ACTIVITIES_PARIS.map(act => ({ ...act, tripId, isLiked: undefined }));
       setUserActivities(initialActivities);
     } else {
@@ -80,6 +83,13 @@ export default function TripDetailPage() {
       router.push('/');
     }
   }, [tripId, router, toast]);
+
+  useEffect(() => {
+    if (trip && trip.startDate && trip.endDate) {
+      setTripDuration(calculateTripDuration(trip.startDate, trip.endDate));
+    }
+  }, [trip?.startDate, trip?.endDate]);
+
 
   const handleVote = (activityId: string, liked: boolean) => {
     setUserActivities(prevActivities =>
@@ -108,12 +118,11 @@ export default function TripDetailPage() {
     setIsLoadingItinerary(true);
 
     const activitiesInput: ActivityInput[] = userActivities
-      // .filter(act => act.isLiked !== undefined) // We want to send all activities, AI will use isLiked
       .map(act => ({
         name: act.name,
         duration: act.duration,
         location: act.location,
-        isLiked: act.isLiked === undefined ? false : !!act.isLiked, // Ensure boolean, treat undefined as false
+        isLiked: act.isLiked === undefined ? false : !!act.isLiked, 
       }));
 
     if (activitiesInput.filter(act => act.isLiked).length === 0 && !generatedItinerary && userActivities.some(act => act.isLiked === undefined)) {
@@ -150,7 +159,6 @@ export default function TripDetailPage() {
   const handleUpdateTripDetails = async (updatedData: Partial<Omit<Trip, 'id' | 'ownerId' | 'participantIds' | 'imageUrl'>>) => {
     if (!trip) return;
 
-    // Ensure dates are strings in 'yyyy-MM-dd' format
     const formattedStartDate = updatedData.startDate instanceof Date ? format(updatedData.startDate, 'yyyy-MM-dd') : updatedData.startDate;
     const formattedEndDate = updatedData.endDate instanceof Date ? format(updatedData.endDate, 'yyyy-MM-dd') : updatedData.endDate;
 
@@ -160,18 +168,16 @@ export default function TripDetailPage() {
       ...updatedData,
       startDate: formattedStartDate || trip.startDate,
       endDate: formattedEndDate || trip.endDate,
-      // latitude and longitude will be part of updatedData if provided by the form
     };
     setTrip(updatedTrip);
     
-    // Simulate updating the MOCK_TRIPS array for persistence across navigation (demo purposes)
     const tripIndex = MOCK_TRIPS.findIndex(t => t.id === tripId);
     if (tripIndex !== -1) {
       MOCK_TRIPS[tripIndex] = updatedTrip;
     }
 
     toast({ title: "Trip Updated!", description: `Details for "${updatedTrip.name}" have been saved.`});
-    setIsEditDialogOpen(false); // Close the dialog
+    setIsEditDialogOpen(false); 
   };
 
 
@@ -200,7 +206,7 @@ export default function TripDetailPage() {
             src={trip.imageUrl || "https://placehold.co/1200x400.png"}
             alt={trip.name}
             fill
-            style={{ objectFit: 'cover' }} // Changed from className
+            style={{ objectFit: 'cover' }} 
             priority
             data-ai-hint="destination panorama"
           />
@@ -209,6 +215,7 @@ export default function TripDetailPage() {
             <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>
             <p className="text-md text-primary-foreground/80 mt-1 shadow-sm">
               {trip.startDate ? format(parseISO(trip.startDate), "PPP") : 'N/A'} to {trip.endDate ? format(parseISO(trip.endDate), "PPP") : 'N/A'}
+              {tripDuration && <span className="ml-2">({tripDuration})</span>}
             </p>
           </div>
         </div>

@@ -5,19 +5,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import Image from "next/image";
 import Link from 'next/link';
+import { calculateTripDuration } from '@/lib/utils';
 
 interface TripCardProps {
   trip: Trip;
 }
 
 export function TripCard({ trip }: TripCardProps) {
-  // Determine hint based on destination or a general travel term
   let imageHint = "travel landscape";
   if (trip.destination.toLowerCase().includes("paris")) {
     imageHint = "paris cityscape";
   } else if (trip.destination.toLowerCase().includes("tokyo")) {
     imageHint = "tokyo city";
   }
+
+  const duration = calculateTripDuration(trip.startDate, trip.endDate);
 
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg">
@@ -38,7 +40,9 @@ export function TripCard({ trip }: TripCardProps) {
           <MapPin className="mr-2 h-4 w-4 text-primary" /> {trip.destination}
         </CardDescription>
         <div className="flex items-center text-sm text-muted-foreground mb-1">
-          <CalendarDays className="mr-2 h-4 w-4 text-primary" /> {trip.startDate} - {trip.endDate}
+          <CalendarDays className="mr-2 h-4 w-4 text-primary" /> 
+          {trip.startDate} - {trip.endDate} 
+          {duration && <span className="ml-1">({duration})</span>}
         </div>
         <div className="flex items-center text-sm text-muted-foreground">
           <Users className="mr-2 h-4 w-4 text-primary" /> {trip.participantIds.length} participant(s)
