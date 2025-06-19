@@ -4,13 +4,19 @@
 import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MOCK_USER_PROFILE, MOCK_TRIPS, type Trip } from "@/types"; 
-import { CalendarDays, MapPinIcon, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MOCK_USER_PROFILE, MOCK_TRIPS, type Trip, type UserProfile } from "@/types"; 
+import { CalendarDays, MapPinIcon, CheckCircle2, Edit } from "lucide-react";
+import { ProfileEditForm } from '@/components/profile/ProfileEditForm';
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
-  const user = MOCK_USER_PROFILE; 
+  const { toast } = useToast();
+  const [user, setUser] = useState<UserProfile>(MOCK_USER_PROFILE); 
   const [completedTrips, setCompletedTrips] = useState<Trip[]>([]);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     const today = new Date();
@@ -22,6 +28,17 @@ export default function ProfilePage() {
     });
     setCompletedTrips(filteredTrips);
   }, []);
+
+  const handleProfileUpdate = async (updatedData: Partial<UserProfile>) => {
+    // In a real app, this would be an API call.
+    // For now, we simulate success and update local state.
+    setUser(prevUser => ({ ...prevUser, ...updatedData }));
+    toast({
+      title: "Profile Updated",
+      description: "Your profile information has been saved.",
+    });
+    setIsEditDialogOpen(false); // Close the dialog
+  };
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -36,6 +53,25 @@ export default function ProfilePage() {
           {user.bio && <p className="text-foreground mt-2 text-center max-w-md">{user.bio}</p>}
         </CardHeader>
         <CardContent className="p-6 space-y-6">
+          <div className="flex justify-end mb-4">
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl"> {/* Increased width for more fields */}
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-headline text-primary">Edit Your Profile</DialogTitle>
+                  <DialogDescription>
+                    Make changes to your personal information and travel preferences.
+                  </DialogDescription>
+                </DialogHeader>
+                <ProfileEditForm initialData={user} onSubmit={handleProfileUpdate} />
+              </DialogContent>
+            </Dialog>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             {user.location && (
               <div className="flex items-center text-muted-foreground">
@@ -51,7 +87,7 @@ export default function ProfilePage() {
             )}
           </div>
           
-          {user.interests.length > 0 && (
+          {user.interests && user.interests.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold mb-3 text-foreground">Interests</h3>
               <div className="flex flex-wrap gap-2">
