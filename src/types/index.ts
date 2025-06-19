@@ -108,8 +108,36 @@ export const MOCK_TRIPS: Trip[] = [
 ];
 
 export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
-  { id: 'activity1', name: 'Eiffel Tower Visit', location: 'Eiffel Tower', duration: 2, imageUrl: 'https://placehold.co/300x200.png', description: 'Iconic landmark offering breathtaking city views.' },
-  { id: 'activity2', name: 'Louvre Museum Tour', location: 'Louvre Museum', duration: 4, imageUrl: 'https://placehold.co/300x200.png', description: 'Home to masterpieces like the Mona Lisa.' },
-  { id: 'activity3', name: 'Seine River Cruise', location: 'Seine River', duration: 1.5, imageUrl: 'https://placehold.co/300x200.png', description: 'Relaxing cruise with stunning Parisian sights.' },
-  { id: 'activity4', name: 'Montmartre Exploration', location: 'Montmartre', duration: 3, imageUrl: 'https://placehold.co/300x200.png', description: 'Artistic neighborhood with Sacré-Cœur Basilica.' },
+  { 
+    id: 'activity1', 
+    name: 'Eiffel Tower Visit', 
+    location: 'Eiffel Tower', 
+    duration: 2, 
+    imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwYXJpcyUyMGVpZmZlbCUyMHRvd2VyfGVufDB8fHx8MTcxNzQwNjU2N3ww&ixlib=rb-4.0.3&q=80&w=400', 
+    description: 'Iconic landmark offering breathtaking city views.' 
+  },
+  { 
+    id: 'activity2', 
+    name: 'Louvre Museum Tour', 
+    location: 'Louvre Museum', 
+    duration: 4, 
+    imageUrl: 'https://images.unsplash.com/photo-1591794722443-0e5713e28009?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxsdXZyZSUyMG11c2V1bSUyMHBhcmlzfGVufDB8fHx8MTcxNzQwNjYxN3ww&ixlib=rb-4.0.3&q=80&w=400', 
+    description: 'Home to masterpieces like the Mona Lisa.' 
+  },
+  { 
+    id: 'activity3', 
+    name: 'Seine River Cruise', 
+    location: 'Seine River', 
+    duration: 1.5, 
+    imageUrl: 'https://images.unsplash.com/photo-1550306822-7620a085fea4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzZWluZSUyMHJpdmVyJTIwY3J1aXNlJTIwcGFyaXN8ZW58MHx8fHwxNzE3NDA2NjU3fDA&ixlib=rb-4.0.3&q=80&w=400', 
+    description: 'Relaxing cruise with stunning Parisian sights.' 
+  },
+  { 
+    id: 'activity4', 
+    name: 'Montmartre Exploration', 
+    location: 'Montmartre', 
+    duration: 3, 
+    imageUrl: 'https://images.unsplash.com/photo-1580488820069-2195b31098c1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtb250bWFydHJlJTIwcGFyaXN8ZW58MHx8fHwxNzE3NDA2Njk2fDA&ixlib=rb-4.0.3&q=80&w=400', 
+    description: 'Artistic neighborhood with Sacré-Cœur Basilica.' 
+  },
 ];

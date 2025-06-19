@@ -90,6 +90,18 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
     return 0;
   };
 
+  let imageHint = "activity travel"; // Default hint
+  if (activity.name.toLowerCase().includes("eiffel")) {
+    imageHint = "eiffel tower";
+  } else if (activity.name.toLowerCase().includes("louvre")) {
+    imageHint = "louvre museum";
+  } else if (activity.name.toLowerCase().includes("seine")) {
+    imageHint = "seine river";
+  } else if (activity.name.toLowerCase().includes("montmartre")) {
+    imageHint = "montmartre paris";
+  }
+
+
   return (
     <Card 
       ref={cardRef}
@@ -121,7 +133,7 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
           height={250}
           className="object-cover w-full h-48 pointer-events-none" // Prevent image drag
           draggable="false"
-          data-ai-hint="activity travel"
+          data-ai-hint={imageHint}
         />
       </CardHeader>
       <CardContent className="p-4 flex-grow pointer-events-none"> {/* Prevent text selection */}
