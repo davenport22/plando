@@ -91,6 +91,31 @@ export const MOCK_USER_PROFILE: UserProfile = {
   avatarUrl: 'https://firebasestudio-hosting.intern.goog/images/prototyper/david_schneiderbauer.png',
 };
 
+export const MOCK_USER_PARTNER_1: UserProfile = {
+  id: 'partner1',
+  name: 'Jamie Doe',
+  email: 'jamie@example.com',
+  bio: 'Loves hiking and exploring new cafes.',
+  location: 'Vienna, Austria',
+  memberSince: 'June 2023',
+  interests: ['Hiking', 'Coffee', 'Photography', 'Art'],
+  avatarUrl: 'https://avatar.vercel.sh/jamie.png',
+};
+
+export const MOCK_USER_PARTNER_2: UserProfile = {
+  id: 'partner2',
+  name: 'Casey Smith',
+  email: 'casey@example.com',
+  bio: 'Passionate about food, travel, and music festivals.',
+  location: 'Berlin, Germany',
+  memberSince: 'August 2023',
+  interests: ['Foodie', 'Travel', 'Music', 'Festivals'],
+  avatarUrl: 'https://avatar.vercel.sh/casey.png',
+};
+
+export const MOCK_POTENTIAL_PARTNERS: UserProfile[] = [MOCK_USER_PARTNER_1, MOCK_USER_PARTNER_2];
+
+
 export const MOCK_TRIPS: Trip[] = [
   {
     id: 'trip1',
@@ -178,7 +203,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     name: 'Shibuya Crossing Experience',
     location: 'Shibuya Scramble Crossing',
     duration: 1.5,
-    imageUrls: ['https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    imageUrls: ['https://images.unsplash.com/photo-1617150929921-636459f9d103?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'], // Updated URL
     description: 'Witness the iconic organized chaos of the world\'s busiest pedestrian crossing. Grab a coffee at a nearby cafe for a bird\'s-eye view.',
     dataAiHint: "shibuya crossing"
   },
@@ -235,7 +260,7 @@ const DEFAULT_MOCK_LOCAL_ACTIVITIES: Activity[] = [
     imageUrls: ['https://images.unsplash.com/photo-1542879997-f09255010477?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Enjoy a refreshing walk or bike ride through the main city park, maybe pack a picnic!',
     dataAiHint: "city park picnic",
-    bestTimeToVisit: "Afternoons on sunny days",
+    bestTimeToVisit: "Afternoons on sunny days, Weekends",
     estimatedPriceRange: "Free (picnic costs vary)"
   },
   {
@@ -257,7 +282,7 @@ const DEFAULT_MOCK_LOCAL_ACTIVITIES: Activity[] = [
     imageUrls: ['https://images.unsplash.com/photo-1536924430914-92f9a6909076?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Explore works by local artists at the community gallery. Check for new exhibits.',
     dataAiHint: "art gallery",
-    bestTimeToVisit: "Weekend afternoons",
+    bestTimeToVisit: "Weekend afternoons or opening evenings",
     estimatedPriceRange: "Often free, donations welcome"
   },
 ];
@@ -272,7 +297,7 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     description: 'Wander through the magnificent gardens of the former imperial summer residence.',
     suggestedDurationHours: 2.5,
     bestTimeToVisit: "Spring or Summer mornings/afternoons",
-    estimatedPriceRange: "Gardens mostly free, palace entry fee",
+    estimatedPriceRange: "Gardens mostly free, palace entry fee applies",
     address: "Schönbrunner Schloßstraße 47, 1130 Wien",
     dataAiHint: "schonbrunn palace"
   },
@@ -284,7 +309,7 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     imageUrls: ['https://images.unsplash.com/photo-1608958449814-e896490174a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Visit the iconic St. Stephen\'s Cathedral and consider climbing a tower for city views.',
     suggestedDurationHours: 1.5,
-    bestTimeToVisit: "Mornings to avoid crowds",
+    bestTimeToVisit: "Mornings to avoid crowds, Any season",
     estimatedPriceRange: "Free entry to main area, tower/catacombs approx. €6-€10",
     address: "Stephansplatz 3, 1010 Wien",
     dataAiHint: "st stephens cathedral"
@@ -369,7 +394,7 @@ const MOCK_COUPLES_VIENNA_ACTIVITIES: Activity[] = [
     imageUrls: ['https://images.unsplash.com/photo-1620596541499-a6713919f0e7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Enjoy a scenic cruise along the Danube with dinner and music as the city lights twinkle.',
     dataAiHint: "danube cruise vienna",
-    bestTimeToVisit: "Evenings, especially sunset",
+    bestTimeToVisit: "Evenings, especially during sunset hours",
     estimatedPriceRange: "€50-€100 per person (with dinner)"
   },
   {
@@ -380,7 +405,7 @@ const MOCK_COUPLES_VIENNA_ACTIVITIES: Activity[] = [
     imageUrls: ['https://images.unsplash.com/photo-1580054604995-7478f2f58cee?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Explore the stunning baroque palace and see Gustav Klimt\'s masterpiece "The Kiss" together.',
     dataAiHint: "belvedere palace",
-    bestTimeToVisit: "Mornings or late afternoons",
+    bestTimeToVisit: "Mornings or late afternoons to avoid crowds",
     estimatedPriceRange: "€20-€25 per person (entry)"
   },
   {
