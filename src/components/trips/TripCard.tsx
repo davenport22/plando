@@ -11,6 +11,14 @@ interface TripCardProps {
 }
 
 export function TripCard({ trip }: TripCardProps) {
+  // Determine hint based on destination or a general travel term
+  let imageHint = "travel landscape";
+  if (trip.destination.toLowerCase().includes("paris")) {
+    imageHint = "paris cityscape";
+  } else if (trip.destination.toLowerCase().includes("tokyo")) {
+    imageHint = "tokyo city";
+  }
+
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg">
       <CardHeader className="p-0">
@@ -20,7 +28,7 @@ export function TripCard({ trip }: TripCardProps) {
             alt={trip.name}
             fill
             className="object-cover"
-            data-ai-hint="travel landscape"
+            data-ai-hint={imageHint}
           />
         </div>
       </CardHeader>
