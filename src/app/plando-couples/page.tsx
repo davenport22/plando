@@ -3,21 +3,23 @@
 
 import { useState, useEffect } from 'react';
 import type { Activity, UserProfile } from '@/types';
-import { MOCK_COUPLES_ACTIVITIES_BY_CITY, MOCK_USER_PROFILE, MOCK_POTENTIAL_PARTNERS } from '@/types'; 
+import { MOCK_COUPLES_ACTIVITIES_BY_CITY, MOCK_USER_PROFILE, MOCK_POTENTIAL_PARTNERS, JULIA_MOCKED_LIKES } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Heart, RotateCcw, MapPin, ListChecks, UserPlus, Users, LogOut } from 'lucide-react';
+import { Loader2, Heart, RotateCcw, MapPin, ListChecks, UserPlus, Users, LogOut, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle as MatchDialogTitle } from "@/components/ui/dialog";
 import { plandoModules } from "@/config/plandoModules";
 import Link from 'next/link';
 
 const LOCAL_STORAGE_LIKED_ACTIVITIES_KEY = `plandoCouplesLikedActivities_${MOCK_USER_PROFILE.id}`;
 const LOCAL_STORAGE_CONNECTED_PARTNER_KEY = `plandoCouplesConnectedPartner_${MOCK_USER_PROFILE.id}`;
+const JULIA_EMAIL = 'julia.musterfrau@gmail.com';
 
 
 export default function PlandoCouplesPage() {
@@ -42,8 +44,11 @@ export default function PlandoCouplesPage() {
   const [connectedPartner, setConnectedPartner] = useState<UserProfile | null>(null);
   const [isConnectingPartner, setIsConnectingPartner] = useState(false);
 
+  // Match animation state
+  const [showMatchAnimation, setShowMatchAnimation] = useState(false);
+  const [matchedAnimationActivityName, setMatchedAnimationActivityName] = useState<string>("");
+
   useEffect(() => {
-    // Load liked activities from localStorage
     const storedLikedActivities = localStorage.getItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
     if (storedLikedActivities) {
       try {
@@ -54,14 +59,13 @@ export default function PlandoCouplesPage() {
       }
     }
 
-    // Load connected partner from localStorage
     const storedPartner = localStorage.getItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
     if (storedPartner) {
         try {
             setConnectedPartner(JSON.parse(storedPartner));
         } catch (e) {
             console.error("Error parsing connected partner from localStorage", e);
-            localStorage.removeItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY); // Clear invalid entry
+            localStorage.removeItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
         }
     }
 
@@ -142,6 +146,15 @@ export default function PlandoCouplesPage() {
         console.error("Error saving liked activity to localStorage", e);
         toast({ title: "Error", description: "Could not save liked activity preference.", variant: "destructive"});
       }
+
+      // Check for match animation
+      if (connectedPartner && connectedPartner.email === JULIA_EMAIL && JULIA_MOCKED_LIKES.includes(votedActivity.id)) {
+        setMatchedAnimationActivityName(votedActivity.name);
+        setShowMatchAnimation(true);
+        setTimeout(() => {
+          setShowMatchAnimation(false);
+        }, 3500); // Auto-close after 3.5 seconds
+      }
     }
 
     if (currentActivityIndex < activities.length - 1) {
@@ -167,7 +180,7 @@ export default function PlandoCouplesPage() {
       return;
     }
     setIsConnectingPartner(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     const foundPartner = MOCK_POTENTIAL_PARTNERS.find(p => p.email.toLowerCase() === partnerEmailInput.trim().toLowerCase());
 
@@ -198,7 +211,7 @@ export default function PlandoCouplesPage() {
     ? activities[currentActivityIndex] 
     : null;
 
-  if (isLoading && activities.length === 0 && !connectedPartner) { // Adjusted initial loading condition
+  if (isLoading && activities.length === 0 && !connectedPartner) { 
     return (
       <div className="container mx-auto py-12 px-4 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -223,7 +236,6 @@ export default function PlandoCouplesPage() {
         </CardHeader>
 
         <CardContent className="px-4 sm:px-6 pb-4">
-          {/* Partner Connection Section */}
           <div className="mb-6 p-4 border rounded-lg bg-muted/30">
             {!connectedPartner ? (
               <>
@@ -266,7 +278,6 @@ export default function PlandoCouplesPage() {
           
           <Separator className="my-6" />
 
-          {/* Activity Swiping Section */}
            {locationStatusMessage && (
             <div className="mb-3 text-xs text-muted-foreground p-2 border border-dashed rounded-md flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary/70"/> 
@@ -343,6 +354,26 @@ export default function PlandoCouplesPage() {
         isOpen={isActivityDetailDialogOpen}
         onOpenChange={setIsActivityDetailDialogOpen}
       />
+
+      <Dialog open={showMatchAnimation} onOpenChange={setShowMatchAnimation}>
+        <DialogContent className="sm:max-w-md text-center p-8">
+          <DialogHeader className="space-y-4">
+            <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 animate-pulse">
+              <Heart className="h-12 w-12 text-primary animate-ping" style={{ animationDuration: '1.5s' }} />
+              <Sparkles className="absolute h-16 w-16 text-accent/70 opacity-75 animate-spin" style={{ animationDuration: '3s' }}/>
+            </div>
+            <MatchDialogTitle className="text-3xl font-headline text-primary">It's a Match!</MatchDialogTitle>
+            <CardDescription className="text-lg">
+              You and {connectedPartner?.name || 'your partner'} both liked <br />
+              <span className="font-semibold text-foreground">{matchedAnimationActivityName}</span>!
+            </CardDescription>
+          </DialogHeader>
+          {/* Auto-closes via setTimeout in handleVote */}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
+
+    

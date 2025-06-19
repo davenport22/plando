@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   name: string;
@@ -45,7 +46,7 @@ export interface Activity {
   bestTimeToVisit?: string;
   estimatedPriceRange?: string;
   address?: string;
-  dataAiHint?: string; // For providing hints to AI image selection/generation for this activity
+  dataAiHint?: string; 
 }
 
 // For AI Flow input
@@ -68,8 +69,8 @@ export interface Itinerary {
 
 // For Plando Couples Matches
 export interface MatchedActivity extends Activity {
-  matchedDate: string; // ISO string for when the match occurred (simulated)
-  partnerAlsoLiked: boolean; // Simulate if partner also liked (always true for this prototype version)
+  matchedDate: string; 
+  partnerAlsoLiked: boolean; 
 }
 
 
@@ -432,6 +433,10 @@ const MOCK_COUPLES_VIENNA_ACTIVITIES: Activity[] = [
   },
 ];
 
+// Specific list of activity IDs that Julia Musterfrau is mocked to have "liked"
+export const JULIA_MOCKED_LIKES: string[] = ['couples-vienna-1', 'couples-vienna-2'];
+
+
 export const MOCK_COUPLES_ACTIVITIES_BY_CITY: Record<string, Activity[]> = {
   "Vienna, Austria": MOCK_COUPLES_VIENNA_ACTIVITIES,
   "Default": MOCK_COUPLES_DEFAULT_ACTIVITIES,
@@ -444,3 +449,5 @@ declare module 'react' {
   }
 }
 
+
+    
