@@ -3,12 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import type { Activity } from '@/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // DialogDescription removed as we handle desc separately
+import type { GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, MapPin, Clock, ThumbsUp, ThumbsDown, Info, CalendarDays, Tag, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Clock, ThumbsUp, ThumbsDown, Info, CalendarDays, Tag, Loader2, Briefcase, DollarSign, Sunrise, Building } from "lucide-react";
 import { Badge } from '../ui/badge';
-import { enhanceActivityDescriptionAction } from '@/lib/actions'; // Import the new action
+import { enhanceActivityDescriptionAction } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 
 interface ActivityDetailDialogProps {
@@ -25,33 +26,32 @@ const categoryVariantMap: Record<string, "default" | "secondary" | "outline" | "
 
 export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: ActivityDetailDialogProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [enhancedDescription, setEnhancedDescription] = useState<string | null>(null);
-  const [isLoadingDescription, setIsLoadingDescription] = useState<boolean>(false);
+  const [enhancedActivityDetails, setEnhancedActivityDetails] = useState<GenerateActivityDescriptionOutput | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (activity) {
-      setCurrentImageIndex(0); // Reset image index when activity changes
-      setEnhancedDescription(null); // Reset enhanced description
+      setCurrentImageIndex(0);
+      setEnhancedActivityDetails(null); 
 
-      if (isOpen) { // Fetch enhanced description only when dialog is open and activity is present
-        setIsLoadingDescription(true);
+      if (isOpen) {
+        setIsLoadingDetails(true);
         enhanceActivityDescriptionAction(activity.name, activity.location)
           .then(result => {
-            if ('description' in result && result.description) {
-              setEnhancedDescription(result.description);
+            if ('description' in result) { // Check if it's the success type
+              setEnhancedActivityDetails(result);
             } else if ('error' in result) {
-              // Optionally show a toast for error, or just fallback to original description
-              // toast({ title: "Details Enhancement Failed", description: result.error, variant: "destructive" });
-              console.warn("Failed to enhance description:", result.error);
+              console.warn("Failed to enhance activity details:", result.error);
+              // Optionally show a toast, but we'll fallback to original description anyway
             }
           })
           .catch(error => {
-            console.error("Error fetching enhanced description:", error);
+            console.error("Error fetching enhanced activity details:", error);
             // toast({ title: "Error", description: "Could not fetch enhanced activity details.", variant: "destructive" });
           })
           .finally(() => {
-            setIsLoadingDescription(false);
+            setIsLoadingDetails(false);
           });
       }
     }
@@ -63,7 +63,7 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
 
   const { name, description: originalDescription, location, duration, imageUrls, category, startTime, likes, dislikes } = activity;
 
-  const displayDescription = enhancedDescription || originalDescription || "No description available.";
+  const displayDescription = enhancedActivityDetails?.description || originalDescription || "No description available.";
 
   const handleNextImage = () => {
     setCurrentImageIndex((prevIndex) => (prevIndex + 1) % (imageUrls?.length || 1));
@@ -78,9 +78,9 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       onOpenChange(open);
-      if (!open) { // Reset states when dialog is closed
-        setEnhancedDescription(null);
-        setIsLoadingDescription(false);
+      if (!open) {
+        setEnhancedActivityDetails(null);
+        setIsLoadingDetails(false);
       }
     }}>
       <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[90vh] flex flex-col">
@@ -140,9 +140,9 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
           <div>
             <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center">
                 <Info className="mr-2 h-5 w-5 text-primary" />
-                Description
+                About this activity
             </h3>
-            {isLoadingDescription ? (
+            {isLoadingDetails && !enhancedActivityDetails ? (
               <div className="flex items-center text-muted-foreground py-2">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 <span>Loading enhanced details...</span>
@@ -155,38 +155,57 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
           <div className="space-y-3 text-sm">
              <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
                 <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-                Details
+                Key Information
             </h3>
-            <div className="flex items-center text-muted-foreground">
-              <MapPin className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
-              <span>{location}</span>
-            </div>
-            <div className="flex items-center text-muted-foreground">
-              <Clock className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
-              <span>{duration} hours{startTime ? ` (Starts around ${startTime})` : ''}</span>
-            </div>
-            {category && (
-                <div className="flex items-center text-muted-foreground">
-                    <Tag className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
-                    Category: <Badge variant={categoryVariantMap[category] || 'secondary'} className="ml-2">{category}</Badge>
-                </div>
-            )}
-            {(likes !== undefined && likes > 0) || (dislikes !== undefined && dislikes > 0) ? (
-              <div className="flex items-center pt-2 gap-6">
-                {likes !== undefined && likes > 0 && (
-                    <div className="flex items-center text-green-600">
-                    <ThumbsUp className="mr-2 h-5 w-5" />
-                    <span className="font-medium">{likes} Like{likes > 1 ? 's' : ''}</span>
-                    </div>
-                )}
-                {dislikes !== undefined && dislikes > 0 && (
-                    <div className="flex items-center text-red-600">
-                    <ThumbsDown className="mr-2 h-5 w-5" />
-                    <span className="font-medium">{dislikes} Dislike{dislikes > 1 ? 's' : ''}</span>
-                    </div>
-                )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+              <div className="flex items-center text-muted-foreground">
+                <MapPin className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
+                <span>{enhancedActivityDetails?.address || location}</span>
               </div>
-            ) : null}
+              <div className="flex items-center text-muted-foreground">
+                <Clock className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
+                <span>
+                  {enhancedActivityDetails?.suggestedDurationHours 
+                    ? `${enhancedActivityDetails.suggestedDurationHours} hours (suggested)` 
+                    : `${duration} hours`}
+                  {startTime && !enhancedActivityDetails?.suggestedDurationHours ? ` (Starts around ${startTime})` : ''}
+                </span>
+              </div>
+              {enhancedActivityDetails?.bestTimeToVisit && (
+                <div className="flex items-center text-muted-foreground">
+                  <Sunrise className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
+                  <span>Best time to visit: {enhancedActivityDetails.bestTimeToVisit}</span>
+                </div>
+              )}
+              {enhancedActivityDetails?.estimatedPriceRange && (
+                <div className="flex items-center text-muted-foreground">
+                  <DollarSign className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
+                  <span>Price: {enhancedActivityDetails.estimatedPriceRange}</span>
+                </div>
+              )}
+              {category && (
+                  <div className="flex items-center text-muted-foreground">
+                      <Tag className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
+                      Category: <Badge variant={categoryVariantMap[category] || 'secondary'} className="ml-2">{category}</Badge>
+                  </div>
+              )}
+              {(likes !== undefined && likes > 0) || (dislikes !== undefined && dislikes > 0) ? (
+                <div className="flex items-center pt-1 gap-6 sm:col-span-2">
+                  {likes !== undefined && likes > 0 && (
+                      <div className="flex items-center text-green-600">
+                      <ThumbsUp className="mr-2 h-5 w-5" />
+                      <span className="font-medium">{likes} Like{likes > 1 ? 's' : ''}</span>
+                      </div>
+                  )}
+                  {dislikes !== undefined && dislikes > 0 && (
+                      <div className="flex items-center text-red-600">
+                      <ThumbsDown className="mr-2 h-5 w-5" />
+                      <span className="font-medium">{dislikes} Dislike{dislikes > 1 ? 's' : ''}</span>
+                      </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
         <div className="pt-4 flex-shrink-0">
