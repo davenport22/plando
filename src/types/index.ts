@@ -38,8 +38,8 @@ export interface Activity {
   imageUrl?: string;
   category?: 'Must Do' | 'Recommended' | 'Optional';
   startTime?: string; // HH:mm
-  likes?: number; // Number of likes
-  dislikes?: number; // Number of dislikes
+  likes?: number; 
+  dislikes?: number; 
 }
 
 // For AI Flow input
@@ -113,7 +113,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Eiffel Tower Visit', 
     location: 'Eiffel Tower', 
     duration: 2, 
-    imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwYXJpcyUyMGVpZmZlbCUyMHRvd2VyfGVufDB8fHx8MTcxNzQwNjU2N3ww&ixlib=rb-4.0.3&q=80&w=400', 
+    imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80', 
     description: 'Iconic landmark offering breathtaking city views.' 
   },
   { 
@@ -121,7 +121,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Louvre Museum Tour', 
     location: 'Louvre Museum', 
     duration: 4, 
-    imageUrl: 'https://images.unsplash.com/photo-1591794722443-0e5713e28009?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxsdXZyZSUyMG11c2V1bSUyMHBhcmlzfGVufDB8fHx8MTcxNzQwNjYxN3ww&ixlib=rb-4.0.3&q=80&w=400', 
+    imageUrl: 'https://images.unsplash.com/photo-1542601909-199825311294?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80',
     description: 'Home to masterpieces like the Mona Lisa.' 
   },
   { 
@@ -129,7 +129,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Seine River Cruise', 
     location: 'Seine River', 
     duration: 1.5, 
-    imageUrl: 'https://images.unsplash.com/photo-1550306822-7620a085fea4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzZWluZSUyMHJpdmVyJTIwY3J1aXNlJTIwcGFyaXN8ZW58MHx8fHwxNzE3NDA2NjU3fDA&ixlib=rb-4.0.3&q=80&w=400', 
+    imageUrl: 'https://images.unsplash.com/photo-1520427799889-658103f07a68?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80',
     description: 'Relaxing cruise with stunning Parisian sights.' 
   },
   { 
@@ -137,7 +137,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Montmartre Exploration', 
     location: 'Montmartre', 
     duration: 3, 
-    imageUrl: 'https://images.unsplash.com/photo-1580488820069-2195b31098c1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtb250bWFydHJlJTIwcGFyaXN8ZW58MHx8fHwxNzE3NDA2Njk2fDA&ixlib=rb-4.0.3&q=80&w=400', 
+    imageUrl: 'https://images.unsplash.com/photo-1569229074200-158480730801?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80',
     description: 'Artistic neighborhood with Sacré-Cœur Basilica.' 
   },
 ];
