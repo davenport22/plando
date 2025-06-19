@@ -167,7 +167,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     location: 'Shibuya Scramble Crossing',
     duration: 1.5,
     imageUrls: [
-      'https://images.unsplash.com/photo-1532236234562-0141e5a29a20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
+      'https://images.unsplash.com/photo-1604789156313-69b0a5cc5442?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
       'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
     description: 'Witness the iconic organized chaos of the world\'s busiest pedestrian crossing. Grab a coffee at a nearby cafe for a bird\'s-eye view.'
@@ -212,3 +212,4 @@ export const MOCK_DESTINATION_ACTIVITIES: Record<string, Activity[]> = {
   "Tokyo, Japan": MOCK_SUGGESTED_ACTIVITIES_TOKYO,
 };
 
+    
