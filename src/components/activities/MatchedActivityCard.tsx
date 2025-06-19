@@ -3,12 +3,12 @@
 
 import type { MatchedActivity } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, MapPinIcon, CalendarCheck2, Sparkles, Info, HeartCrack } from "lucide-react";
+import { Clock, MapPinIcon, CalendarCheck2, Sparkles, Info } from "lucide-react";
 import Image from "next/image";
 import { format, parseISO } from 'date-fns';
 
 interface MatchedActivityCardProps {
-  activity: MatchedActivity;
+  activity: MatchedActivity; // partnerAlsoLiked will always be true if this card is rendered on the matches page
   onCardClick: (activity: MatchedActivity) => void;
 }
 
@@ -26,9 +26,10 @@ export function MatchedActivityCard({ activity, onCardClick }: MatchedActivityCa
     // Keep default if parsing fails
   }
 
-  const PartnerIcon = activity.partnerAlsoLiked ? Sparkles : HeartCrack;
-  const partnerIconColor = activity.partnerAlsoLiked ? "text-primary-foreground" : "text-destructive-foreground";
-  const partnerIconBg = activity.partnerAlsoLiked ? "bg-primary/80" : "bg-destructive/80";
+  // Since this card is only for *matched* activities, we can always show a "match" indicator.
+  const MatchIcon = Sparkles;
+  const matchIconColor = "text-primary-foreground";
+  const matchIconBg = "bg-primary/80";
 
 
   return (
@@ -49,8 +50,8 @@ export function MatchedActivityCard({ activity, onCardClick }: MatchedActivityCa
           className="object-cover w-full h-40"
           data-ai-hint={imageHint}
         />
-        <div className={`absolute top-2 right-2 ${partnerIconBg} ${partnerIconColor} p-2 rounded-md backdrop-blur-sm`}>
-            <PartnerIcon className="h-5 w-5" />
+        <div className={`absolute top-2 right-2 ${matchIconBg} ${matchIconColor} p-2 rounded-md backdrop-blur-sm`}>
+            <MatchIcon className="h-5 w-5" title="It's a match!" />
         </div>
       </CardHeader>
       <CardContent className="p-4 flex-grow">
@@ -77,3 +78,4 @@ export function MatchedActivityCard({ activity, onCardClick }: MatchedActivityCa
     </Card>
   );
 }
+
