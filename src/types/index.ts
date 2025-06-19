@@ -45,6 +45,7 @@ export interface Activity {
   bestTimeToVisit?: string;
   estimatedPriceRange?: string;
   address?: string;
+  dataAiHint?: string; // For providing hints to AI image selection/generation for this activity
 }
 
 // For AI Flow input
@@ -92,7 +93,7 @@ export const MOCK_TRIPS: Trip[] = [
     endDate: '2024-09-17',
     ownerId: 'user1',
     participantIds: ['user1', 'user2'],
-    imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     latitude: 48.8566,
     longitude: 2.3522,
     placeId: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ',
@@ -123,7 +124,8 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
       'https://images.unsplash.com/photo-1543349689-9a4d426bee8e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
       'https://images.unsplash.com/photo-1510125960040-a488747b040b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Ascend the iconic Eiffel Tower for breathtaking panoramic views of Paris. Consider booking tickets in advance to skip long queues, especially during peak season. The evening light show is also a must-see.'
+    description: 'Ascend the iconic Eiffel Tower for breathtaking panoramic views of Paris. Consider booking tickets in advance to skip long queues, especially during peak season. The evening light show is also a must-see.',
+    dataAiHint: "eiffel tower"
   },
   {
     id: 'activity-paris-2',
@@ -134,7 +136,8 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
       'https://images.unsplash.com/photo-1587648415693-4a5362b2ce41?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxsb3V2cmV8ZW58MHx8fHwxNzUwMzQ0ODUxfDA&ixlib=rb-4.1.0&q=80&w=1080',
       'https://images.unsplash.com/photo-1590101152024-1a0792027179?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Explore world-renowned art collections, including the Mona Lisa and Venus de Milo. The museum is vast; plan your visit to focus on specific wings or masterpieces to make the most of your time.'
+    description: 'Explore world-renowned art collections, including the Mona Lisa and Venus de Milo. The museum is vast; plan your visit to focus on specific wings or masterpieces to make the most of your time.',
+    dataAiHint: "louvre museum"
   },
   {
     id: 'activity-paris-3',
@@ -145,7 +148,8 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
       'https://images.unsplash.com/photo-1504896287989-ff1fbde00199?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzZWluZSUyMHJpdmVyfGVufDB8fHx8MTc1MDM0NDkwOXww&ixlib=rb-4.1.0&q=80&w=1080',
       'https://images.unsplash.com/photo-1558380733-e6a30704f782?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Enjoy a relaxing boat tour along the Seine, passing famous landmarks like Notre Dame Cathedral, Musée d\'Orsay, and the Louvre. Evening cruises offer a magical view of the illuminated city.'
+    description: 'Enjoy a relaxing boat tour along the Seine, passing famous landmarks like Notre Dame Cathedral, Musée d\'Orsay, and the Louvre. Evening cruises offer a magical view of the illuminated city.',
+    dataAiHint: "seine river"
   },
   {
     id: 'activity-paris-4',
@@ -156,7 +160,8 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
       'https://images.unsplash.com/photo-1702375308488-de52189a0ff3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtb250bWFydHJlJTIwc2FjcmV8ZW58MHx8fHwxNzUwMzQ0OTU5fDA&ixlib=rb-4.1.0&q=80&w=1080',
       'https://images.unsplash.com/photo-1579178510800-5119ac53a276?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Discover the artistic charm of Montmartre, wander through its cobblestone streets, see artists at Place du Tertre, and visit the stunning Sacré-Cœur Basilica for panoramic city views.'
+    description: 'Discover the artistic charm of Montmartre, wander through its cobblestone streets, see artists at Place du Tertre, and visit the stunning Sacré-Cœur Basilica for panoramic city views.',
+    dataAiHint: "montmartre paris"
   },
 ];
 
@@ -167,10 +172,11 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     location: 'Shibuya Scramble Crossing',
     duration: 1.5,
     imageUrls: [
-      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
+      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80', // Original, but let's assume it's working now or was just a temporary blip. If it was the source of the 404, we'd replace it.
       'https://images.unsplash.com/photo-1604789156313-69b0a5cc5442?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Witness the iconic organized chaos of the world\'s busiest pedestrian crossing. Grab a coffee at a nearby cafe for a bird\'s-eye view.'
+    description: 'Witness the iconic organized chaos of the world\'s busiest pedestrian crossing. Grab a coffee at a nearby cafe for a bird\'s-eye view.',
+    dataAiHint: "shibuya crossing"
   },
   {
     id: 'activity-tokyo-2',
@@ -181,7 +187,8 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
       'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
       'https://images.unsplash.com/photo-1588069008739-5404769440cf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Explore Tokyo\'s oldest temple, a vibrant cultural and spiritual hub. Don\'t miss Nakamise-dori street leading to the temple, filled with traditional snacks and souvenirs.'
+    description: 'Explore Tokyo\'s oldest temple, a vibrant cultural and spiritual hub. Don\'t miss Nakamise-dori street leading to the temple, filled with traditional snacks and souvenirs.',
+    dataAiHint: "sensoji temple"
   },
   {
     id: 'activity-tokyo-3',
@@ -192,7 +199,8 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
       'https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
       'https://images.unsplash.com/photo-1578213860249-78201cf323e1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Get stunning panoramic views of Tokyo from one of the world\'s tallest towers. On a clear day, you might even see Mount Fuji.'
+    description: 'Get stunning panoramic views of Tokyo from one of the world\'s tallest towers. On a clear day, you might even see Mount Fuji.',
+    dataAiHint: "tokyo skytree"
   },
   {
     id: 'activity-tokyo-4',
@@ -203,7 +211,8 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
       'https://images.unsplash.com/photo-1573969708938-370990395aa0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
       'https://images.unsplash.com/photo-1607868398016-f01b151a49f5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Indulge in fresh seafood and local delicacies at this bustling market. Perfect for a breakfast or lunch adventure, trying various street foods.'
+    description: 'Indulge in fresh seafood and local delicacies at this bustling market. Perfect for a breakfast or lunch adventure, trying various street foods.',
+    dataAiHint: "tsukiji market"
   }
 ];
 
@@ -219,7 +228,7 @@ const DEFAULT_MOCK_LOCAL_ACTIVITIES: Activity[] = [
     name: 'City Park Stroll',
     location: 'Local City Park',
     duration: 1.5,
-    imageUrls: ['https://placehold.co/400x250.png'],
+    imageUrls: ['https://images.unsplash.com/photo-1542879997-f09255010477?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Enjoy a refreshing walk or bike ride through the main city park.',
     dataAiHint: "city park"
   },
@@ -228,7 +237,7 @@ const DEFAULT_MOCK_LOCAL_ACTIVITIES: Activity[] = [
     name: 'Neighborhood Cafe Visit',
     location: 'Downtown Area',
     duration: 1,
-    imageUrls: ['https://placehold.co/400x250.png'],
+    imageUrls: ['https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Discover a cozy local cafe and enjoy a cup of coffee or tea.',
     dataAiHint: "cafe interior"
   },
@@ -237,7 +246,7 @@ const DEFAULT_MOCK_LOCAL_ACTIVITIES: Activity[] = [
     name: 'Community Art Gallery',
     location: 'Arts District',
     duration: 2,
-    imageUrls: ['https://placehold.co/400x250.png'],
+    imageUrls: ['https://images.unsplash.com/photo-1536924430914-92f9a6909076?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Explore works by local artists at the community gallery.',
     dataAiHint: "art gallery"
   },
@@ -249,7 +258,7 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     name: 'Schönbrunn Palace Gardens Walk',
     location: 'Schönbrunn Palace, Vienna',
     duration: 2.5,
-    imageUrls: ['https://placehold.co/400x250.png'],
+    imageUrls: ['https://images.unsplash.com/photo-1587616596304-987fde18990d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Wander through the magnificent gardens of the former imperial summer residence.',
     suggestedDurationHours: 2.5,
     bestTimeToVisit: "Spring or Summer mornings",
@@ -262,7 +271,7 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     name: 'St. Stephen\'s Cathedral Visit',
     location: 'Stephansplatz, Vienna',
     duration: 1.5,
-    imageUrls: ['https://placehold.co/400x250.png'],
+    imageUrls: ['https://images.unsplash.com/photo-1608958449814-e896490174a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Visit the iconic St. Stephen\'s Cathedral, a masterpiece of Gothic architecture in the heart of Vienna.',
     suggestedDurationHours: 1.5,
     bestTimeToVisit: "Anytime, less crowded mornings",
@@ -275,7 +284,7 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     name: 'Naschmarkt Food Exploration',
     location: 'Naschmarkt, Vienna',
     duration: 2,
-    imageUrls: ['https://placehold.co/400x250.png'],
+    imageUrls: ['https://images.unsplash.com/photo-1518300210072-6497ca050313?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Explore Vienna\'s most popular market, offering a variety of international foods, local produce, and vibrant stalls.',
     suggestedDurationHours: 2,
     bestTimeToVisit: "Late morning or lunchtime, Saturday for flea market",
@@ -288,13 +297,13 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     name: 'Coffee at a Traditional Viennese Coffee House',
     location: 'Inner Stadt, Vienna',
     duration: 1,
-    imageUrls: ['https://placehold.co/400x250.png'],
+    imageUrls: ['https://images.unsplash.com/photo-1559925198-8f03a9b70f8a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Experience the unique culture of a traditional Viennese coffee house (Kaffeehaus).',
     suggestedDurationHours: 1,
     bestTimeToVisit: "Anytime",
     estimatedPriceRange: "€5-€15 per person",
     address: "Various locations, e.g., Cafe Central, Cafe Sacher",
-    dataAiHint: "viennese coffee house"
+    dataAiHint: "viennese coffee"
   },
 ];
 
@@ -306,8 +315,12 @@ export const MOCK_ACTIVITIES_BY_CITY: Record<string, Activity[]> = {
   "Vienna, Austria": MOCK_VIENNA_ACTIVITIES,
   "Default": DEFAULT_MOCK_LOCAL_ACTIVITIES,
 };
+
+// Add this declaration to allow data-ai-hint on intrinsic elements
 declare module 'react' {
   interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
     dataAiHint?: string;
   }
 }
+
+    
