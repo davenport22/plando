@@ -8,30 +8,30 @@ body {
 
 @layer base {
   :root {
-    --background: 220 20% 96%; /* Light Cool Gray */
-    --foreground: 220 10% 25%; /* Dark Cool Gray */
+    --background: 208 100% 97%; /* Very light blue (Alice Blue) */
+    --foreground: 208 50% 30%; /* Darker blue for text */
     --card: 0 0% 100%; /* White */
-    --card-foreground: 220 10% 25%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 25%;
-    --primary: 255 70% 65%; /* Lavender */
-    --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 255 60% 80%; /* Lighter Lavender */
-    --secondary-foreground: 255 30% 30%; /* Darker Lavender Text */
-    --muted: 220 20% 92%; /* Slightly Darker Light Cool Gray */
-    --muted-foreground: 220 10% 45%; /* Medium Cool Gray */
-    --accent: 220 15% 75%; /* Medium Light Cool Gray */
-    --accent-foreground: 220 10% 15%; /* Very Dark Cool Gray */
+    --card-foreground: 208 50% 30%; /* Darker blue for card text */
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 208 50% 30%; /* Darker blue for popover text */
+    --primary: 197 71% 73%; /* Light sky blue */
+    --primary-foreground: 0 0% 100%; /* White for text on primary */
+    --secondary: 197 70% 83%; /* Lighter sky blue */
+    --secondary-foreground: 197 50% 25%; /* Darker blue for text on secondary */
+    --muted: 208 70% 94%; /* Muted light blue */
+    --muted-foreground: 208 40% 50%; /* Muted blue text */
+    --accent: 180 65% 81%; /* Pale cyan */
+    --accent-foreground: 180 50% 25%; /* Darker cyan for text on accent */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 20% 88%; /* Light Cool Gray Border */
+    --border: 208 60% 90%; /* Light blue border */
     --input: 0 0% 100%; /* White input background */
-    --ring: 255 70% 60%; /* Slightly Darker Lavender Ring */
-    --chart-1: 255 70% 65%;
-    --chart-2: 255 60% 75%;
-    --chart-3: 220 15% 70%;
-    --chart-4: 255 50% 60%;
-    --chart-5: 220 10% 60%;
+    --ring: 197 71% 68%; /* Sky blue for ring */
+    --chart-1: 197 71% 73%; /* Corresponds to primary */
+    --chart-2: 197 70% 83%; /* Corresponds to secondary */
+    --chart-3: 180 65% 81%; /* Corresponds to accent */
+    --chart-4: 197 60% 65%; /* Variation of primary */
+    --chart-5: 180 55% 70%; /* Variation of accent */
     --radius: 0.5rem;
 
     /* Sidebar theme inherits or uses specific values */
@@ -46,30 +46,30 @@ body {
   }
 
   .dark {
-    --background: 220 15% 12%; /* Very Dark Blue-Gray */
-    --foreground: 220 15% 88%; /* Light Gray-Blue text */
-    --card: 220 15% 18%; /* Darker card background */
-    --card-foreground: 220 15% 88%;
-    --popover: 220 15% 18%;
-    --popover-foreground: 220 15% 88%;
-    --primary: 255 70% 70%; /* Slightly lighter Lavender for dark theme */
-    --primary-foreground: 255 10% 10%; /* Very Dark purple/black for contrast */
-    --secondary: 255 60% 55%; /* Darker Lavender */
-    --secondary-foreground: 220 15% 90%;
-    --muted: 220 15% 22%; /* Darker muted for tab list bg */
-    --muted-foreground: 220 15% 65%; /* Lighter muted text */
-    --accent: 220 10% 45%; /* Medium Cool Gray for dark theme accent */
-    --accent-foreground: 220 15% 90%;
+    --background: 208 30% 10%; /* Very Dark Alice Blue variant */
+    --foreground: 208 80% 90%; /* Light grayish blue for text */
+    --card: 208 30% 15%; /* Darker card background */
+    --card-foreground: 208 80% 90%;
+    --popover: 208 30% 15%;
+    --popover-foreground: 208 80% 90%;
+    --primary: 197 71% 78%; /* Slightly Lighter Sky Blue for dark theme */
+    --primary-foreground: 197 100% 10%; /* Very dark blue for contrast */
+    --secondary: 197 70% 60%; /* Darker version of light secondary */
+    --secondary-foreground: 208 80% 90%;
+    --muted: 208 30% 20%; /* Darker muted for tab list bg */
+    --muted-foreground: 208 60% 70%; /* Lighter muted text */
+    --accent: 180 60% 51%; /* Darker Pale Cyan */
+    --accent-foreground: 180 80% 90%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 15% 30%; /* Darker border */
-    --input: 220 15% 22%; /* Darker input bg */
-    --ring: 255 70% 65%; /* Lavender ring for dark theme */
-    --chart-1: 255 70% 70%;
-    --chart-2: 255 60% 60%;
-    --chart-3: 220 15% 60%;
-    --chart-4: 255 50% 55%;
-    --chart-5: 220 10% 50%;
+    --border: 208 30% 25%; /* Darker border */
+    --input: 208 30% 20%; /* Darker input bg */
+    --ring: 197 71% 73%; /* Light theme primary for ring in dark mode */
+    --chart-1: 197 71% 78%;
+    --chart-2: 197 70% 60%;
+    --chart-3: 180 60% 51%;
+    --chart-4: 197 60% 70%;
+    --chart-5: 180 55% 60%;
 
     --sidebar-background: hsl(var(--muted));
     --sidebar-foreground: hsl(var(--muted-foreground));
