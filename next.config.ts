@@ -25,15 +25,12 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    // allowedDevOrigins was here, it's moved to the top level
+    // Other experimental features can go here if needed
   },
+  // allowedDevOrigins should be a top-level key
   allowedDevOrigins: [
     'https://6000-firebase-studio-1750279304267.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev',
     'https://9000-firebase-studio-1750279304267.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev',
-    // It's good practice to also allow http if that's how you access it sometimes,
-    // though the log specifically showed https.
-    // 'http://6000-firebase-studio-1750279304267.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev',
-    // 'http://9000-firebase-studio-1750279304267.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev'
   ],
 };
 
