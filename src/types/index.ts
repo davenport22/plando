@@ -113,7 +113,18 @@ export const MOCK_USER_PARTNER_2: UserProfile = {
   avatarUrl: 'https://avatar.vercel.sh/casey.png',
 };
 
-export const MOCK_POTENTIAL_PARTNERS: UserProfile[] = [MOCK_USER_PARTNER_1, MOCK_USER_PARTNER_2];
+export const MOCK_USER_PARTNER_JULIA: UserProfile = {
+  id: 'partnerJulia',
+  name: 'Julia Musterfrau',
+  email: 'julia.musterfrau@gmail.com',
+  bio: 'Enjoys quiet evenings, good books, and long walks.',
+  location: 'Munich, Germany',
+  memberSince: 'January 2024',
+  interests: ['Reading', 'Nature', 'Photography', 'Art'],
+  avatarUrl: 'https://avatar.vercel.sh/julia.png',
+};
+
+export const MOCK_POTENTIAL_PARTNERS: UserProfile[] = [MOCK_USER_PARTNER_1, MOCK_USER_PARTNER_2, MOCK_USER_PARTNER_JULIA];
 
 
 export const MOCK_TRIPS: Trip[] = [
@@ -203,7 +214,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     name: 'Shibuya Crossing Experience',
     location: 'Shibuya Scramble Crossing',
     duration: 1.5,
-    imageUrls: ['https://images.unsplash.com/photo-1617150929921-636459f9d103?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'], // Updated URL
+    imageUrls: ['https://images.unsplash.com/photo-1617150929921-636459f9d103?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Witness the iconic organized chaos of the world\'s busiest pedestrian crossing. Grab a coffee at a nearby cafe for a bird\'s-eye view.',
     dataAiHint: "shibuya crossing"
   },
@@ -432,3 +443,4 @@ declare module 'react' {
     dataAiHint?: string;
   }
 }
+
