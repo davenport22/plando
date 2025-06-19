@@ -129,7 +129,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Seine River Cruise', 
     location: 'Seine River Banks', 
     duration: 1.5, 
-    imageUrl: 'https://images.unsplash.com/photo-1550355291-bbee04a92027?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1504896287989-ff1fbde00199?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzZWluZSUyMHJpdmVyfGVufDB8fHx8MTc1MDM0NDkwOXww&ixlib=rb-4.1.0&q=80&w=1080',
     description: 'Enjoy a relaxing boat tour along the Seine, passing famous landmarks.' 
   },
   { 
@@ -182,5 +182,7 @@ export const MOCK_DESTINATION_ACTIVITIES: Record<string, Activity[]> = {
   "Tokyo, Japan": MOCK_SUGGESTED_ACTIVITIES_TOKYO,
 };
 
+
+    
 
     
