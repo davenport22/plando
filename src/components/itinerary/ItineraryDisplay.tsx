@@ -1,13 +1,15 @@
-import type { Itinerary } from '@/types';
+
+import type { Itinerary, Activity } from '@/types'; // Added Activity
 import { ItineraryDayCard } from './ItineraryDayCard';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 interface ItineraryDisplayProps {
   itinerary: Itinerary | null;
+  onActivityClick: (activity: Activity) => void; // New prop
 }
 
-export function ItineraryDisplay({ itinerary }: ItineraryDisplayProps) {
+export function ItineraryDisplay({ itinerary, onActivityClick }: ItineraryDisplayProps) {
   if (!itinerary || itinerary.days.length === 0) {
     return (
       <Alert variant="default" className="mt-6 bg-blue-50 border-blue-200 text-blue-700">
@@ -24,7 +26,11 @@ export function ItineraryDisplay({ itinerary }: ItineraryDisplayProps) {
     <div className="mt-8">
       <h2 className="text-3xl font-headline font-semibold mb-6 text-primary">Your Trip Itinerary</h2>
       {itinerary.days.map((dayData) => (
-        <ItineraryDayCard key={dayData.date} dayData={dayData} />
+        <ItineraryDayCard 
+            key={dayData.date} 
+            dayData={dayData} 
+            onActivityClick={onActivityClick} // Pass down
+        />
       ))}
     </div>
   );

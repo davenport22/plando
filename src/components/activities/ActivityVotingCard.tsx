@@ -52,7 +52,6 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
 
     if (Math.abs(dragState.offsetX) > SWIPE_THRESHOLD) {
       onVote(activity.id, dragState.offsetX > 0);
-      // Card will likely be removed by parent, so no need to animate it out here for now
     }
 
     setDragState({
@@ -64,7 +63,6 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
   
   const handlePointerLeave = (event: React.PointerEvent<HTMLDivElement>) => {
     if (dragState.isDragging) {
-        // If pointer leaves while dragging (e.g. mouse out of window), treat as drag end.
         handlePointerUp(event);
     }
   };
@@ -75,8 +73,8 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
     transition: dragState.isDragging ? 'none' : 'transform 0.3s ease-out',
     cursor: dragState.isDragging ? 'grabbing' : 'grab',
     userSelect: dragState.isDragging ? 'none' : 'auto',
-    touchAction: 'none', // Prevents scrolling while swiping card
-    position: 'relative', // For absolute positioned feedback
+    touchAction: 'none', 
+    position: 'relative', 
   };
 
   const getFeedbackOpacity = (direction: 'like' | 'nope') => {
@@ -90,27 +88,21 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
     return 0;
   };
 
-  let imageHint = "activity travel"; // Default hint
+  let imageHint = "activity travel"; 
   const activityNameLower = activity.name.toLowerCase();
 
-  if (activityNameLower.includes("eiffel")) {
-    imageHint = "eiffel tower";
-  } else if (activityNameLower.includes("louvre")) {
-    imageHint = "louvre museum";
-  } else if (activityNameLower.includes("seine")) {
-    imageHint = "seine river";
-  } else if (activityNameLower.includes("montmartre")) {
-    imageHint = "montmartre paris";
-  } else if (activityNameLower.includes("shibuya")) {
-    imageHint = "shibuya crossing";
-  } else if (activityNameLower.includes("senso-ji")) {
-    imageHint = "sensoji temple";
-  } else if (activityNameLower.includes("skytree")) {
-    imageHint = "tokyo skytree";
-  } else if (activityNameLower.includes("tsukiji")) {
-    imageHint = "tsukiji market";
-  }
+  if (activityNameLower.includes("eiffel")) imageHint = "eiffel tower";
+  else if (activityNameLower.includes("louvre")) imageHint = "louvre museum";
+  else if (activityNameLower.includes("seine")) imageHint = "seine river";
+  else if (activityNameLower.includes("montmartre")) imageHint = "montmartre paris";
+  else if (activityNameLower.includes("shibuya")) imageHint = "shibuya crossing";
+  else if (activityNameLower.includes("senso-ji")) imageHint = "sensoji temple";
+  else if (activityNameLower.includes("skytree")) imageHint = "tokyo skytree";
+  else if (activityNameLower.includes("tsukiji")) imageHint = "tsukiji market";
 
+  const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 
+    ? activity.imageUrls[0] 
+    : "https://placehold.co/400x250.png";
 
   return (
     <Card 
@@ -120,7 +112,7 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerLeave} // Handle mouse leaving the card area
+      onPointerLeave={handlePointerLeave}
     >
       <div
         className="absolute top-1/2 left-4 transform -translate-y-1/2 -rotate-12 border-2 border-red-500 text-red-500 text-2xl font-bold px-4 py-2 rounded-md opacity-0"
@@ -137,18 +129,19 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
 
       <CardHeader className="p-0 relative">
         <Image
-          src={activity.imageUrl || "https://placehold.co/400x250.png"}
+          src={displayImageUrl}
           alt={activity.name}
           width={400}
           height={250}
-          className="object-cover w-full h-48 pointer-events-none" // Prevent image drag
+          className="object-cover w-full h-48 pointer-events-none" 
           draggable="false"
           data-ai-hint={imageHint}
+          priority // Preload the first visible image
         />
       </CardHeader>
-      <CardContent className="p-4 flex-grow pointer-events-none"> {/* Prevent text selection */}
+      <CardContent className="p-4 flex-grow pointer-events-none"> 
         <CardTitle className="text-xl font-headline mb-1">{activity.name}</CardTitle>
-        {activity.description && <CardDescription className="text-sm mb-2 text-muted-foreground">{activity.description}</CardDescription>}
+        {activity.description && <CardDescription className="text-sm mb-2 text-muted-foreground line-clamp-2">{activity.description.split('.')[0] + '.'}</CardDescription>}
         <div className="space-y-1 text-sm">
           <div className="flex items-center text-muted-foreground">
             <MapPinIcon className="mr-2 h-4 w-4 text-primary" />
@@ -160,7 +153,6 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
           </div>
         </div>
       </CardContent>
-      {/* Footer with buttons removed */}
     </Card>
   );
 }

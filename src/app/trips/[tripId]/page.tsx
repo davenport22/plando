@@ -4,10 +4,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Trip, Activity, Itinerary, ActivityInput } from '@/types';
-import { MOCK_TRIPS, MOCK_DESTINATION_ACTIVITIES } from '@/types'; // Updated import
+import { MOCK_TRIPS, MOCK_DESTINATION_ACTIVITIES } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
 import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
+import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog'; // New import
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { suggestItineraryAction } from '@/lib/actions';
@@ -26,24 +27,36 @@ import {
 import { EditTripForm } from '@/components/trips/EditTripForm';
 import { format, parseISO } from 'date-fns';
 
-// Helper to map AI output to our Itinerary type
 const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null => {
   if (!aiOutput || !aiOutput.itinerary) return null;
   return {
     tripId,
     days: aiOutput.itinerary.map((day: any) => ({
       date: day.date,
-      activities: day.activities.map((act: any, index: number) => ({
-        id: `${act.name.replace(/\s+/g, '-')}-${index}`, 
-        name: act.name,
-        location: act.location,
-        duration: act.duration,
-        startTime: act.startTime,
-        category: act.category,
-        description: act.description || '',
-        likes: act.likes !== undefined ? act.likes : 0,
-        dislikes: act.dislikes !== undefined ? act.dislikes : 0,
-      })),
+      activities: day.activities.map((act: any, index: number) => {
+        let imageUrls: string[] = [];
+        if (act.imageUrl && typeof act.imageUrl === 'string') {
+          imageUrls = [act.imageUrl];
+        } else if (Array.isArray(act.imageUrls) && act.imageUrls.every((item: any) => typeof item === 'string')) {
+          imageUrls = act.imageUrls;
+        } else {
+          // Fallback if no image URL is provided by AI for an itinerary activity
+          imageUrls = [`https://placehold.co/400x300.png?text=${encodeURIComponent(act.name)}`];
+        }
+        
+        return {
+          id: `${act.name.replace(/\s+/g, '-')}-${day.date}-${index}`, 
+          name: act.name,
+          location: act.location,
+          duration: act.duration,
+          startTime: act.startTime,
+          category: act.category,
+          description: act.description || '',
+          likes: act.likes !== undefined ? act.likes : 0,
+          dislikes: act.dislikes !== undefined ? act.dislikes : 0,
+          imageUrls: imageUrls,
+        };
+      }),
     })),
   };
 };
@@ -66,6 +79,8 @@ export default function TripDetailPage() {
   const [activitiesAtLastGeneration, setActivitiesAtLastGeneration] = useState<Activity[] | null>(null);
   const [hasActivityChangesSinceLastGen, setHasActivityChangesSinceLastGen] = useState<boolean>(true);
 
+  const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
+  const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
   useEffect(() => {
     const currentTrip = MOCK_TRIPS.find(t => t.id === tripId);
@@ -79,7 +94,7 @@ export default function TripDetailPage() {
       if (formattedTrip.startDate && formattedTrip.endDate) {
         setTripDuration(calculateTripDuration(formattedTrip.startDate, formattedTrip.endDate));
       }
-      // Get activities based on destination
+      
       const destinationActivities = MOCK_DESTINATION_ACTIVITIES[currentTrip.destination] || [];
       const initialActivities = destinationActivities.map(act => ({ ...act, tripId, isLiked: undefined }));
       setUserActivities(initialActivities);
@@ -124,13 +139,13 @@ export default function TripDetailPage() {
     );
   };
 
-  const handleAddCustomActivity = (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrl' | 'likes' | 'dislikes'>) => {
+  const handleAddCustomActivity = (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes'>) => {
     const newActivity: Activity = {
       ...newActivityData,
       id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       tripId,
       isLiked: undefined, 
-      imageUrl: "https://placehold.co/300x200.png", // Default placeholder for custom activities
+      imageUrls: ["https://placehold.co/400x300.png?text=Custom+Activity"], 
       likes: 0,
       dislikes: 0,
     };
@@ -187,7 +202,7 @@ export default function TripDetailPage() {
       const mappedItinerary = mapAiOutputToItinerary(result, trip.id);
       if (mappedItinerary) {
         setGeneratedItinerary(mappedItinerary);
-        setActivitiesAtLastGeneration(JSON.parse(JSON.stringify(userActivities))); // Deep copy
+        setActivitiesAtLastGeneration(JSON.parse(JSON.stringify(userActivities))); 
         toast({ title: generatedItinerary && hasActivityChangesSinceLastGen ? "Itinerary Updated!" : "Itinerary Generated!", description: "Your personalized trip itinerary is ready." });
         setCurrentView('itinerary');
       } else {
@@ -218,6 +233,11 @@ export default function TripDetailPage() {
 
     toast({ title: "Trip Updated!", description: `Details for "${updatedTrip.name}" have been saved.`});
     setIsEditDialogOpen(false); 
+  };
+
+  const handleOpenActivityDetail = (activity: Activity) => {
+    setSelectedActivityForDialog(activity);
+    setIsActivityDetailDialogOpen(true);
   };
 
 
@@ -284,7 +304,10 @@ export default function TripDetailPage() {
                 <CardTitle className="text-2xl font-headline text-primary">Smart Itinerary</CardTitle>
               </CardHeader>
               <CardContent>
-                <ItineraryDisplay itinerary={generatedItinerary} />
+                <ItineraryDisplay 
+                    itinerary={generatedItinerary} 
+                    onActivityClick={handleOpenActivityDetail}
+                />
                 <Button
                   onClick={handleGenerateItinerary}
                   disabled={disableGenerateButton}
@@ -408,7 +431,11 @@ export default function TripDetailPage() {
           </Card>
         </div>
       </div>
+      <ActivityDetailDialog 
+        activity={selectedActivityForDialog}
+        isOpen={isActivityDetailDialogOpen}
+        onOpenChange={setIsActivityDetailDialogOpen}
+      />
     </div>
   );
 }
-
