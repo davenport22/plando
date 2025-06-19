@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutGrid, Grid, Users, Sparkles, Heart, PlaneTakeoff } from 'lucide-react'; // Changed Apps to Grid
+import { LayoutGrid, Grid, Users, Sparkles, Heart, PlaneTakeoff } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 const AppHeader = () => {
@@ -34,7 +34,7 @@ const AppHeader = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
-                  <Grid className="h-5 w-5" /> {/* Changed Apps to Grid */}
+                  <Grid className="h-5 w-5" />
                   <span className="sr-only">Open Plando Apps</span>
                 </Button>
               </DropdownMenuTrigger>
