@@ -3,14 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import type { Activity, UserProfile } from '@/types';
-import { MOCK_COUPLES_ACTIVITIES_BY_CITY, MOCK_USER_PROFILE, MOCK_POTENTIAL_PARTNERS, JULIA_MOCKED_LIKES } from '@/types'; 
+import { MOCK_COUPLES_ACTIVITIES_BY_CITY, MOCK_USER_PROFILE, MOCK_POTENTIAL_PARTNERS, JULIA_MOCKED_LIKES, ALL_MOCK_USERS } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Heart, RotateCcw, MapPin, ListChecks, UserPlus, Users, LogOut, Sparkles } from 'lucide-react';
+import { Loader2, Heart, RotateCcw, MapPin, ListChecks, UserPlus, Users, LogOut, Sparkles, UserCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle as MatchDialogTitle } from "@/components/ui/dialog";
@@ -259,17 +259,19 @@ export default function PlandoCouplesPage() {
             ) : (
               <div className="text-left">
                 <h3 className="text-lg font-semibold text-foreground mb-3">Connected with:</h3>
-                <div className="flex items-center gap-3 mb-3">
-                  <Avatar className="h-12 w-12 border-2 border-primary">
-                    <AvatarImage src={connectedPartner.avatarUrl || `https://avatar.vercel.sh/${connectedPartner.email}.png`} alt={connectedPartner.name} />
-                    <AvatarFallback>{connectedPartner.name.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold text-foreground">{connectedPartner.name}</p>
-                    <p className="text-sm text-muted-foreground">{connectedPartner.email}</p>
-                  </div>
-                </div>
-                <Button onClick={handleDisconnectPartner} variant="outline" size="sm" className="w-full">
+                 <Link href={`/users/${connectedPartner.id}`} passHref className="block hover:bg-accent/20 p-2 rounded-md transition-colors -m-2">
+                    <div className="flex items-center gap-3 mb-3">
+                    <Avatar className="h-12 w-12 border-2 border-primary">
+                        <AvatarImage src={connectedPartner.avatarUrl || `https://avatar.vercel.sh/${connectedPartner.email}.png`} alt={connectedPartner.name} />
+                        <AvatarFallback>{connectedPartner.name.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="font-semibold text-foreground group-hover:text-primary">{connectedPartner.name}</p>
+                        <p className="text-sm text-muted-foreground">{connectedPartner.email}</p>
+                    </div>
+                    </div>
+                </Link>
+                <Button onClick={handleDisconnectPartner} variant="outline" size="sm" className="w-full mt-1">
                   <LogOut className="mr-2 h-4 w-4" /> Disconnect Partner
                 </Button>
               </div>
@@ -375,5 +377,3 @@ export default function PlandoCouplesPage() {
     </div>
   );
 }
-
-    

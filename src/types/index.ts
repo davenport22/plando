@@ -1,5 +1,4 @@
 
-
 export interface User {
   id: string;
   name: string;
@@ -126,6 +125,8 @@ export const MOCK_USER_PARTNER_JULIA: UserProfile = {
 };
 
 export const MOCK_POTENTIAL_PARTNERS: UserProfile[] = [MOCK_USER_PARTNER_1, MOCK_USER_PARTNER_2, MOCK_USER_PARTNER_JULIA];
+
+export const ALL_MOCK_USERS: UserProfile[] = [MOCK_USER_PROFILE, ...MOCK_POTENTIAL_PARTNERS];
 
 
 export const MOCK_TRIPS: Trip[] = [
@@ -449,5 +450,3 @@ declare module 'react' {
   }
 }
 
-
-    

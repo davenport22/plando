@@ -28,24 +28,26 @@ const AppHeader = () => {
   }, [pathname]);
   
   const isAuthPage = pathname === '/login' || pathname === '/register';
-  const isProfilePage = pathname === '/profile' || pathname.startsWith('/profile/');
-  const isSettingsPage = pathname === '/settings';
   
-  const showMyTripsButton = currentModule.id === 'travel' && !isAuthPage && !isProfilePage && !isSettingsPage;
+  // Check if the current module determined by getModuleByPath is one of the main application modules (not global)
+  // and specifically if it's the 'travel' module for showing "My Trips".
+  // Global pages like /profile, /settings, /users/[id] will have currentModule.id set by getModuleByPath.
+  const showMyTripsButton = currentModule.id === 'travel' && !currentModule.isGlobal && !isAuthPage;
 
   let displayModuleName = currentModule.displayName; 
   let displayModuleIcon = currentModule.Icon;
   let displayBasePath = currentModule.path;
 
-  if (isProfilePage) {
-    displayModuleName = "My Profile";
-    displayModuleIcon = UserIcon; 
-    displayBasePath = "/profile";
-  } else if (isSettingsPage) {
-    displayModuleName = "Settings";
-    displayModuleIcon = SettingsIcon; 
-    displayBasePath = "/settings";
+  // If it's a global page like profile or settings, use its specific path for the logo link
+  if (currentModule.isGlobal) {
+     // For /users/[userId], the base path is /users, but clicking logo should ideally go to a sensible default or stay.
+     // For simplicity, let's keep displayBasePath as currentModule.path for global modules.
+     // This means clicking "My Profile" logo on /profile/edit will go to /profile.
+     // Clicking "User Profile" logo on /users/some-id will link to /users (which might not be a page, consider this UX).
+     // A better UX for /users/[id] logo might be to link to '/' or the couples page if context is available.
+     // For now, it links to currentModule.path.
   }
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -63,7 +65,7 @@ const AppHeader = () => {
               <DropdownMenuContent align="start" className="w-56">
                 <DropdownMenuLabel>Plando Suite</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {plandoModules.map((module) => (
+                {plandoModules.filter(m => !m.isGlobal || m.id === 'profile' || m.id === 'settings').map((module) => ( // Filter out 'userProfileView' from dropdown
                   <DropdownMenuItem key={module.id} asChild data-active={module.id === currentModule.id}>
                     <Link href={module.path} className="flex items-center">
                       <module.Icon className="mr-2 h-4 w-4" />

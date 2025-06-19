@@ -1,5 +1,5 @@
 
-import { PlaneTakeoff, Users, Sparkles, Heart, type LucideIcon } from 'lucide-react';
+import { PlaneTakeoff, Users, Sparkles, Heart, Settings, User as UserIcon, type LucideIcon } from 'lucide-react';
 
 export interface PlandoThemeColors {
   background: string;
@@ -30,10 +30,56 @@ export interface PlandoModuleConfig {
   displayName: string; // e.g., "Travel", "Friends"
   path: string;
   Icon: LucideIcon;
-  themeClass: string;
-  light: PlandoThemeColors;
-  dark: PlandoThemeColors;
+  themeClass?: string; // Optional: not all modules need a specific theme class if they use default
+  light?: PlandoThemeColors; // Optional: only for modules with distinct themes
+  dark?: PlandoThemeColors; // Optional: only for modules with distinct themes
+  isGlobal?: boolean; // Indicates if it's a global page like Profile/Settings
 }
+
+const defaultTravelThemeLight: PlandoThemeColors = { 
+  background: "208 100% 97%",
+  foreground: "208 50% 30%",
+  card: "0 0% 100%",
+  cardForeground: "208 50% 30%",
+  popover: "0 0% 100%",
+  popoverForeground: "208 50% 30%",
+  primary: "197 71% 73%",
+  primaryForeground: "0 0% 100%",
+  secondary: "197 70% 83%",
+  secondaryForeground: "197 50% 25%",
+  muted: "208 70% 94%",
+  mutedForeground: "208 40% 50%",
+  accent: "180 65% 81%",
+  accentForeground: "180 50% 25%",
+  destructive: "0 84.2% 60.2%",
+  destructiveForeground: "0 0% 98%",
+  border: "208 60% 90%",
+  input: "0 0% 100%",
+  ring: "197 71% 68%",
+};
+
+const defaultTravelThemeDark: PlandoThemeColors = { 
+  background: "208 30% 10%",
+  foreground: "208 80% 90%",
+  card: "208 30% 15%",
+  cardForeground: "208 80% 90%",
+  popover: "208 30% 15%",
+  popoverForeground: "208 80% 90%",
+  primary: "197 71% 78%",
+  primaryForeground: "197 100% 10%",
+  secondary: "197 70% 60%",
+  secondaryForeground: "208 80% 90%",
+  muted: "208 30% 20%",
+  mutedForeground: "208 60% 70%",
+  accent: "180 60% 51%",
+  accentForeground: "180 80% 90%",
+  destructive: "0 70% 50%",
+  destructiveForeground: "0 0% 98%",
+  border: "208 30% 25%",
+  input: "208 30% 20%",
+  ring: "197 71% 73%",
+};
+
 
 export const plandoModules: PlandoModuleConfig[] = [
   {
@@ -42,49 +88,9 @@ export const plandoModules: PlandoModuleConfig[] = [
     displayName: 'Travel',
     path: '/',
     Icon: PlaneTakeoff,
-    themeClass: 'theme-plando-travel',
-    light: { 
-      background: "208 100% 97%",
-      foreground: "208 50% 30%",
-      card: "0 0% 100%",
-      cardForeground: "208 50% 30%",
-      popover: "0 0% 100%",
-      popoverForeground: "208 50% 30%",
-      primary: "197 71% 73%",
-      primaryForeground: "0 0% 100%",
-      secondary: "197 70% 83%",
-      secondaryForeground: "197 50% 25%",
-      muted: "208 70% 94%",
-      mutedForeground: "208 40% 50%",
-      accent: "180 65% 81%",
-      accentForeground: "180 50% 25%",
-      destructive: "0 84.2% 60.2%",
-      destructiveForeground: "0 0% 98%",
-      border: "208 60% 90%",
-      input: "0 0% 100%",
-      ring: "197 71% 68%",
-    },
-    dark: { 
-      background: "208 30% 10%",
-      foreground: "208 80% 90%",
-      card: "208 30% 15%",
-      cardForeground: "208 80% 90%",
-      popover: "208 30% 15%",
-      popoverForeground: "208 80% 90%",
-      primary: "197 71% 78%",
-      primaryForeground: "197 100% 10%",
-      secondary: "197 70% 60%",
-      secondaryForeground: "208 80% 90%",
-      muted: "208 30% 20%",
-      mutedForeground: "208 60% 70%",
-      accent: "180 60% 51%",
-      accentForeground: "180 80% 90%",
-      destructive: "0 70% 50%",
-      destructiveForeground: "0 0% 98%",
-      border: "208 30% 25%",
-      input: "208 30% 20%",
-      ring: "197 71% 73%",
-    }
+    themeClass: 'theme-plando-travel', // This is the default theme in globals.css via :root
+    light: defaultTravelThemeLight,
+    dark: defaultTravelThemeDark,
   },
   {
     id: 'friends',
@@ -236,28 +242,74 @@ export const plandoModules: PlandoModuleConfig[] = [
       ring: "320 60% 70%",
     }
   },
+  // Global Pages (use default Plando Travel theme)
+  {
+    id: 'profile',
+    name: 'My Profile', // Name for display in header
+    displayName: 'My Profile',
+    path: '/profile',
+    Icon: UserIcon,
+    isGlobal: true,
+    // themeClass: 'theme-plando-travel', // Uses default
+    light: defaultTravelThemeLight,
+    dark: defaultTravelThemeDark,
+  },
+  {
+    id: 'settings',
+    name: 'Settings', // Name for display in header
+    displayName: 'Settings',
+    path: '/settings',
+    Icon: Settings,
+    isGlobal: true,
+    // themeClass: 'theme-plando-travel', // Uses default
+    light: defaultTravelThemeLight,
+    dark: defaultTravelThemeDark,
+  },
+  {
+    id: 'userProfileView',
+    name: 'User Profile', // Generic name for viewing other users
+    displayName: 'User Profile',
+    path: '/users', // Base path for matching /users/[userId]
+    Icon: UserIcon,
+    isGlobal: true,
+    // themeClass: 'theme-plando-travel', // Uses default
+    light: defaultTravelThemeLight,
+    dark: defaultTravelThemeDark,
+  }
 ];
 
-// Utility to find module by path prefix
-// Ensures that a path like "/plando-friends/settings" correctly maps to "Plando Friends"
-// and "/" maps to "Plando Travel".
 export const getModuleByPath = (pathname: string): PlandoModuleConfig => {
-  const sortedModules = [...plandoModules].sort((a, b) => {
-    // Prioritize exact matches or longer paths
-    if (a.path === pathname) return -1;
-    if (b.path === pathname) return 1;
-    return b.path.length - a.path.length;
-  });
+  const defaultModule = plandoModules.find(m => m.id === 'travel')!;
 
-  for (const module of sortedModules) {
-    if (module.path === '/' && pathname === '/') {
-      return module;
-    }
-    if (module.path !== '/' && pathname.startsWith(module.path)) {
-      return module;
-    }
+  // Exact matches first
+  const exactMatch = plandoModules.find(module => module.path === pathname && module.path !== '/');
+  if (exactMatch) {
+    return exactMatch;
   }
-  return plandoModules.find(m => m.id === 'travel')!; // Default to Plando Travel
-};
 
-    
+  // Check for global page prefixes like /profile, /settings, /users/
+  const globalModuleMatch = plandoModules.find(module => 
+    module.isGlobal && module.path !== '/' && pathname.startsWith(module.path)
+  );
+  if (globalModuleMatch) {
+    return globalModuleMatch;
+  }
+  
+  // Check for other module prefixes (excluding global ones already checked and root)
+  const prefixMatch = plandoModules
+    .filter(module => !module.isGlobal && module.path !== '/')
+    .sort((a, b) => b.path.length - a.path.length) // Sort by path length to match more specific paths first
+    .find(module => pathname.startsWith(module.path));
+
+  if (prefixMatch) {
+    return prefixMatch;
+  }
+  
+  // If on root path "/", return the travel module
+  if (pathname === '/') {
+    return defaultModule;
+  }
+
+  // Fallback to default (travel) for any other unmatched paths (e.g. /trips/new, /trips/[id])
+  return defaultModule;
+};
