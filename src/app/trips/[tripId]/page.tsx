@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Trip, Activity, Itinerary, ActivityInput } from '@/types';
-import { MOCK_TRIPS, MOCK_SUGGESTED_ACTIVITIES_PARIS } from '@/types';
+import { MOCK_TRIPS, MOCK_DESTINATION_ACTIVITIES } from '@/types'; // Updated import
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
 import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
@@ -79,7 +79,9 @@ export default function TripDetailPage() {
       if (formattedTrip.startDate && formattedTrip.endDate) {
         setTripDuration(calculateTripDuration(formattedTrip.startDate, formattedTrip.endDate));
       }
-      const initialActivities = MOCK_SUGGESTED_ACTIVITIES_PARIS.map(act => ({ ...act, tripId, isLiked: undefined }));
+      // Get activities based on destination
+      const destinationActivities = MOCK_DESTINATION_ACTIVITIES[currentTrip.destination] || [];
+      const initialActivities = destinationActivities.map(act => ({ ...act, tripId, isLiked: undefined }));
       setUserActivities(initialActivities);
     } else {
       toast({ title: "Trip not found", variant: "destructive" });
@@ -128,7 +130,7 @@ export default function TripDetailPage() {
       id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       tripId,
       isLiked: undefined, 
-      imageUrl: "https://placehold.co/300x200.png",
+      imageUrl: "https://placehold.co/300x200.png", // Default placeholder for custom activities
       likes: 0,
       dislikes: 0,
     };

@@ -91,14 +91,24 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
   };
 
   let imageHint = "activity travel"; // Default hint
-  if (activity.name.toLowerCase().includes("eiffel")) {
+  const activityNameLower = activity.name.toLowerCase();
+
+  if (activityNameLower.includes("eiffel")) {
     imageHint = "eiffel tower";
-  } else if (activity.name.toLowerCase().includes("louvre")) {
+  } else if (activityNameLower.includes("louvre")) {
     imageHint = "louvre museum";
-  } else if (activity.name.toLowerCase().includes("seine")) {
+  } else if (activityNameLower.includes("seine")) {
     imageHint = "seine river";
-  } else if (activity.name.toLowerCase().includes("montmartre")) {
+  } else if (activityNameLower.includes("montmartre")) {
     imageHint = "montmartre paris";
+  } else if (activityNameLower.includes("shibuya")) {
+    imageHint = "shibuya crossing";
+  } else if (activityNameLower.includes("senso-ji")) {
+    imageHint = "sensoji temple";
+  } else if (activityNameLower.includes("skytree")) {
+    imageHint = "tokyo skytree";
+  } else if (activityNameLower.includes("tsukiji")) {
+    imageHint = "tsukiji market";
   }
 
 
