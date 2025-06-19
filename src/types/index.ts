@@ -87,7 +87,7 @@ export const MOCK_TRIPS: Trip[] = [
     endDate: '2024-09-17',
     ownerId: 'user1',
     participantIds: ['user1', 'user2'],
-    imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwYXJpc3xlbnwwfHx8fDE3NTAyNzQzMTh8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     latitude: 48.8566,
     longitude: 2.3522,
     placeId: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ',
@@ -100,7 +100,7 @@ export const MOCK_TRIPS: Trip[] = [
     endDate: '2024-11-15',
     ownerId: 'user2',
     participantIds: ['user1', 'user2'],
-    imageUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHx0b2t5b3xlbnwwfHx8fDE3NTAzMTQwNDB8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     latitude: 35.6895,
     longitude: 139.6917,
     placeId: 'ChIJXSModoWLGGARILWiCfeuYSo',
@@ -113,7 +113,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Eiffel Tower Visit', 
     location: 'Eiffel Tower, Champ de Mars', 
     duration: 2.5, 
-    imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxlZmZlbCUyMHRvd2VyfGVufDB8fHx8fDE3MTg3OTMwMDZ8MA&ixlib=rb-4.1.0&q=80&w=1080', 
+    imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80', 
     description: 'Ascend the iconic Eiffel Tower for breathtaking panoramic views of Paris.' 
   },
   { 
@@ -121,7 +121,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Louvre Museum Tour', 
     location: 'Louvre Museum, Rue de Rivoli', 
     duration: 4, 
-    imageUrl: 'https://images.unsplash.com/photo-1597920188905-4d906630277c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxsb3V2cmV8ZW58MHx8fHwxNzE4NzkyMTA4fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1597920188905-4d906630277c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     description: 'Explore world-renowned art collections, including the Mona Lisa and Venus de Milo.' 
   },
   { 
@@ -129,7 +129,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Seine River Cruise', 
     location: 'Seine River Banks', 
     duration: 1.5, 
-    imageUrl: 'https://images.unsplash.com/photo-1550355291-bbee04a92027?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzZWluZSUyMHJpdmVyJTIwY3J1aXNlfGVufDB8fHx8fDE3MTg3OTIxNDF8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1550355291-bbee04a92027?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     description: 'Enjoy a relaxing boat tour along the Seine, passing famous landmarks.' 
   },
   { 
@@ -137,7 +137,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Montmartre & Sacré-Cœur', 
     location: 'Montmartre District', 
     duration: 3, 
-    imageUrl: 'https://images.unsplash.com/photo-1569229074200-158480730801?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtb250bWFydHJlJTIwcGFyaXN8ZW58MHx8fHwxNzE4NzkyMTcyfDA&ixlib=rb-4.1.0&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1569229074200-158480730801?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     description: 'Discover the artistic charm of Montmartre and visit the stunning Sacré-Cœur Basilica.' 
   },
 ];
@@ -148,7 +148,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     name: 'Shibuya Crossing Experience',
     location: 'Shibuya Scramble Crossing',
     duration: 1.5,
-    imageUrl: 'https://images.unsplash.com/photo-1532236234562-0141e5a29a20?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzaGlib3lhJTIwY3Jvc3Npbmd8ZW58MHx8fHwxNzE4NzkyMjg5fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1532236234562-0141e5a29a20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     description: 'Witness the iconic organized chaos of the world\'s busiest pedestrian crossing.'
   },
   {
@@ -156,7 +156,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     name: 'Senso-ji Temple Visit',
     location: 'Asakusa',
     duration: 2,
-    imageUrl: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzZW5zbyUyMGppJTIwdGVtcGxlfGVufDB8fHx8fDE3MTg3OTIzMjB8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     description: 'Explore Tokyo\'s oldest temple, a vibrant cultural and spiritual hub.'
   },
   {
@@ -164,7 +164,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     name: 'Tokyo Skytree Views',
     location: 'Tokyo Skytree',
     duration: 2.5,
-    imageUrl: 'https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHx0b2t5byUyMHNreXRyZWV8ZW58MHx8fHwxNzE4NzkyMzQ3fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     description: 'Get stunning panoramic views of Tokyo from one of the world\'s tallest towers.'
   },
   {
@@ -172,7 +172,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     name: 'Tsukiji Outer Market Food Tour',
     location: 'Tsukiji Outer Market',
     duration: 3,
-    imageUrl: 'https://images.unsplash.com/photo-1573969708938-370990395aa0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHx0c3VraWppJTIwbWFya2V0fGVufDB8fHx8fDE3MTg3OTIzNzl8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1573969708938-370990395aa0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     description: 'Indulge in fresh seafood and local delicacies at this bustling market.'
   }
 ];
@@ -182,3 +182,5 @@ export const MOCK_DESTINATION_ACTIVITIES: Record<string, Activity[]> = {
   "Tokyo, Japan": MOCK_SUGGESTED_ACTIVITIES_TOKYO,
 };
 
+
+    
