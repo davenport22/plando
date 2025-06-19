@@ -121,7 +121,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
     name: 'Louvre Museum Tour', 
     location: 'Louvre Museum, Rue de Rivoli', 
     duration: 4, 
-    imageUrl: 'https://images.unsplash.com/photo-1597920188905-4d906630277c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1587648415693-4a5362b2ce41?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxsb3V2cmV8ZW58MHx8fHwxNzUwMzQ0ODUxfDA&ixlib=rb-4.1.0&q=80&w=1080',
     description: 'Explore world-renowned art collections, including the Mona Lisa and Venus de Milo.' 
   },
   { 
