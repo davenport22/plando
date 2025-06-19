@@ -29,17 +29,22 @@ export interface Trip {
 
 export interface Activity {
   id: string;
-  tripId?: string; 
+  tripId?: string;
   name: string;
   description?: string;
   location: string;
   duration: number; // in hours
   isLiked?: boolean;
-  imageUrls: string[]; // Changed from imageUrl to imageUrls
+  imageUrls: string[];
   category?: 'Must Do' | 'Recommended' | 'Optional';
   startTime?: string; // HH:mm
-  likes?: number; 
-  dislikes?: number; 
+  likes?: number;
+  dislikes?: number;
+  // Fields that can be enhanced by AI
+  suggestedDurationHours?: number;
+  bestTimeToVisit?: string;
+  estimatedPriceRange?: string;
+  address?: string;
 }
 
 // For AI Flow input
@@ -108,50 +113,50 @@ export const MOCK_TRIPS: Trip[] = [
 ];
 
 export const MOCK_SUGGESTED_ACTIVITIES_PARIS: Activity[] = [
-  { 
-    id: 'activity-paris-1', 
-    name: 'Eiffel Tower Visit', 
-    location: 'Eiffel Tower, Champ de Mars', 
-    duration: 2.5, 
+  {
+    id: 'activity-paris-1',
+    name: 'Eiffel Tower Visit',
+    location: 'Eiffel Tower, Champ de Mars',
+    duration: 2.5,
     imageUrls: [
       'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
       'https://images.unsplash.com/photo-1543349689-9a4d426bee8e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
       'https://images.unsplash.com/photo-1510125960040-a488747b040b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
-    ], 
-    description: 'Ascend the iconic Eiffel Tower for breathtaking panoramic views of Paris. Consider booking tickets in advance to skip long queues, especially during peak season. The evening light show is also a must-see.' 
+    ],
+    description: 'Ascend the iconic Eiffel Tower for breathtaking panoramic views of Paris. Consider booking tickets in advance to skip long queues, especially during peak season. The evening light show is also a must-see.'
   },
-  { 
-    id: 'activity-paris-2', 
-    name: 'Louvre Museum Tour', 
-    location: 'Louvre Museum, Rue de Rivoli', 
-    duration: 4, 
+  {
+    id: 'activity-paris-2',
+    name: 'Louvre Museum Tour',
+    location: 'Louvre Museum, Rue de Rivoli',
+    duration: 4,
     imageUrls: [
       'https://images.unsplash.com/photo-1587648415693-4a5362b2ce41?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxsb3V2cmV8ZW58MHx8fHwxNzUwMzQ0ODUxfDA&ixlib=rb-4.1.0&q=80&w=1080',
       'https://images.unsplash.com/photo-1590101152024-1a0792027179?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Explore world-renowned art collections, including the Mona Lisa and Venus de Milo. The museum is vast; plan your visit to focus on specific wings or masterpieces to make the most of your time.' 
+    description: 'Explore world-renowned art collections, including the Mona Lisa and Venus de Milo. The museum is vast; plan your visit to focus on specific wings or masterpieces to make the most of your time.'
   },
-  { 
-    id: 'activity-paris-3', 
-    name: 'Seine River Cruise', 
-    location: 'Seine River Banks', 
-    duration: 1.5, 
+  {
+    id: 'activity-paris-3',
+    name: 'Seine River Cruise',
+    location: 'Seine River Banks',
+    duration: 1.5,
     imageUrls: [
       'https://images.unsplash.com/photo-1504896287989-ff1fbde00199?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzZWluZSUyMHJpdmVyfGVufDB8fHx8MTc1MDM0NDkwOXww&ixlib=rb-4.1.0&q=80&w=1080',
       'https://images.unsplash.com/photo-1558380733-e6a30704f782?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Enjoy a relaxing boat tour along the Seine, passing famous landmarks like Notre Dame Cathedral, Musée d\'Orsay, and the Louvre. Evening cruises offer a magical view of the illuminated city.' 
+    description: 'Enjoy a relaxing boat tour along the Seine, passing famous landmarks like Notre Dame Cathedral, Musée d\'Orsay, and the Louvre. Evening cruises offer a magical view of the illuminated city.'
   },
-  { 
-    id: 'activity-paris-4', 
-    name: 'Montmartre & Sacré-Cœur', 
-    location: 'Montmartre District', 
-    duration: 3, 
+  {
+    id: 'activity-paris-4',
+    name: 'Montmartre & Sacré-Cœur',
+    location: 'Montmartre District',
+    duration: 3,
     imageUrls: [
       'https://images.unsplash.com/photo-1702375308488-de52189a0ff3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtb250bWFydHJlJTIwc2FjcmV8ZW58MHx8fHwxNzUwMzQ0OTU5fDA&ixlib=rb-4.1.0&q=80&w=1080',
       'https://images.unsplash.com/photo-1579178510800-5119ac53a276?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
-    description: 'Discover the artistic charm of Montmartre, wander through its cobblestone streets, see artists at Place du Tertre, and visit the stunning Sacré-Cœur Basilica for panoramic city views.' 
+    description: 'Discover the artistic charm of Montmartre, wander through its cobblestone streets, see artists at Place du Tertre, and visit the stunning Sacré-Cœur Basilica for panoramic city views.'
   },
 ];
 
@@ -206,3 +211,4 @@ export const MOCK_DESTINATION_ACTIVITIES: Record<string, Activity[]> = {
   "Paris, France": MOCK_SUGGESTED_ACTIVITIES_PARIS,
   "Tokyo, Japan": MOCK_SUGGESTED_ACTIVITIES_TOKYO,
 };
+
