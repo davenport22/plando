@@ -1,13 +1,22 @@
-import { PlaneTakeoff } from 'lucide-react';
+
+import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 
-const Logo = () => {
+interface LogoProps {
+  moduleName: string;
+  ModuleIcon: LucideIcon;
+  basePath?: string; // To link back to the module's base path
+}
+
+const Logo = ({ moduleName, ModuleIcon, basePath = "/" }: LogoProps) => {
   return (
-    <Link href="/" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
-      <PlaneTakeoff className="h-8 w-8" />
-      <span className="text-2xl font-headline font-semibold">Plando Travel</span>
+    <Link href={basePath} className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
+      <ModuleIcon className="h-8 w-8" />
+      <span className="text-2xl font-headline font-semibold">{moduleName}</span>
     </Link>
   );
 };
 
 export default Logo;
+
+    
