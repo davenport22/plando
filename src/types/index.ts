@@ -167,8 +167,8 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     location: 'Shibuya Scramble Crossing',
     duration: 1.5,
     imageUrls: [
-      'https://images.unsplash.com/photo-1604789156313-69b0a5cc5442?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
+      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80', // Replaced broken link
+      'https://images.unsplash.com/photo-1604789156313-69b0a5cc5442?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
     description: 'Witness the iconic organized chaos of the world\'s busiest pedestrian crossing. Grab a coffee at a nearby cafe for a bird\'s-eye view.'
   },
@@ -212,4 +212,65 @@ export const MOCK_DESTINATION_ACTIVITIES: Record<string, Activity[]> = {
   "Tokyo, Japan": MOCK_SUGGESTED_ACTIVITIES_TOKYO,
 };
 
-    
+export const MOCK_LOCAL_ACTIVITIES: Activity[] = [
+  {
+    id: 'local-activity-1',
+    name: 'Explore Central Park',
+    location: 'New York, USA', // Assuming a generic "local" context
+    duration: 3,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'A vast green oasis in the heart of the city, perfect for walks, picnics, and people-watching.',
+    suggestedDurationHours: 3,
+    bestTimeToVisit: "Daytime, especially weekends",
+    estimatedPriceRange: "Free",
+    address: "Central Park, New York, NY",
+  },
+  {
+    id: 'local-activity-2',
+    name: 'Visit the Local Museum',
+    location: 'Anytown, USA',
+    duration: 2,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Discover local history and art collections. A great way to spend an afternoon.',
+    suggestedDurationHours: 2,
+    bestTimeToVisit: "Afternoons",
+    estimatedPriceRange: "$10-20",
+    address: "123 Main Street, Anytown",
+  },
+  {
+    id: 'local-activity-3',
+    name: 'Hike the River Trail',
+    location: 'Green Valley',
+    duration: 2.5,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Enjoy scenic views and fresh air on this popular local hiking trail along the river.',
+    suggestedDurationHours: 2.5,
+    bestTimeToVisit: "Mornings or late afternoons",
+    estimatedPriceRange: "Free",
+    address: "River Trailhead, Green Valley",
+  },
+  {
+    id: 'local-activity-4',
+    name: 'Downtown Coffee Shop Hop',
+    location: 'City Center',
+    duration: 2,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Discover the best local coffee shops and enjoy unique brews and atmospheres.',
+    suggestedDurationHours: 2,
+    bestTimeToVisit: "Anytime",
+    estimatedPriceRange: "$5-15 per coffee",
+    address: "Various locations, Downtown",
+  },
+  {
+    id: 'local-activity-5',
+    name: 'Saturday Farmers Market',
+    location: 'Town Square',
+    duration: 1.5,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Support local vendors and find fresh produce, crafts, and baked goods.',
+    suggestedDurationHours: 1.5,
+    bestTimeToVisit: "Saturday mornings",
+    estimatedPriceRange: "Varies",
+    address: "Town Square Park",
+  }
+];
