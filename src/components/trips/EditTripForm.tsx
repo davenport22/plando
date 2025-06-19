@@ -59,10 +59,9 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
   const endDate = form.watch("endDate");
 
   useEffect(() => {
-    // Initialize duration display when component mounts or currentTrip changes
     if (currentTrip.startDate && currentTrip.endDate) {
       const initialDuration = calculateTripDuration(
-        currentTrip.startDate, // These are already strings
+        currentTrip.startDate, 
         currentTrip.endDate
       );
       setDurationDisplay(initialDuration);
@@ -71,7 +70,6 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
 
 
   useEffect(() => {
-    // Update duration display when form dates change
     if (startDate && endDate && endDate >= startDate) {
       const duration = calculateTripDuration(
         format(startDate, "yyyy-MM-dd"),
@@ -99,12 +97,19 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
   async function handleFormSubmit(data: EditTripFormValues) {
     setIsLoading(true);
     
+    // Simulate updating geo data if destination changed, or retain existing
+    const destinationChanged = data.destination !== currentTrip.destination;
+    const updatedLatitude = destinationChanged && data.destination ? 34.0522 : (data.latitude ?? currentTrip.latitude); // Example: LA Latitude
+    const updatedLongitude = destinationChanged && data.destination ? -118.2437 : (data.longitude ?? currentTrip.longitude); // Example: LA Longitude
+    const updatedPlaceId = destinationChanged && data.destination ? "mock-place-id-456" : (data.placeId ?? currentTrip.placeId); // Example Place ID
+    
     const updatedData = {
         ...data,
-        latitude: data.destination ? (data.latitude ?? 34.0522) : undefined, 
-        longitude: data.destination ? (data.longitude ?? -118.2437) : undefined,
-        placeId: data.destination ? (data.placeId ?? "mock-place-id-456") : undefined,
+        latitude: updatedLatitude,
+        longitude: updatedLongitude,
+        placeId: updatedPlaceId,
     };
+
     await onSubmit({ 
         ...updatedData,
         startDate: format(updatedData.startDate, 'yyyy-MM-dd'),

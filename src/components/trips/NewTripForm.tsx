@@ -21,6 +21,9 @@ const newTripFormSchema = z.object({
   destination: z.string().min(2, "Destination must be at least 2 characters.").max(100, "Destination must be at most 100 characters."),
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  placeId: z.string().optional(),
 }).refine(data => data.endDate >= data.startDate, {
   message: "End date cannot be before start date.",
   path: ["endDate"],
@@ -65,9 +68,10 @@ export function NewTripForm() {
       ...data,
       startDate: format(data.startDate, "yyyy-MM-dd"),
       endDate: format(data.endDate, "yyyy-MM-dd"),
-      latitude: data.destination ? 40.7128 : undefined, 
-      longitude: data.destination ? -74.0060 : undefined, 
-      placeId: data.destination ? "mock-place-id-123" : undefined,
+      // Simulate getting geo data if a destination is provided
+      latitude: data.destination ? 40.7128 : undefined, // Example: New York Latitude
+      longitude: data.destination ? -74.0060 : undefined, // Example: New York Longitude
+      placeId: data.destination ? "mock-place-id-123" : undefined, // Example Place ID
     };
 
     console.log("New Trip Data:", tripDataWithGeo);
