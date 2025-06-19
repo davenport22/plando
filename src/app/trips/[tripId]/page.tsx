@@ -34,15 +34,15 @@ const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null
     days: aiOutput.itinerary.map((day: any) => ({
       date: day.date,
       activities: day.activities.map((act: any, index: number) => ({
-        id: `${act.name.replace(/\s+/g, '-')}-${index}`, // Generate a simple ID
+        id: `${act.name.replace(/\s+/g, '-')}-${index}`, 
         name: act.name,
         location: act.location,
         duration: act.duration,
         startTime: act.startTime,
         category: act.category,
         description: act.description || '',
-        likes: act.likes !== undefined ? act.likes : 0, // Map likes, default to 0
-        dislikes: act.dislikes !== undefined ? act.dislikes : 0, // Map dislikes, default to 0
+        likes: act.likes !== undefined ? act.likes : 0,
+        dislikes: act.dislikes !== undefined ? act.dislikes : 0,
       })),
     })),
   };
@@ -62,6 +62,9 @@ export default function TripDetailPage() {
   const [isLoadingItinerary, setIsLoadingItinerary] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [tripDuration, setTripDuration] = useState<string>("");
+
+  const [activitiesAtLastGeneration, setActivitiesAtLastGeneration] = useState<Activity[] | null>(null);
+  const [hasActivityChangesSinceLastGen, setHasActivityChangesSinceLastGen] = useState<boolean>(true);
 
 
   useEffect(() => {
@@ -90,6 +93,26 @@ export default function TripDetailPage() {
     }
   }, [trip?.startDate, trip?.endDate]);
 
+  useEffect(() => {
+    if (generatedItinerary && activitiesAtLastGeneration) {
+      const currentActivityStates = userActivities
+        .map(a => ({ id: a.id, isLiked: a.isLiked === undefined ? null : a.isLiked }))
+        .sort((a, b) => a.id.localeCompare(b.id));
+      
+      const prevActivityStates = activitiesAtLastGeneration
+        .map(a => ({ id: a.id, isLiked: a.isLiked === undefined ? null : a.isLiked }))
+        .sort((a, b) => a.id.localeCompare(b.id));
+
+      if (JSON.stringify(currentActivityStates) !== JSON.stringify(prevActivityStates)) {
+        setHasActivityChangesSinceLastGen(true);
+      } else {
+        setHasActivityChangesSinceLastGen(false);
+      }
+    } else {
+      setHasActivityChangesSinceLastGen(true); 
+    }
+  }, [userActivities, generatedItinerary, activitiesAtLastGeneration]);
+
 
   const handleVote = (activityId: string, liked: boolean) => {
     setUserActivities(prevActivities =>
@@ -104,7 +127,7 @@ export default function TripDetailPage() {
       ...newActivityData,
       id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       tripId,
-      isLiked: undefined,
+      isLiked: undefined, 
       imageUrl: "https://placehold.co/300x200.png",
       likes: 0,
       dislikes: 0,
@@ -115,6 +138,16 @@ export default function TripDetailPage() {
 
   const handleGenerateItinerary = async () => {
     if (!trip) return;
+
+    if (generatedItinerary && !hasActivityChangesSinceLastGen) {
+       toast({
+          title: "No Itinerary Changes",
+          description: "No new votes or activities found since the last itinerary generation. Make some changes to update.",
+       });
+       setIsLoadingItinerary(false);
+       return;
+    }
+
     setIsLoadingItinerary(true);
 
     const activitiesInput: ActivityInput[] = userActivities
@@ -124,22 +157,27 @@ export default function TripDetailPage() {
         location: act.location,
         isLiked: act.isLiked === undefined ? false : !!act.isLiked, 
       }));
+    
+    const noActivitiesLiked = activitiesInput.filter(act => act.isLiked).length === 0;
+    const hasUnvotedItems = userActivities.some(act => act.isLiked === undefined);
 
-    if (activitiesInput.filter(act => act.isLiked).length === 0 && !generatedItinerary && userActivities.some(act => act.isLiked === undefined)) {
-       toast({ title: "No Voted Activities", description: "Please vote on some activities (like/dislike) before generating an itinerary, or add custom ones.", variant: "default" });
+    if (noActivitiesLiked && !generatedItinerary && hasUnvotedItems && userActivities.length > 0) {
+       toast({ title: "No Liked Activities", description: "Please like some activities, or vote on all suggested ones, before generating an itinerary.", variant: "default" });
        setIsLoadingItinerary(false);
        return;
     }
     
-    const finalActivitiesInput = activitiesInput.length > 0 ? activitiesInput : userActivities.map(act => ({
-        name: act.name,
-        duration: act.duration,
-        location: act.location,
-        isLiked: act.isLiked === undefined ? false : !!act.isLiked,
-    }));
+    if (activitiesInput.length === 0) {
+        toast({
+            title: "No Activities",
+            description: "Add or vote on some activities to generate an itinerary.",
+            variant: "destructive"
+        });
+        setIsLoadingItinerary(false);
+        return;
+    }
 
-
-    const result = await suggestItineraryAction(trip.id, finalActivitiesInput, trip.startDate, trip.endDate);
+    const result = await suggestItineraryAction(trip.id, activitiesInput, trip.startDate, trip.endDate);
 
     if ('error' in result) {
       toast({ title: "Error Generating Itinerary", description: result.error, variant: "destructive" });
@@ -147,7 +185,8 @@ export default function TripDetailPage() {
       const mappedItinerary = mapAiOutputToItinerary(result, trip.id);
       if (mappedItinerary) {
         setGeneratedItinerary(mappedItinerary);
-        toast({ title: generatedItinerary ? "Itinerary Updated!" : "Itinerary Generated!", description: "Your personalized trip itinerary is ready." });
+        setActivitiesAtLastGeneration(JSON.parse(JSON.stringify(userActivities))); // Deep copy
+        toast({ title: generatedItinerary && hasActivityChangesSinceLastGen ? "Itinerary Updated!" : "Itinerary Generated!", description: "Your personalized trip itinerary is ready." });
         setCurrentView('itinerary');
       } else {
         toast({ title: "Error Generating Itinerary", description: "Received invalid data from AI.", variant: "destructive" });
@@ -161,7 +200,6 @@ export default function TripDetailPage() {
 
     const formattedStartDate = updatedData.startDate instanceof Date ? format(updatedData.startDate, 'yyyy-MM-dd') : updatedData.startDate;
     const formattedEndDate = updatedData.endDate instanceof Date ? format(updatedData.endDate, 'yyyy-MM-dd') : updatedData.endDate;
-
 
     const updatedTrip = {
       ...trip,
@@ -192,7 +230,22 @@ export default function TripDetailPage() {
 
   const unvotedActivities = userActivities.filter(act => act.isLiked === undefined);
   const currentActivityToVote = unvotedActivities.length > 0 ? unvotedActivities[0] : null;
-  const votedActivitiesCount = userActivities.filter(act => act.isLiked !== undefined).length;
+  
+  const noActivitiesLikedForInitialGen = !generatedItinerary && userActivities.filter(a => a.isLiked === true).length === 0;
+  const hasUnvotedActivitiesForInitialGen = userActivities.some(act => act.isLiked === undefined);
+  const shouldPromptForInitialVote = noActivitiesLikedForInitialGen && hasUnvotedActivitiesForInitialGen && userActivities.length > 0;
+
+  const disableGenerateButton = isLoadingItinerary ||
+    shouldPromptForInitialVote ||
+    (!!generatedItinerary && !hasActivityChangesSinceLastGen);
+
+  let buttonHelperText = null;
+  if (shouldPromptForInitialVote) {
+    buttonHelperText = <p className="text-sm text-muted-foreground text-center mt-2">Please like some activities or finish voting to generate your initial itinerary.</p>;
+  } else if (!!generatedItinerary && !hasActivityChangesSinceLastGen) {
+    buttonHelperText = <p className="text-sm text-muted-foreground text-center mt-2">No new votes or activities. Make changes to update the itinerary.</p>;
+  }
+
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -232,7 +285,7 @@ export default function TripDetailPage() {
                 <ItineraryDisplay itinerary={generatedItinerary} />
                 <Button
                   onClick={handleGenerateItinerary}
-                  disabled={isLoadingItinerary || (votedActivitiesCount === 0 && !generatedItinerary && userActivities.length > 0) }
+                  disabled={disableGenerateButton}
                   className="w-full text-lg py-3 mt-6"
                   size="lg"
                 >
@@ -243,9 +296,7 @@ export default function TripDetailPage() {
                   )}
                   {generatedItinerary ? 'Update Itinerary' : 'Generate Itinerary'}
                 </Button>
-                 {(votedActivitiesCount === 0 && !generatedItinerary && userActivities.length > 0) && (
-                  <p className="text-sm text-muted-foreground text-center mt-2">Please vote on some activities first to generate an itinerary.</p>
-                )}
+                {buttonHelperText}
               </CardContent>
             </Card>
           )}
@@ -358,3 +409,4 @@ export default function TripDetailPage() {
     </div>
   );
 }
+
