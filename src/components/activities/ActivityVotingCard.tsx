@@ -95,17 +95,8 @@ export function ActivityVotingCard({ activity, onVote, onCardClick }: ActivityVo
     return 0;
   };
 
-  let imageHint = "activity travel"; 
-  const activityNameLower = activity.name.toLowerCase();
-
-  if (activityNameLower.includes("eiffel")) imageHint = "eiffel tower";
-  else if (activityNameLower.includes("louvre")) imageHint = "louvre museum";
-  else if (activityNameLower.includes("seine")) imageHint = "seine river";
-  else if (activityNameLower.includes("montmartre")) imageHint = "montmartre paris";
-  else if (activityNameLower.includes("shibuya")) imageHint = "shibuya crossing";
-  else if (activityNameLower.includes("senso-ji")) imageHint = "sensoji temple";
-  else if (activityNameLower.includes("skytree")) imageHint = "tokyo skytree";
-  else if (activityNameLower.includes("tsukiji")) imageHint = "tsukiji market";
+  // Ensure dataAiHint is passed to Image component
+  const imageHint = (activity as any).dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(" ") || "activity travel";
 
   const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 
     ? activity.imageUrls[0] 
@@ -163,4 +154,3 @@ export function ActivityVotingCard({ activity, onVote, onCardClick }: ActivityVo
     </Card>
   );
 }
-

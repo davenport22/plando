@@ -167,7 +167,7 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     location: 'Shibuya Scramble Crossing',
     duration: 1.5,
     imageUrls: [
-      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80', // Replaced broken link
+      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
       'https://images.unsplash.com/photo-1604789156313-69b0a5cc5442?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
     description: 'Witness the iconic organized chaos of the world\'s busiest pedestrian crossing. Grab a coffee at a nearby cafe for a bird\'s-eye view.'
@@ -212,65 +212,102 @@ export const MOCK_DESTINATION_ACTIVITIES: Record<string, Activity[]> = {
   "Tokyo, Japan": MOCK_SUGGESTED_ACTIVITIES_TOKYO,
 };
 
-export const MOCK_LOCAL_ACTIVITIES: Activity[] = [
+// --- Plando Meet Specific Mock Data ---
+const DEFAULT_MOCK_LOCAL_ACTIVITIES: Activity[] = [
   {
-    id: 'local-activity-1',
-    name: 'Explore Central Park',
-    location: 'New York, USA', // Assuming a generic "local" context
-    duration: 3,
-    imageUrls: ['https://placehold.co/400x250.png'],
-    description: 'A vast green oasis in the heart of the city, perfect for walks, picnics, and people-watching.',
-    suggestedDurationHours: 3,
-    bestTimeToVisit: "Daytime, especially weekends",
-    estimatedPriceRange: "Free",
-    address: "Central Park, New York, NY",
-  },
-  {
-    id: 'local-activity-2',
-    name: 'Visit the Local Museum',
-    location: 'Anytown, USA',
-    duration: 2,
-    imageUrls: ['https://placehold.co/400x250.png'],
-    description: 'Discover local history and art collections. A great way to spend an afternoon.',
-    suggestedDurationHours: 2,
-    bestTimeToVisit: "Afternoons",
-    estimatedPriceRange: "$10-20",
-    address: "123 Main Street, Anytown",
-  },
-  {
-    id: 'local-activity-3',
-    name: 'Hike the River Trail',
-    location: 'Green Valley',
-    duration: 2.5,
-    imageUrls: ['https://placehold.co/400x250.png'],
-    description: 'Enjoy scenic views and fresh air on this popular local hiking trail along the river.',
-    suggestedDurationHours: 2.5,
-    bestTimeToVisit: "Mornings or late afternoons",
-    estimatedPriceRange: "Free",
-    address: "River Trailhead, Green Valley",
-  },
-  {
-    id: 'local-activity-4',
-    name: 'Downtown Coffee Shop Hop',
-    location: 'City Center',
-    duration: 2,
-    imageUrls: ['https://placehold.co/400x250.png'],
-    description: 'Discover the best local coffee shops and enjoy unique brews and atmospheres.',
-    suggestedDurationHours: 2,
-    bestTimeToVisit: "Anytime",
-    estimatedPriceRange: "$5-15 per coffee",
-    address: "Various locations, Downtown",
-  },
-  {
-    id: 'local-activity-5',
-    name: 'Saturday Farmers Market',
-    location: 'Town Square',
+    id: 'local-activity-default-1',
+    name: 'City Park Stroll',
+    location: 'Local City Park',
     duration: 1.5,
     imageUrls: ['https://placehold.co/400x250.png'],
-    description: 'Support local vendors and find fresh produce, crafts, and baked goods.',
-    suggestedDurationHours: 1.5,
-    bestTimeToVisit: "Saturday mornings",
-    estimatedPriceRange: "Varies",
-    address: "Town Square Park",
-  }
+    description: 'Enjoy a refreshing walk or bike ride through the main city park.',
+    dataAiHint: "city park"
+  },
+  {
+    id: 'local-activity-default-2',
+    name: 'Neighborhood Cafe Visit',
+    location: 'Downtown Area',
+    duration: 1,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Discover a cozy local cafe and enjoy a cup of coffee or tea.',
+    dataAiHint: "cafe interior"
+  },
+  {
+    id: 'local-activity-default-3',
+    name: 'Community Art Gallery',
+    location: 'Arts District',
+    duration: 2,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Explore works by local artists at the community gallery.',
+    dataAiHint: "art gallery"
+  },
 ];
+
+const MOCK_VIENNA_ACTIVITIES: Activity[] = [
+  {
+    id: 'local-vienna-1',
+    name: 'Schönbrunn Palace Gardens Walk',
+    location: 'Schönbrunn Palace, Vienna',
+    duration: 2.5,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Wander through the magnificent gardens of the former imperial summer residence.',
+    suggestedDurationHours: 2.5,
+    bestTimeToVisit: "Spring or Summer mornings",
+    estimatedPriceRange: "Gardens mostly free, palace entry fee",
+    address: "Schönbrunner Schloßstraße 47, 1130 Wien",
+    dataAiHint: "schonbrunn palace"
+  },
+  {
+    id: 'local-vienna-2',
+    name: 'St. Stephen\'s Cathedral Visit',
+    location: 'Stephansplatz, Vienna',
+    duration: 1.5,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Visit the iconic St. Stephen\'s Cathedral, a masterpiece of Gothic architecture in the heart of Vienna.',
+    suggestedDurationHours: 1.5,
+    bestTimeToVisit: "Anytime, less crowded mornings",
+    estimatedPriceRange: "Free entry to main area, fees for towers/catacombs",
+    address: "Stephansplatz 3, 1010 Wien",
+    dataAiHint: "st stephens cathedral"
+  },
+  {
+    id: 'local-vienna-3',
+    name: 'Naschmarkt Food Exploration',
+    location: 'Naschmarkt, Vienna',
+    duration: 2,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Explore Vienna\'s most popular market, offering a variety of international foods, local produce, and vibrant stalls.',
+    suggestedDurationHours: 2,
+    bestTimeToVisit: "Late morning or lunchtime, Saturday for flea market",
+    estimatedPriceRange: "Varies (free to browse)",
+    address: "Naschmarkt, 1060 Wien",
+    dataAiHint: "naschmarkt vienna"
+  },
+  {
+    id: 'local-vienna-4',
+    name: 'Coffee at a Traditional Viennese Coffee House',
+    location: 'Inner Stadt, Vienna',
+    duration: 1,
+    imageUrls: ['https://placehold.co/400x250.png'],
+    description: 'Experience the unique culture of a traditional Viennese coffee house (Kaffeehaus).',
+    suggestedDurationHours: 1,
+    bestTimeToVisit: "Anytime",
+    estimatedPriceRange: "€5-€15 per person",
+    address: "Various locations, e.g., Cafe Central, Cafe Sacher",
+    dataAiHint: "viennese coffee house"
+  },
+];
+
+// MOCK_LOCAL_ACTIVITIES is now used as a fallback within MOCK_ACTIVITIES_BY_CITY
+export const MOCK_LOCAL_ACTIVITIES: Activity[] = DEFAULT_MOCK_LOCAL_ACTIVITIES;
+
+
+export const MOCK_ACTIVITIES_BY_CITY: Record<string, Activity[]> = {
+  "Vienna, Austria": MOCK_VIENNA_ACTIVITIES,
+  "Default": DEFAULT_MOCK_LOCAL_ACTIVITIES,
+};
+declare module 'react' {
+  interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
+    dataAiHint?: string;
+  }
+}
