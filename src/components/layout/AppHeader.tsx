@@ -21,8 +21,6 @@ import type { PlandoModuleConfig } from '@/config/plandoModules';
 
 const AppHeader = () => {
   const pathname = usePathname();
-  // For theming and underlying context, currentModule is determined by getModuleByPath.
-  // For /profile or /settings, this will default to 'travel'.
   const [currentModule, setCurrentModule] = useState<PlandoModuleConfig>(getModuleByPath(pathname));
 
   useEffect(() => {
@@ -33,11 +31,11 @@ const AppHeader = () => {
   const isProfilePage = pathname === '/profile' || pathname.startsWith('/profile/');
   const isSettingsPage = pathname === '/settings';
   
-  // "My Trips" button shows if the module context is 'travel' (which is default for global pages)
-  const showMyTripsButton = currentModule.id === 'travel' && !isAuthPage;
+  // "My Trips" button shows if the module context is 'travel' AND not on global pages
+  const showMyTripsButton = currentModule.id === 'travel' && !isAuthPage && !isProfilePage && !isSettingsPage;
 
   // Determine display properties for the main logo
-  let displayModuleName = currentModule.name;
+  let displayModuleName = currentModule.displayName; // Use displayName for a shorter version
   let displayModuleIcon = currentModule.Icon;
   let displayBasePath = currentModule.path;
 
