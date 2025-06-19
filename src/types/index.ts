@@ -172,8 +172,8 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
     location: 'Shibuya Scramble Crossing',
     duration: 1.5,
     imageUrls: [
-      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80', // Original, but let's assume it's working now or was just a temporary blip. If it was the source of the 404, we'd replace it.
-      'https://images.unsplash.com/photo-1604789156313-69b0a5cc5442?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
+      'https://images.unsplash.com/photo-1604789156313-69b0a5cc5442?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
+      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
     ],
     description: 'Witness the iconic organized chaos of the world\'s busiest pedestrian crossing. Grab a coffee at a nearby cafe for a bird\'s-eye view.',
     dataAiHint: "shibuya crossing"
@@ -221,34 +221,40 @@ export const MOCK_DESTINATION_ACTIVITIES: Record<string, Activity[]> = {
   "Tokyo, Japan": MOCK_SUGGESTED_ACTIVITIES_TOKYO,
 };
 
-// --- Plando Meet Specific Mock Data ---
+// --- Plando Meet/Friends Specific Mock Data ---
 const DEFAULT_MOCK_LOCAL_ACTIVITIES: Activity[] = [
   {
     id: 'local-activity-default-1',
-    name: 'City Park Stroll',
+    name: 'City Park Stroll & Picnic',
     location: 'Local City Park',
-    duration: 1.5,
+    duration: 2,
     imageUrls: ['https://images.unsplash.com/photo-1542879997-f09255010477?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
-    description: 'Enjoy a refreshing walk or bike ride through the main city park.',
-    dataAiHint: "city park"
+    description: 'Enjoy a refreshing walk or bike ride through the main city park, maybe pack a picnic!',
+    dataAiHint: "city park picnic",
+    bestTimeToVisit: "Afternoons on sunny days",
+    estimatedPriceRange: "Free (picnic costs vary)"
   },
   {
     id: 'local-activity-default-2',
-    name: 'Neighborhood Cafe Visit',
+    name: 'Independent Bookstore Browse',
     location: 'Downtown Area',
     duration: 1,
-    imageUrls: ['https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
-    description: 'Discover a cozy local cafe and enjoy a cup of coffee or tea.',
-    dataAiHint: "cafe interior"
+    imageUrls: ['https://images.unsplash.com/photo-1530096161592-28369c58991a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Discover hidden gems and bestsellers at a local independent bookstore.',
+    dataAiHint: "bookstore interior",
+    bestTimeToVisit: "Anytime, quieter on weekday mornings",
+    estimatedPriceRange: "Free to browse"
   },
   {
     id: 'local-activity-default-3',
-    name: 'Community Art Gallery',
+    name: 'Community Art Gallery Visit',
     location: 'Arts District',
-    duration: 2,
+    duration: 1.5,
     imageUrls: ['https://images.unsplash.com/photo-1536924430914-92f9a6909076?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
-    description: 'Explore works by local artists at the community gallery.',
-    dataAiHint: "art gallery"
+    description: 'Explore works by local artists at the community gallery. Check for new exhibits.',
+    dataAiHint: "art gallery",
+    bestTimeToVisit: "Weekend afternoons",
+    estimatedPriceRange: "Often free, donations welcome"
   },
 ];
 
@@ -261,21 +267,21 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     imageUrls: ['https://images.unsplash.com/photo-1587616596304-987fde18990d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Wander through the magnificent gardens of the former imperial summer residence.',
     suggestedDurationHours: 2.5,
-    bestTimeToVisit: "Spring or Summer mornings",
+    bestTimeToVisit: "Spring or Summer mornings/afternoons",
     estimatedPriceRange: "Gardens mostly free, palace entry fee",
     address: "Schönbrunner Schloßstraße 47, 1130 Wien",
     dataAiHint: "schonbrunn palace"
   },
   {
     id: 'local-vienna-2',
-    name: 'St. Stephen\'s Cathedral Visit',
+    name: 'St. Stephen\'s Cathedral Visit & Tower Climb',
     location: 'Stephansplatz, Vienna',
     duration: 1.5,
     imageUrls: ['https://images.unsplash.com/photo-1608958449814-e896490174a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
-    description: 'Visit the iconic St. Stephen\'s Cathedral, a masterpiece of Gothic architecture in the heart of Vienna.',
+    description: 'Visit the iconic St. Stephen\'s Cathedral and consider climbing a tower for city views.',
     suggestedDurationHours: 1.5,
-    bestTimeToVisit: "Anytime, less crowded mornings",
-    estimatedPriceRange: "Free entry to main area, fees for towers/catacombs",
+    bestTimeToVisit: "Mornings to avoid crowds",
+    estimatedPriceRange: "Free entry to main area, tower/catacombs approx. €6-€10",
     address: "Stephansplatz 3, 1010 Wien",
     dataAiHint: "st stephens cathedral"
   },
@@ -287,8 +293,8 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     imageUrls: ['https://images.unsplash.com/photo-1518300210072-6497ca050313?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Explore Vienna\'s most popular market, offering a variety of international foods, local produce, and vibrant stalls.',
     suggestedDurationHours: 2,
-    bestTimeToVisit: "Late morning or lunchtime, Saturday for flea market",
-    estimatedPriceRange: "Varies (free to browse)",
+    bestTimeToVisit: "Late morning/lunchtime, Saturday for flea market",
+    estimatedPriceRange: "Varies (free to browse, food items €5+)",
     address: "Naschmarkt, 1060 Wien",
     dataAiHint: "naschmarkt vienna"
   },
@@ -300,20 +306,95 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     imageUrls: ['https://images.unsplash.com/photo-1559925198-8f03a9b70f8a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Experience the unique culture of a traditional Viennese coffee house (Kaffeehaus).',
     suggestedDurationHours: 1,
-    bestTimeToVisit: "Anytime",
-    estimatedPriceRange: "€5-€15 per person",
+    bestTimeToVisit: "Anytime, often busier in afternoons",
+    estimatedPriceRange: "€5-€15 per person for coffee & cake",
     address: "Various locations, e.g., Cafe Central, Cafe Sacher",
     dataAiHint: "viennese coffee"
   },
 ];
 
-// MOCK_LOCAL_ACTIVITIES is now used as a fallback within MOCK_ACTIVITIES_BY_CITY
-export const MOCK_LOCAL_ACTIVITIES: Activity[] = DEFAULT_MOCK_LOCAL_ACTIVITIES;
-
-
 export const MOCK_ACTIVITIES_BY_CITY: Record<string, Activity[]> = {
   "Vienna, Austria": MOCK_VIENNA_ACTIVITIES,
   "Default": DEFAULT_MOCK_LOCAL_ACTIVITIES,
+};
+
+
+// --- Plando Couples Specific Mock Data ---
+const MOCK_COUPLES_DEFAULT_ACTIVITIES: Activity[] = [
+  {
+    id: 'couples-default-1',
+    name: 'Romantic Sunset Picnic',
+    location: 'Scenic Viewpoint or Park',
+    duration: 2.5,
+    imageUrls: ['https://images.unsplash.com/photo-1515002246390-7bf14be4598a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Pack a basket with your favorite treats and find a beautiful spot to watch the sunset together.',
+    dataAiHint: "couple picnic sunset",
+    bestTimeToVisit: "Evenings, just before sunset",
+    estimatedPriceRange: "Cost of picnic items"
+  },
+  {
+    id: 'couples-default-2',
+    name: 'Cozy Movie Night In',
+    location: 'At Home',
+    duration: 3,
+    imageUrls: ['https://images.unsplash.com/photo-1595777457584-9d776c177dd8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Choose a movie, grab some popcorn, and cuddle up for a relaxing evening.',
+    dataAiHint: "couple movie night",
+    bestTimeToVisit: "Evenings",
+    estimatedPriceRange: "Free (or cost of movie rental)"
+  },
+  {
+    id: 'couples-default-3',
+    name: 'Stargazing Adventure',
+    location: 'Away from City Lights',
+    duration: 2,
+    imageUrls: ['https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Find a dark spot away from city lights, lay out a blanket, and gaze at the stars together.',
+    dataAiHint: "couple stargazing",
+    bestTimeToVisit: "Clear nights",
+    estimatedPriceRange: "Free"
+  },
+];
+
+const MOCK_COUPLES_VIENNA_ACTIVITIES: Activity[] = [
+  {
+    id: 'couples-vienna-1',
+    name: 'Romantic Danube River Evening Cruise',
+    location: 'Danube River, Vienna',
+    duration: 3,
+    imageUrls: ['https://images.unsplash.com/photo-1620596541499-a6713919f0e7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Enjoy a scenic cruise along the Danube with dinner and music as the city lights twinkle.',
+    dataAiHint: "danube cruise vienna",
+    bestTimeToVisit: "Evenings, especially sunset",
+    estimatedPriceRange: "€50-€100 per person (with dinner)"
+  },
+  {
+    id: 'couples-vienna-2',
+    name: 'Belvedere Palace & Klimt\'s "The Kiss"',
+    location: 'Belvedere Palace, Vienna',
+    duration: 2.5,
+    imageUrls: ['https://images.unsplash.com/photo-1580054604995-7478f2f58cee?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Explore the stunning baroque palace and see Gustav Klimt\'s masterpiece "The Kiss" together.',
+    dataAiHint: "belvedere palace",
+    bestTimeToVisit: "Mornings or late afternoons",
+    estimatedPriceRange: "€20-€25 per person (entry)"
+  },
+  {
+    id: 'couples-vienna-3',
+    name: 'Wine Tasting in Viennese Vineyards (Heuriger)',
+    location: 'Outskirts of Vienna (e.g., Kahlenberg, Grinzing)',
+    duration: 3,
+    imageUrls: ['https://images.unsplash.com/photo-1506377295352-e3154d43ea9e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Visit a traditional Viennese wine tavern (Heuriger) in the vineyards for local wine and food.',
+    dataAiHint: "vienna vineyards wine",
+    bestTimeToVisit: "Late afternoons or evenings, especially in summer/autumn",
+    estimatedPriceRange: "€15-€30 per person"
+  },
+];
+
+export const MOCK_COUPLES_ACTIVITIES_BY_CITY: Record<string, Activity[]> = {
+  "Vienna, Austria": MOCK_COUPLES_VIENNA_ACTIVITIES,
+  "Default": MOCK_COUPLES_DEFAULT_ACTIVITIES,
 };
 
 // Add this declaration to allow data-ai-hint on intrinsic elements
