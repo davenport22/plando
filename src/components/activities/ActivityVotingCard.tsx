@@ -10,13 +10,15 @@ import React, { useState, useRef } from 'react';
 interface ActivityVotingCardProps {
   activity: Activity;
   onVote: (activityId: string, liked: boolean) => void;
+  onCardClick?: (activity: Activity) => void; 
 }
 
 const SWIPE_THRESHOLD = 100; // Min distance in px to trigger a vote
+const CLICK_TAP_THRESHOLD = 10; // Max distance for a movement to be considered a click/tap
 const ROTATION_FACTOR = 0.1; // How much the card rotates based on swipe distance
 const FEEDBACK_OPACITY_FACTOR = 1.5; // How quickly feedback text becomes opaque
 
-export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps) {
+export function ActivityVotingCard({ activity, onVote, onCardClick }: ActivityVotingCardProps) {
   const [dragState, setDragState] = useState({
     isDragging: false,
     startX: 0,
@@ -50,9 +52,14 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
       cardRef.current.releasePointerCapture(event.pointerId);
     }
 
-    if (Math.abs(dragState.offsetX) > SWIPE_THRESHOLD) {
+    const movedDistance = Math.abs(dragState.offsetX);
+
+    if (movedDistance > SWIPE_THRESHOLD) {
       onVote(activity.id, dragState.offsetX > 0);
+    } else if (movedDistance <= CLICK_TAP_THRESHOLD && onCardClick) {
+      onCardClick(activity);
     }
+
 
     setDragState({
       isDragging: false,
@@ -156,3 +163,4 @@ export function ActivityVotingCard({ activity, onVote }: ActivityVotingCardProps
     </Card>
   );
 }
+

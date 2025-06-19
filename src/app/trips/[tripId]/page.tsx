@@ -8,7 +8,7 @@ import { MOCK_TRIPS, MOCK_DESTINATION_ACTIVITIES } from '@/types';
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
 import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
-import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog'; // New import
+import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { suggestItineraryAction } from '@/lib/actions';
@@ -41,14 +41,15 @@ const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null
           imageUrls = act.imageUrls;
         } else {
           // Fallback if no image URL is provided by AI for an itinerary activity
-          imageUrls = [`https://placehold.co/400x300.png?text=${encodeURIComponent(act.name)}`];
+          const activityNameForPlaceholder = act.name || 'Activity';
+          imageUrls = [`https://placehold.co/400x300.png?text=${encodeURIComponent(activityNameForPlaceholder)}`];
         }
         
         return {
-          id: `${act.name.replace(/\s+/g, '-')}-${day.date}-${index}`, 
-          name: act.name,
-          location: act.location,
-          duration: act.duration,
+          id: `${act.name ? act.name.replace(/\s+/g, '-') : 'unknown-activity'}-${day.date}-${index}`, 
+          name: act.name || 'Unnamed Activity',
+          location: act.location || 'Unknown Location',
+          duration: act.duration || 1,
           startTime: act.startTime,
           category: act.category,
           description: act.description || '',
@@ -340,6 +341,7 @@ export default function TripDetailPage() {
                       key={currentActivityToVote.id}
                       activity={currentActivityToVote}
                       onVote={handleVote}
+                      onCardClick={handleOpenActivityDetail}
                     />
                   </div>
                 ) : (
@@ -439,3 +441,4 @@ export default function TripDetailPage() {
     </div>
   );
 }
+
