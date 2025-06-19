@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutGrid, Grid, User as UserIcon, Settings as SettingsIcon } from 'lucide-react'; 
+import { LayoutGrid, Grid, User as UserIcon, Settings as SettingsIcon, HeartCrack } from 'lucide-react'; 
 import { usePathname } from 'next/navigation';
 import { plandoModules, getModuleByPath } from '@/config/plandoModules';
 import { useEffect, useState } from 'react';
@@ -31,11 +31,9 @@ const AppHeader = () => {
   const isProfilePage = pathname === '/profile' || pathname.startsWith('/profile/');
   const isSettingsPage = pathname === '/settings';
   
-  // "My Trips" button shows if the module context is 'travel' AND not on global pages
   const showMyTripsButton = currentModule.id === 'travel' && !isAuthPage && !isProfilePage && !isSettingsPage;
 
-  // Determine display properties for the main logo
-  let displayModuleName = currentModule.displayName; // Use displayName for a shorter version
+  let displayModuleName = currentModule.displayName; 
   let displayModuleIcon = currentModule.Icon;
   let displayBasePath = currentModule.path;
 
@@ -54,7 +52,6 @@ const AppHeader = () => {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <Logo moduleName={displayModuleName} ModuleIcon={displayModuleIcon} basePath={displayBasePath} />
-          {/* Plando Suite dropdown is available on non-auth pages */}
           {!isAuthPage && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -82,7 +79,7 @@ const AppHeader = () => {
         {!isAuthPage && (
           <nav className="flex items-center gap-2 sm:gap-4">
             {showMyTripsButton && (
-              <Link href="/" passHref> {/* Link "My Trips" to Plando Travel home */}
+              <Link href="/" passHref> 
                 <Button variant="ghost">
                   <LayoutGrid className="mr-2 h-5 w-5" />
                   My Trips
