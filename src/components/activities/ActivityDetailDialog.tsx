@@ -3,11 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import type { Activity } from '@/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // DialogDescription removed as we handle desc separately
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, MapPin, Clock, ThumbsUp, ThumbsDown, Info, CalendarDays, Tag } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Clock, ThumbsUp, ThumbsDown, Info, CalendarDays, Tag, Loader2 } from "lucide-react";
 import { Badge } from '../ui/badge';
+import { enhanceActivityDescriptionAction } from '@/lib/actions'; // Import the new action
+import { useToast } from '@/hooks/use-toast';
 
 interface ActivityDetailDialogProps {
   activity: Activity | null;
@@ -23,33 +25,64 @@ const categoryVariantMap: Record<string, "default" | "secondary" | "outline" | "
 
 export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: ActivityDetailDialogProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [enhancedDescription, setEnhancedDescription] = useState<string | null>(null);
+  const [isLoadingDescription, setIsLoadingDescription] = useState<boolean>(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Reset to the first image when the activity changes or dialog opens with a new activity
     if (activity) {
-      setCurrentImageIndex(0);
+      setCurrentImageIndex(0); // Reset image index when activity changes
+      setEnhancedDescription(null); // Reset enhanced description
+
+      if (isOpen) { // Fetch enhanced description only when dialog is open and activity is present
+        setIsLoadingDescription(true);
+        enhanceActivityDescriptionAction(activity.name, activity.location)
+          .then(result => {
+            if ('description' in result && result.description) {
+              setEnhancedDescription(result.description);
+            } else if ('error' in result) {
+              // Optionally show a toast for error, or just fallback to original description
+              // toast({ title: "Details Enhancement Failed", description: result.error, variant: "destructive" });
+              console.warn("Failed to enhance description:", result.error);
+            }
+          })
+          .catch(error => {
+            console.error("Error fetching enhanced description:", error);
+            // toast({ title: "Error", description: "Could not fetch enhanced activity details.", variant: "destructive" });
+          })
+          .finally(() => {
+            setIsLoadingDescription(false);
+          });
+      }
     }
-  }, [activity]);
+  }, [activity, isOpen, toast]);
 
   if (!activity) {
     return null;
   }
 
-  const { name, description, location, duration, imageUrls, category, startTime, likes, dislikes } = activity;
+  const { name, description: originalDescription, location, duration, imageUrls, category, startTime, likes, dislikes } = activity;
+
+  const displayDescription = enhancedDescription || originalDescription || "No description available.";
 
   const handleNextImage = () => {
-    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % imageUrls.length);
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % (imageUrls?.length || 1));
   };
 
   const handlePrevImage = () => {
-    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + imageUrls.length) % imageUrls.length);
+    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + (imageUrls?.length || 1)) % (imageUrls?.length || 1));
   };
   
   const imageHint = name ? name.toLowerCase().split(" ").slice(0,2).join(" ") : "activity detail";
 
-
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      onOpenChange(open);
+      if (!open) { // Reset states when dialog is closed
+        setEnhancedDescription(null);
+        setIsLoadingDescription(false);
+      }
+    }}>
       <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-2xl md:text-3xl font-headline text-primary">{name}</DialogTitle>
@@ -104,17 +137,21 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
             </div>
           )}
 
-          {description && (
-            <div className="prose prose-sm sm:prose-base max-w-none text-muted-foreground">
-                 <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center">
-                    <Info className="mr-2 h-5 w-5 text-primary" />
-                    Description
-                </h3>
-                <p className="whitespace-pre-line">{description}</p>
-            </div>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center">
+                <Info className="mr-2 h-5 w-5 text-primary" />
+                Description
+            </h3>
+            {isLoadingDescription ? (
+              <div className="flex items-center text-muted-foreground py-2">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Loading enhanced details...</span>
+              </div>
+            ) : (
+              <p className="whitespace-pre-line text-muted-foreground prose prose-sm sm:prose-base max-w-none">{displayDescription}</p>
+            )}
+          </div>
            
-          )}
-
           <div className="space-y-3 text-sm">
              <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
                 <CalendarDays className="mr-2 h-5 w-5 text-primary" />
