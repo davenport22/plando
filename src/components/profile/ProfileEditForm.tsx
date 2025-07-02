@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/actions";
+import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -147,7 +148,11 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
             <FormItem>
               <FormLabel>Location</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., City, Country" {...field} />
+                <CityAutocompleteInput
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder="e.g., City, Country"
+                />
               </FormControl>
               <FormDescription>
                 Your home city. This helps us suggest local activities in other Plando modules.

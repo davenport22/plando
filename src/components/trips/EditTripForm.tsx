@@ -17,6 +17,7 @@ import { useState, useEffect } from "react";
 import type { Trip } from "@/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 
 const editTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
@@ -141,7 +142,11 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
             <FormItem>
               <FormLabel>Destination</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Rome, Italy" {...field} />
+                <CityAutocompleteInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="e.g., Rome, Italy"
+                />
               </FormControl>
               <FormDescription>
                 Where are you planning to go? In a full implementation, this would use a map-based place selector to get precise location data.

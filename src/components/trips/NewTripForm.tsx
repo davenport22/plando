@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { createTrip } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 
 const newTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
@@ -112,7 +113,11 @@ export function NewTripForm() {
             <FormItem>
               <FormLabel>Destination</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Rome, Italy" {...field} />
+                <CityAutocompleteInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="e.g., Rome, Italy"
+                />
               </FormControl>
               <FormDescription>
                 Where are you planning to go?
