@@ -1,12 +1,32 @@
 import { TripCard } from '@/components/trips/TripCard';
 import { Button } from '@/components/ui/button';
-import { MOCK_TRIPS } from '@/types';
+import { firestore } from '@/lib/firebase';
+import type { Trip } from '@/types';
 import { PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 
-export default function TripsPage() {
-  // In a real app, fetch trips for the current user
-  const trips = MOCK_TRIPS;
+export default async function TripsPage() {
+  let trips: Trip[] = [];
+  try {
+    const tripsSnapshot = await firestore.collection('trips').get();
+    trips = tripsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            name: data.name || 'Untitled Trip',
+            destination: data.destination || 'Unknown',
+            startDate: data.startDate || 'N/A',
+            endDate: data.endDate || 'N/A',
+            ownerId: data.ownerId || '',
+            participantIds: data.participantIds || [],
+            imageUrl: data.imageUrl,
+        } as Trip;
+    });
+  } catch (error) {
+    console.error("Failed to fetch trips from Firestore:", error);
+    // You could render an error message to the user here
+  }
+
 
   return (
     <div className="container mx-auto py-8 px-4">

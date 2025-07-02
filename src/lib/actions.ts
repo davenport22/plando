@@ -3,7 +3,10 @@
 
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
 import { generateActivityDescription, type GenerateActivityDescriptionInput, type GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
-import type { ActivityInput } from '@/types';
+import type { ActivityInput, Trip } from '@/types';
+import { firestore } from '@/lib/firebase';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 // This function will be called from client components to generate the itinerary.
 export async function suggestItineraryAction(
@@ -82,4 +85,33 @@ export async function enhanceActivityDescriptionAction(
     }
     return { error: "An unknown error occurred while generating the enhanced description." };
   }
+}
+
+// Type for data coming from the NewTripForm
+type NewTripData = Omit<Trip, 'id' | 'ownerId' | 'participantIds'>;
+
+export async function createTrip(data: NewTripData): Promise<{ error: string } | void> {
+    try {
+        if (!data.name || !data.destination || !data.startDate || !data.endDate) {
+            return { error: 'Missing required fields.' };
+        }
+        
+        const newTrip = {
+            ...data,
+            ownerId: 'user1', // In a real app, get this from the authenticated session
+            participantIds: ['user1'],
+            // Use a generic placeholder and let the AI hint drive image selection later
+            imageUrl: `https://placehold.co/600x400.png`
+        };
+
+        await firestore.collection('trips').add(newTrip);
+
+    } catch (e) {
+        console.error('Error creating trip in Firestore:', e);
+        if (e instanceof Error) return { error: e.message };
+        return { error: 'An unknown error occurred while creating the trip.' };
+    }
+
+    revalidatePath('/'); // Invalidate cache for the trips list page
+    redirect('/'); // Navigate to the trips list page
 }

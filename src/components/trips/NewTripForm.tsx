@@ -13,8 +13,8 @@ import { cn, calculateTripDuration } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; 
 import { useToast } from "@/hooks/use-toast";
+import { createTrip } from "@/lib/actions";
 
 const newTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
@@ -32,7 +32,6 @@ const newTripFormSchema = z.object({
 type NewTripFormValues = z.infer<typeof newTripFormSchema>;
 
 export function NewTripForm() {
-  const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [durationDisplay, setDurationDisplay] = useState<string>("");
@@ -62,26 +61,30 @@ export function NewTripForm() {
 
   async function onSubmit(data: NewTripFormValues) {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    const tripDataWithGeo = {
+    const tripData = {
       ...data,
       startDate: format(data.startDate, "yyyy-MM-dd"),
       endDate: format(data.endDate, "yyyy-MM-dd"),
-      // Simulate getting geo data if a destination is provided
-      latitude: data.destination ? 40.7128 : undefined, // Example: New York Latitude
-      longitude: data.destination ? -74.0060 : undefined, // Example: New York Longitude
-      placeId: data.destination ? "mock-place-id-123" : undefined, // Example Place ID
     };
 
-    console.log("New Trip Data:", tripDataWithGeo);
+    const result = await createTrip(tripData);
 
-    toast({
-      title: "Trip Created!",
-      description: `Your trip "${data.name}" to ${data.destination} has been successfully created.`,
-    });
-    setIsLoading(false);
-    router.push("/"); 
+    if (result?.error) {
+      toast({
+        title: "Error Creating Trip",
+        description: result.error,
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    } else {
+      toast({
+        title: "Trip Created!",
+        description: `Your trip "${data.name}" is being saved. Redirecting...`,
+      });
+      // The redirect is handled by the server action, so we don't need to do anything here.
+      // The page will navigate away, so no need to set isLoading to false.
+    }
   }
 
   return (
@@ -111,7 +114,7 @@ export function NewTripForm() {
                 <Input placeholder="e.g., Rome, Italy" {...field} />
               </FormControl>
               <FormDescription>
-                Where are you planning to go? In a full implementation, this would use a map-based place selector to get precise location data.
+                Where are you planning to go?
               </FormDescription>
               <FormMessage />
             </FormItem>
