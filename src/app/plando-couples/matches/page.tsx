@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Activity, MatchedActivity, UserProfile } from '@/types'; 
-import { MOCK_USER_PROFILE } from '@/types'; // MOCK_COUPLES_ACTIVITIES_BY_CITY no longer needed here
+import { MOCK_USER_PROFILE } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, HeartCrack, Info, ListChecks, UserCheck, Sparkles, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -18,6 +18,7 @@ const JULIA_EMAIL = 'julia.musterfrau@gmail.com';
 
 export default function PlandoCouplesMatchesPage() {
   const [matchedActivities, setMatchedActivities] = useState<MatchedActivity[]>([]);
+  const [userLikedActivitiesCount, setUserLikedActivitiesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [connectedPartner, setConnectedPartner] = useState<UserProfile | null>(null);
@@ -26,6 +27,7 @@ export default function PlandoCouplesMatchesPage() {
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
   useEffect(() => {
+    // Load connected partner from localStorage on initial render
     const storedPartner = localStorage.getItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
     if (storedPartner) {
         try {
@@ -39,6 +41,8 @@ export default function PlandoCouplesMatchesPage() {
 
 
   useEffect(() => {
+    // This effect runs when the component mounts or when the connected partner changes.
+    // It calculates the mutual matches.
     setIsLoading(true);
     const storedUserLikedActivities = localStorage.getItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
     let userLikedActivities: Activity[] = [];
@@ -51,13 +55,16 @@ export default function PlandoCouplesMatchesPage() {
             toast({ title: "Error", description: "Could not load your liked activities.", variant: "destructive" });
         }
     }
+    setUserLikedActivitiesCount(userLikedActivities.length);
 
     if (!connectedPartner) {
+        // If no partner is connected, there can be no matches.
         setMatchedActivities([]);
     } else {
         const mutuallyLiked: MatchedActivity[] = [];
         for (const userActivity of userLikedActivities) {
-            let partnerAlsoLikedThisActivity = false; // Default to NO match if partner's vote is unknown or a dislike
+            // Default to NO match if partner's vote is unknown or a dislike
+            let partnerAlsoLikedThisActivity = false; 
 
             if (connectedPartner.email === JULIA_EMAIL) {
                 // Julia's specific mocked preferences
@@ -65,11 +72,9 @@ export default function PlandoCouplesMatchesPage() {
                 else if (userActivity.id === 'couples-vienna-2') partnerAlsoLikedThisActivity = true;  // Belvedere - Julia Liked
                 else if (userActivity.id === 'couples-vienna-3') partnerAlsoLikedThisActivity = false; // Wine Tasting - Julia Disliked
                 // For any other activity the user liked, Julia's vote is unknown, so it's not a confirmed match.
-            } else {
-                // For any other connected partner (not Julia), we don't have their specific mock votes.
-                // Therefore, we cannot confirm a mutual like.
-                partnerAlsoLikedThisActivity = false;
             }
+            // For any other connected partner (not Julia), we don't have their specific mock votes.
+            // Therefore, we cannot confirm a mutual like. `partnerAlsoLikedThisActivity` remains false.
 
             if (partnerAlsoLikedThisActivity) {
                 mutuallyLiked.push({
@@ -84,10 +89,11 @@ export default function PlandoCouplesMatchesPage() {
     setIsLoading(false);
   }, [toast, connectedPartner]);
 
-  const handleClearMatches = () => {
+  const handleClearLikes = () => {
     // This clears the current user's liked activities, which indirectly clears the matches.
     localStorage.removeItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
     setMatchedActivities([]);
+    setUserLikedActivitiesCount(0);
     toast({ title: "Cleared!", description: "Your liked date ideas have been cleared. Any mutual matches are also removed." });
   };
 
@@ -121,7 +127,7 @@ export default function PlandoCouplesMatchesPage() {
       return {
         title: "No Mutual Date Ideas Yet!",
         description: `It looks like you and ${connectedPartner.name} haven't mutually liked any activities yet. Keep swiping, or ensure your partner has also liked some of the same ideas!`,
-        icon: Users // Using Users icon for "couple" context
+        icon: Users
       };
     }
     return null;
@@ -140,7 +146,7 @@ export default function PlandoCouplesMatchesPage() {
         </Link>
         <div>
             <h1 className="text-3xl font-headline text-primary text-center">
-              {connectedPartner ? `Our Matched Date Ideas` : "Your Liked Date Ideas"}
+              Our Matched Date Ideas
             </h1>
             {connectedPartner && (
                 <p className="text-sm text-muted-foreground text-center mt-1">
@@ -150,7 +156,7 @@ export default function PlandoCouplesMatchesPage() {
                 </p>
             )}
         </div>
-        <Button variant="destructive" onClick={handleClearMatches} disabled={userLikedActivities.length === 0 && matchedActivities.length === 0}>
+        <Button variant="destructive" onClick={handleClearLikes} disabled={userLikedActivitiesCount === 0}>
           <HeartCrack className="mr-2 h-4 w-4" />
           Clear My Likes
         </Button>
@@ -165,9 +171,9 @@ export default function PlandoCouplesMatchesPage() {
             <CardTitle className="text-2xl">{emptyState.title}</CardTitle>
           </CardHeader>
           <CardContent>
-            <CardDescription className="text-lg">
+            <p className="text-lg">
               {emptyState.description}
-            </CardDescription>
+            </p>
             <Link href="/plando-couples" passHref>
               <Button className="mt-6" size="lg">
                 <Sparkles className="mr-2 h-5 w-5" />
@@ -194,17 +200,4 @@ export default function PlandoCouplesMatchesPage() {
       />
     </div>
   );
-}
-
-// Helper to get user liked activities count for button disabling logic
-let userLikedActivities: Activity[] = [];
-if (typeof window !== 'undefined') {
-    const storedUserLikedActivities = localStorage.getItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
-    if (storedUserLikedActivities) {
-        try {
-            userLikedActivities = JSON.parse(storedUserLikedActivities);
-        } catch (e) {
-            // ignore
-        }
-    }
 }
