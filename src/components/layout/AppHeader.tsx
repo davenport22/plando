@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutGrid, Grid, User as UserIcon, Settings as SettingsIcon, HeartCrack } from 'lucide-react'; 
+import { LayoutGrid, Grid } from 'lucide-react'; 
 import { usePathname } from 'next/navigation';
 import { plandoModules, getModuleByPath } from '@/config/plandoModules';
 import { useEffect, useState } from 'react';
@@ -29,17 +29,18 @@ const AppHeader = () => {
   
   const isAuthPage = pathname === '/' || pathname === '/register';
   
-  // Check if the current module determined by getModuleByPath is one of the main application modules (not global)
-  // and specifically if it's the 'travel' module for showing "My Trips".
-  // Global pages like /profile, /settings, /users/[id] will have currentModule.id set by getModuleByPath.
   const showMyTripsButton = currentModule.id === 'travel' && !currentModule.isGlobal && !isAuthPage;
 
   let displayModuleName = currentModule.displayName; 
   let displayModuleIcon = currentModule.Icon;
   let displayBasePath = currentModule.path;
 
-  // If it's a global page like profile or settings, use its specific path for the logo link
-  if (currentModule.isGlobal) {
+  // On authentication pages, show a generic "Plando" logo that links to the root.
+  if (isAuthPage) {
+    displayModuleName = 'Plando';
+    displayModuleIcon = Grid; // Using Grid as a neutral "suite" icon
+    displayBasePath = '/';
+  } else if (currentModule.isGlobal) {
      // For /users/[userId], the base path is /users, but clicking logo should ideally go to a sensible default or stay.
      // For simplicity, let's keep displayBasePath as currentModule.path for global modules.
      // This means clicking "My Profile" logo on /profile/edit will go to /profile.
