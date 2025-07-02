@@ -1,3 +1,4 @@
+
 import { TripCard } from '@/components/trips/TripCard';
 import { Button } from '@/components/ui/button';
 import { firestore } from '@/lib/firebase';
@@ -41,14 +42,9 @@ export default async function TripsPage() {
       </div>
       
       {trips.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-xl text-muted-foreground mb-4">You haven&apos;t created or joined any trips yet.</p>
-          <Link href="/trips/new">
-            <Button size="lg" variant="default">
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Start Your First Trip
-            </Button>
-          </Link>
+        <div className="text-center py-20 bg-muted/50 rounded-lg">
+          <p className="text-xl text-muted-foreground">You haven&apos;t created or joined any trips yet.</p>
+          <p className="text-sm text-muted-foreground mt-2">Click "Create New Trip" to get started.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
