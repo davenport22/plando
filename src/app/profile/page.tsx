@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { type Trip, MOCK_USER_PROFILE } from "@/types"; 
+import { type Trip, MOCK_USER_PROFILE, type UserProfile } from "@/types"; 
 import { CalendarDays, MapPinIcon, CheckCircle2, Edit, AlertCircle } from "lucide-react";
 import Link from 'next/link';
 import { getUserProfile } from '@/lib/actions';
@@ -12,44 +12,63 @@ import { firestore } from "@/lib/firebase";
 
 export default async function ProfilePage() {
   const userId = MOCK_USER_PROFILE.id; // In a real app, this would come from the auth session
-  const user = await getUserProfile(userId);
-
+  
+  let user: UserProfile | null;
   let completedTrips: Trip[] = [];
+
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const tripsSnapshot = await firestore
-        .collection('trips')
-        .where('ownerId', '==', userId)
-        .where('endDate', '<', today)
-        .get();
-        
-    completedTrips = tripsSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.name || 'Untitled Trip',
-        destination: data.destination || 'Unknown',
-        startDate: data.startDate || 'N/A',
-        endDate: data.endDate || 'N/A',
-        ownerId: data.ownerId || '',
-        participantIds: data.participantIds || [],
-        imageUrl: data.imageUrl,
-      } as Trip;
-    });
+    // Attempt to get the user profile first.
+    user = await getUserProfile(userId);
+
+    // Only if the user exists, attempt to get their trips.
+    if (user) {
+      const today = new Date().toISOString().split('T')[0];
+      const tripsSnapshot = await firestore
+          .collection('trips')
+          .where('ownerId', '==', userId)
+          .where('endDate', '<', today)
+          .get();
+          
+      completedTrips = tripsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || 'Untitled Trip',
+          destination: data.destination || 'Unknown',
+          startDate: data.startDate || 'N/A',
+          endDate: data.endDate || 'N/A',
+          ownerId: data.ownerId || '',
+          participantIds: data.participantIds || [],
+          imageUrl: data.imageUrl,
+        } as Trip;
+      });
+    }
+
   } catch (error) {
-    console.error("Failed to fetch completed trips from Firestore:", error);
-    // If this fails (e.g., Firebase not configured), we'll just show an empty list.
-    // The main error will be the user profile failing to load.
+    console.error("Failed to load profile page data from Firestore:", error);
+    // If ANY database operation fails (e.g., Firebase not configured), render a clear error page.
+    return (
+        <div className="container mx-auto py-8 px-4 max-w-4xl">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error Loading Profile Data</AlertTitle>
+              <AlertDescription>
+                Could not load data from the database. Please check your connection or ensure the Firebase backend is configured correctly.
+              </AlertDescription>
+            </Alert>
+        </div>
+    );
   }
 
   if (!user) {
+    // This case handles when getUserProfile returns null without throwing an error (e.g., user not found).
     return (
       <div className="container mx-auto py-8 px-4 max-w-4xl">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Profile</AlertTitle>
           <AlertDescription>
-            Could not load your profile. Please check your connection or try again later. Ensure your Firebase backend is configured correctly.
+            Could not load your profile. The user may not exist in the database.
           </AlertDescription>
         </Alert>
       </div>
