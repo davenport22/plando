@@ -1,20 +1,19 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Activity, MatchedActivity, UserProfile } from '@/types'; 
-import { MOCK_USER_PROFILE } from '@/types';
+import { MOCK_USER_PROFILE, MOCK_COUPLES_ACTIVITIES_BY_CITY } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, HeartCrack, Info, ListChecks, UserCheck, Sparkles, Users } from 'lucide-react';
+import { ArrowLeft, Info, ListChecks, UserCheck, Sparkles, Users, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MatchedActivityCard } from '@/components/activities/MatchedActivityCard';
 import { useToast } from '@/hooks/use-toast';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
+import { getLikedCouplesActivityIds, saveCoupleVote } from '@/lib/actions';
 
-const LOCAL_STORAGE_LIKED_ACTIVITIES_KEY = `plandoCouplesLikedActivities_${MOCK_USER_PROFILE.id}`;
 const LOCAL_STORAGE_CONNECTED_PARTNER_KEY = `plandoCouplesConnectedPartner_${MOCK_USER_PROFILE.id}`;
-const JULIA_EMAIL = 'julia.musterfrau@gmail.com';
 
 export default function PlandoCouplesMatchesPage() {
   const [matchedActivities, setMatchedActivities] = useState<MatchedActivity[]>([]);
@@ -39,59 +38,61 @@ export default function PlandoCouplesMatchesPage() {
     }
   }, []);
 
-
-  useEffect(() => {
-    // This effect runs when the component mounts or when the connected partner changes.
-    // It calculates the mutual matches.
+  const fetchMatches = useCallback(async () => {
     setIsLoading(true);
-    const storedUserLikedActivities = localStorage.getItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
-    let userLikedActivities: Activity[] = [];
 
-    if (storedUserLikedActivities) {
-        try {
-            userLikedActivities = JSON.parse(storedUserLikedActivities);
-        } catch (e) {
-            console.error("Error parsing user liked activities from localStorage", e);
-            toast({ title: "Error", description: "Could not load your liked activities.", variant: "destructive" });
-        }
-    }
-    setUserLikedActivitiesCount(userLikedActivities.length);
+    const userLikedIds = await getLikedCouplesActivityIds(MOCK_USER_PROFILE.id);
+    setUserLikedActivitiesCount(userLikedIds.length);
 
     if (!connectedPartner) {
-        // If no partner is connected, there can be no matches.
         setMatchedActivities([]);
-    } else {
-        const mutuallyLiked: MatchedActivity[] = [];
-        for (const userActivity of userLikedActivities) {
-            // Default to NO match if partner's vote is unknown or a dislike
-            let partnerAlsoLikedThisActivity = false; 
-
-            if (connectedPartner.email === JULIA_EMAIL) {
-                // Julia's specific mocked preferences
-                if (userActivity.id === 'couples-vienna-1') partnerAlsoLikedThisActivity = true;  // Danube Cruise - Julia Liked
-                else if (userActivity.id === 'couples-vienna-2') partnerAlsoLikedThisActivity = true;  // Belvedere - Julia Liked
-                else if (userActivity.id === 'couples-vienna-3') partnerAlsoLikedThisActivity = false; // Wine Tasting - Julia Disliked
-                // For any other activity the user liked, Julia's vote is unknown, so it's not a confirmed match.
-            }
-            // For any other connected partner (not Julia), we don't have their specific mock votes.
-            // Therefore, we cannot confirm a mutual like. `partnerAlsoLikedThisActivity` remains false.
-
-            if (partnerAlsoLikedThisActivity) {
-                mutuallyLiked.push({
-                    ...userActivity,
-                    matchedDate: new Date().toISOString(), 
-                    partnerAlsoLiked: true, // This will always be true for items in this list
-                });
-            }
-        }
-        setMatchedActivities(mutuallyLiked);
+        setIsLoading(false);
+        return;
     }
-    setIsLoading(false);
-  }, [toast, connectedPartner]);
 
-  const handleClearLikes = () => {
-    // This clears the current user's liked activities, which indirectly clears the matches.
-    localStorage.removeItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
+    const partnerLikedIds = await getLikedCouplesActivityIds(connectedPartner.id);
+
+    const mutualIds = userLikedIds.filter(id => partnerLikedIds.includes(id));
+
+    // Get the full activity objects from the mock data source
+    const allPossibleActivities = MOCK_COUPLES_ACTIVITIES_BY_CITY[MOCK_USER_PROFILE.location] || MOCK_COUPLES_ACTIVITIES_BY_CITY["Default"];
+    
+    const mutualActivities = mutualIds.map(id => {
+        const activity = allPossibleActivities.find(act => act.id === id);
+        if (activity) {
+            return {
+                ...activity,
+                matchedDate: new Date().toISOString(),
+                partnerAlsoLiked: true,
+            };
+        }
+        return null;
+    }).filter((a): a is MatchedActivity => a !== null);
+    
+    setMatchedActivities(mutualActivities);
+    setIsLoading(false);
+  }, [connectedPartner]);
+
+
+  useEffect(() => {
+    fetchMatches();
+  }, [fetchMatches]);
+
+  const handleClearLikes = async () => {
+    // This now clears the likes from the backend by re-saving them as "disliked".
+    // A more robust implementation might have a "delete" action.
+    const userLikedIds = await getLikedCouplesActivityIds(MOCK_USER_PROFILE.id);
+    
+    if (userLikedIds.length === 0) {
+        toast({ title: "No Likes to Clear", description: "You haven't liked any date ideas yet." });
+        return;
+    }
+
+    toast({ title: "Clearing Likes...", description: "Please wait while we update your preferences." });
+    
+    const clearPromises = userLikedIds.map(id => saveCoupleVote(MOCK_USER_PROFILE.id, id, false));
+    await Promise.all(clearPromises);
+    
     setMatchedActivities([]);
     setUserLikedActivitiesCount(0);
     toast({ title: "Cleared!", description: "Your liked date ideas have been cleared. Any mutual matches are also removed." });
@@ -110,7 +111,10 @@ export default function PlandoCouplesMatchesPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-12 px-4 text-center">
-        <p>Loading mutual date ideas...</p>
+        <div className="flex flex-col items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Finding mutual date ideas...</p>
+        </div>
       </div>
     );
   }
@@ -152,12 +156,10 @@ export default function PlandoCouplesMatchesPage() {
                 <p className="text-sm text-muted-foreground text-center mt-1">
                     <UserCheck className="inline h-4 w-4 mr-1 text-green-500" />
                     Viewing matches with {connectedPartner.name}.
-                    {connectedPartner.email === JULIA_EMAIL && " (Julia's specific preferences applied for matches)"}
                 </p>
             )}
         </div>
-        <Button variant="destructive" onClick={handleClearLikes} disabled={userLikedActivitiesCount === 0}>
-          <HeartCrack className="mr-2 h-4 w-4" />
+        <Button variant="ghost" onClick={handleClearLikes} disabled={userLikedActivitiesCount === 0}>
           Clear My Likes
         </Button>
       </div>

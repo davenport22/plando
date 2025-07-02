@@ -1,13 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Activity, UserProfile } from '@/types';
-import { MOCK_USER_PROFILE, MOCK_POTENTIAL_PARTNERS, JULIA_MOCKED_LIKES } from '@/types'; 
+import { MOCK_USER_PROFILE } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Heart, RotateCcw, MapPin, ListChecks, Sparkles, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,11 +16,9 @@ import { plandoModules } from "@/config/plandoModules";
 import Link from 'next/link';
 import { PartnerConnection } from '@/components/couples/PartnerConnection';
 import { useLocalActivities } from '@/hooks/useLocalActivities';
+import { saveCoupleVote, getLikedCouplesActivityIds, findUserByEmail } from '@/lib/actions';
 
-const LOCAL_STORAGE_LIKED_ACTIVITIES_KEY = `plandoCouplesLikedActivities_${MOCK_USER_PROFILE.id}`;
 const LOCAL_STORAGE_CONNECTED_PARTNER_KEY = `plandoCouplesConnectedPartner_${MOCK_USER_PROFILE.id}`;
-const JULIA_EMAIL = 'julia.musterfrau@gmail.com';
-
 
 export default function PlandoCouplesPage() {
   const { toast } = useToast();
@@ -30,11 +27,12 @@ export default function PlandoCouplesPage() {
 
   const { 
     activities, 
-    setActivities, 
     isLoading, 
     locationStatusMessage, 
     currentLocationKey, 
-    fetchActivities: fetchNewActivities 
+    fetchActivities: fetchNewActivities,
+    setVotedActivityIds,
+    votedActivityIds
   } = useLocalActivities('couples');
 
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
@@ -49,6 +47,7 @@ export default function PlandoCouplesPage() {
   const [partnerEmailInput, setPartnerEmailInput] = useState("");
   const [connectedPartner, setConnectedPartner] = useState<UserProfile | null>(null);
   const [isConnectingPartner, setIsConnectingPartner] = useState(false);
+  const [partnerLikedActivityIds, setPartnerLikedActivityIds] = useState<string[]>([]);
 
   // Match animation state
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
@@ -60,21 +59,21 @@ export default function PlandoCouplesPage() {
     setShowEndOfList(activities.length > 0 ? false : true);
   }, [activities]);
 
+  // Load initial data on mount
   useEffect(() => {
-    const storedLikedActivities = localStorage.getItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
-    if (storedLikedActivities) {
-      try {
-        const parsedActivities: Activity[] = JSON.parse(storedLikedActivities);
-        setLikedActivitiesCount(parsedActivities.length);
-      } catch (e) {
-        console.error("Error parsing liked activities from localStorage", e);
-      }
-    }
+    // Fetch liked count from DB
+    getLikedCouplesActivityIds(MOCK_USER_PROFILE.id).then(ids => {
+      setLikedActivitiesCount(ids.length);
+    });
 
+    // Load connected partner from localStorage
     const storedPartner = localStorage.getItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
     if (storedPartner) {
         try {
-            setConnectedPartner(JSON.parse(storedPartner));
+            const partner: UserProfile = JSON.parse(storedPartner);
+            setConnectedPartner(partner);
+            // Fetch partner's likes
+            getLikedCouplesActivityIds(partner.id).then(setPartnerLikedActivityIds);
         } catch (e) {
             console.error("Error parsing connected partner from localStorage", e);
             localStorage.removeItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
@@ -82,40 +81,33 @@ export default function PlandoCouplesPage() {
     }
   }, []);
 
-  const handleVote = (activityId: string, liked: boolean) => {
+  const handleVote = async (activityId: string, liked: boolean) => {
     const votedActivity = activities.find(act => act.id === activityId);
     if (!votedActivity) return;
 
-    setActivities(prevActivities =>
-      prevActivities.map(act =>
-        act.id === activityId ? { ...act, isLiked: liked } : act
-      )
-    );
-    
-    toast({
-      title: liked ? "Date Idea Liked!" : "Date Idea Skipped",
-      description: `You ${liked ? 'liked' : 'skipped'} "${votedActivity.name}".`,
-    });
+    setVotedActivityIds(prev => new Set(prev).add(activityId));
+
+    const { success, error } = await saveCoupleVote(MOCK_USER_PROFILE.id, activityId, liked);
+
+    if (success) {
+      toast({
+        title: liked ? "Date Idea Liked!" : "Date Idea Skipped",
+        description: `You ${liked ? 'liked' : 'skipped'} "${votedActivity.name}".`,
+      });
+    } else {
+      toast({ title: "Error", description: error || "Could not save your vote.", variant: "destructive" });
+      setVotedActivityIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(activityId);
+          return newSet;
+      });
+      return; // Stop processing if vote failed to save
+    }
 
     if (liked) {
-      try {
-        const storedLikedActivities = localStorage.getItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
-        let currentLiked: Activity[] = [];
-        if (storedLikedActivities) {
-          currentLiked = JSON.parse(storedLikedActivities);
-        }
-        if (!currentLiked.find(act => act.id === votedActivity.id)) {
-          const updatedLiked = [...currentLiked, votedActivity];
-          localStorage.setItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY, JSON.stringify(updatedLiked));
-          setLikedActivitiesCount(updatedLiked.length);
-        }
-      } catch (e) {
-        console.error("Error saving liked activity to localStorage", e);
-        toast({ title: "Error", description: "Could not save liked activity preference.", variant: "destructive"});
-      }
-
+      setLikedActivitiesCount(prev => prev + 1);
       // Check for match animation
-      if (connectedPartner && connectedPartner.email === JULIA_EMAIL && JULIA_MOCKED_LIKES.includes(votedActivity.id)) {
+      if (connectedPartner && partnerLikedActivityIds.includes(votedActivity.id)) {
         setMatchedAnimationActivityName(votedActivity.name);
         setShowMatchAnimation(true);
         setTimeout(() => {
@@ -147,9 +139,8 @@ export default function PlandoCouplesPage() {
       return;
     }
     setIsConnectingPartner(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
-
-    const foundPartner = MOCK_POTENTIAL_PARTNERS.find(p => p.email.toLowerCase() === partnerEmailInput.trim().toLowerCase());
+    
+    const foundPartner = await findUserByEmail(partnerEmailInput.trim().toLowerCase());
 
     if (foundPartner) {
       if (foundPartner.id === MOCK_USER_PROFILE.id) {
@@ -158,6 +149,8 @@ export default function PlandoCouplesPage() {
         setConnectedPartner(foundPartner);
         localStorage.setItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY, JSON.stringify(foundPartner));
         toast({ title: "Partner Connected!", description: `You are now connected with ${foundPartner.name}.` });
+        // Fetch partner's likes on connect
+        getLikedCouplesActivityIds(foundPartner.id).then(setPartnerLikedActivityIds);
         setPartnerEmailInput("");
       }
     } else {
@@ -170,6 +163,7 @@ export default function PlandoCouplesPage() {
     if (connectedPartner) {
       toast({ title: "Partner Disconnected", description: `You are no longer connected with ${connectedPartner.name}.` });
       setConnectedPartner(null);
+      setPartnerLikedActivityIds([]);
       localStorage.removeItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
     }
   };
@@ -242,9 +236,10 @@ export default function PlandoCouplesPage() {
               <div className="text-center text-muted-foreground space-y-4 py-8">
                 <Users className="h-20 w-20 mx-auto text-primary/40" />
                 <p className="text-xl">
-                  {activities.length === 0 
-                    ? `No local date ideas found for ${currentLocationKey === "Default" ? "your area" : currentLocationKey}.` 
-                    : "You've swiped through all local date ideas!"}
+                  {votedActivityIds.size > 0 && activities.length === 0
+                    ? "You've swiped through all local date ideas!"
+                    : `No local date ideas found for ${currentLocationKey === "Default" ? "your area" : currentLocationKey}.` 
+                  }
                 </p>
                 <p className="text-sm">Check back later or reset the deck for more romantic suggestions.</p>
                 <div className="flex flex-col sm:flex-row gap-2 justify-center">
@@ -255,7 +250,7 @@ export default function PlandoCouplesPage() {
                   <Link href="/plando-couples/matches" passHref>
                     <Button variant="default" disabled={likedActivitiesCount === 0}>
                       <ListChecks className="mr-2 h-4 w-4" />
-                      View Liked Ideas ({likedActivitiesCount})
+                      View Matched Ideas ({likedActivitiesCount})
                     </Button>
                   </Link>
                 </div>
@@ -270,7 +265,7 @@ export default function PlandoCouplesPage() {
             <Link href="/plando-couples/matches" passHref>
               <Button variant="default" size="lg" disabled={likedActivitiesCount === 0}>
                 <ListChecks className="mr-2 h-5 w-5" />
-                View Your Liked Date Ideas ({likedActivitiesCount})
+                View Your Matched Date Ideas ({likedActivitiesCount})
               </Button>
             </Link>
         </div>
@@ -281,7 +276,7 @@ export default function PlandoCouplesPage() {
             <Link href="/plando-couples/matches" passHref>
               <Button variant="secondary" disabled={likedActivitiesCount === 0}>
                 <ListChecks className="mr-2 h-4 w-4" />
-                View Liked Date Ideas ({likedActivitiesCount})
+                View Matched Ideas ({likedActivitiesCount})
               </Button>
             </Link>
         </div>
@@ -306,7 +301,11 @@ export default function PlandoCouplesPage() {
               <span className="font-semibold text-foreground">{matchedAnimationActivityName}</span>!
             </CardDescription>
           </DialogHeader>
-          {/* Auto-closes via setTimeout in handleVote */}
+          <Link href="/plando-couples/matches" passHref>
+            <Button className="mt-4 w-full" onClick={() => setShowMatchAnimation(false)}>
+              See All Matches
+            </Button>
+          </Link>
         </DialogContent>
       </Dialog>
 

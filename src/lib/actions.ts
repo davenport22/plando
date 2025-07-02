@@ -179,8 +179,8 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
 // --- User Profile Actions ---
 
 /**
- * Fetches a user profile from Firestore. If the user doesn't exist and it's the
- * primary mock user, it seeds the database with the mock data.
+ * Fetches a user profile from Firestore. If the user doesn't exist and it's a
+ * mock user, it seeds the database with the mock data.
  * @param userId The ID of the user to fetch.
  * @returns A UserProfile object or null if not found.
  */
@@ -189,17 +189,17 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
         const userDoc = await firestore.collection('users').doc(userId).get();
 
         if (!userDoc.exists) {
-            // For this prototype, if the main user doesn't exist, create them from mock data.
-            // This ensures the app works on first run without manual DB setup.
-            if (userId === MOCK_USER_PROFILE.id) {
-                await firestore.collection('users').doc(userId).set(MOCK_USER_PROFILE);
-                return MOCK_USER_PROFILE;
-            }
-            // In a real app, you might want to fetch other mock users as well or just return null.
-            const otherMockUser = ALL_MOCK_USERS.find(u => u.id === userId);
-            if (otherMockUser) {
-                await firestore.collection('users').doc(userId).set(otherMockUser);
-                return otherMockUser;
+            // For this prototype, if a known mock user doesn't exist, create them from mock data.
+            const userToSeed = ALL_MOCK_USERS.find(u => u.id === userId);
+            if (userToSeed) {
+                await firestore.collection('users').doc(userId).set(userToSeed);
+                // Also ensure the "users" collection exists for queries.
+                // This is a bit of a hack for demo purposes to ensure the first query on an empty collection works.
+                const dummyDoc = firestore.collection('users').doc('__dummy__');
+                if (!(await dummyDoc.get()).exists) {
+                    await dummyDoc.set({ initialized: true });
+                }
+                return userToSeed;
             }
             return null;
         }
@@ -235,5 +235,64 @@ export async function updateUserProfile(userId: string, data: Partial<UserProfil
         console.error(`Error updating user profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
+    }
+}
+
+// --- Plando Couples Actions ---
+
+/**
+ * Finds a user by their email address.
+ * @param email The email of the user to find.
+ * @returns A UserProfile object or null if not found.
+ */
+export async function findUserByEmail(email: string): Promise<UserProfile | null> {
+    try {
+        const usersRef = firestore.collection('users');
+        const snapshot = await usersRef.where('email', '==', email).limit(1).get();
+        if (snapshot.empty) {
+            return null;
+        }
+        const userDoc = snapshot.docs[0];
+        return { id: userDoc.id, ...userDoc.data() } as UserProfile;
+    } catch (error) {
+        console.error(`Error finding user by email ${email}:`, error);
+        return null;
+    }
+}
+
+/**
+ * Saves a user's vote (like/dislike) for a couples activity.
+ * @param userId The ID of the user voting.
+ * @param activityId The ID of the activity being voted on.
+ * @param liked A boolean indicating if the user liked the activity.
+ * @returns An object indicating success or failure.
+ */
+export async function saveCoupleVote(userId: string, activityId: string, liked: boolean): Promise<{ success: boolean; error?: string }> {
+    try {
+        const voteRef = firestore.collection('users').doc(userId).collection('couplesVotes').doc(activityId);
+        await voteRef.set({
+            liked,
+            votedAt: new Date().toISOString(),
+        });
+        return { success: true };
+    } catch (error) {
+        console.error(`Error saving vote for user ${userId}, activity ${activityId}:`, error);
+        return { success: false, error: 'Failed to save your vote to the database.' };
+    }
+}
+
+/**
+ * Retrieves a list of liked activity IDs for a specific user.
+ * @param userId The ID of the user whose liked activities to fetch.
+ * @returns A promise that resolves to an array of liked activity IDs.
+ */
+export async function getLikedCouplesActivityIds(userId: string): Promise<string[]> {
+    try {
+        const votesSnapshot = await firestore.collection('users').doc(userId).collection('couplesVotes').where('liked', '==', true).get();
+        return votesSnapshot.docs.map(doc => doc.id);
+    } catch (error) {
+        console.error(`Error fetching liked activity IDs for user ${userId}:`, error);
+        // Return an empty array on error to prevent the app from crashing.
+        return [];
     }
 }
