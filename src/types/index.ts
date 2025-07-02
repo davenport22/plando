@@ -7,7 +7,7 @@ export interface User {
 
 export interface UserProfile extends User {
   bio: string;
-  location: string;
+  location: string; // The user's home city, e.g., "Vienna, Austria". Used for local activity suggestions.
   memberSince: string;
   interests: string[];
   avatarUrl?: string;
@@ -16,7 +16,7 @@ export interface UserProfile extends User {
 export interface Trip {
   id: string;
   name: string;
-  destination: string;
+  destination: string; // The destination city for the trip, e.g., "Paris, France"
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   ownerId: string;
@@ -32,7 +32,7 @@ export interface Activity {
   tripId?: string;
   name: string;
   description?: string;
-  location: string;
+  location: string; // The location of the activity, typically within the trip's destination city.
   duration: number; // in hours
   isLiked?: boolean;
   imageUrls: string[];
@@ -449,4 +449,3 @@ declare module 'react' {
     dataAiHint?: string;
   }
 }
-

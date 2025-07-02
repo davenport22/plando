@@ -11,10 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, calculateTripDuration } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { createTrip } from "@/lib/actions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const newTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
@@ -120,6 +121,15 @@ export function NewTripForm() {
             </FormItem>
           )}
         />
+
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>City Trips Focus</AlertTitle>
+          <AlertDescription>
+            Plando is currently optimized for city-based trips. Please enter a major city as your destination.
+          </AlertDescription>
+        </Alert>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <FormField
             control={form.control}

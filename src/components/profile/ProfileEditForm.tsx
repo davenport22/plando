@@ -149,6 +149,9 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
               <FormControl>
                 <Input placeholder="e.g., City, Country" {...field} />
               </FormControl>
+              <FormDescription>
+                Your home city. This helps us suggest local activities in other Plando modules.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
