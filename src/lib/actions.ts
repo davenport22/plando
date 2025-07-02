@@ -3,7 +3,7 @@
 
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
 import { generateActivityDescription, type GenerateActivityDescriptionInput, type GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
-import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE } from '@/types';
+import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS } from '@/types';
 import { firestore } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -136,7 +136,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
                 return MOCK_USER_PROFILE;
             }
             // In a real app, you might want to fetch other mock users as well or just return null.
-            const otherMockUser = (await import('@/types')).ALL_MOCK_USERS.find(u => u.id === userId);
+            const otherMockUser = ALL_MOCK_USERS.find(u => u.id === userId);
             if (otherMockUser) {
                 await firestore.collection('users').doc(userId).set(otherMockUser);
                 return otherMockUser;

@@ -7,7 +7,7 @@ import { type Trip, MOCK_USER_PROFILE } from "@/types";
 import { CalendarDays, MapPinIcon, CheckCircle2, Edit, AlertCircle } from "lucide-react";
 import Link from 'next/link';
 import { getUserProfile } from '@/lib/actions';
-import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { firestore } from "@/lib/firebase";
 
 export default async function ProfilePage() {
@@ -48,7 +48,9 @@ export default async function ProfilePage() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Profile</AlertTitle>
-          <p>Could not load your profile. Please check your connection or try again later. Ensure your Firebase backend is configured correctly.</p>
+          <AlertDescription>
+            Could not load your profile. Please check your connection or try again later. Ensure your Firebase backend is configured correctly.
+          </AlertDescription>
         </Alert>
       </div>
     );

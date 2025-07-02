@@ -6,7 +6,7 @@ import { getUserProfile } from '@/lib/actions';
 import { MOCK_USER_PROFILE } from '@/types';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default async function EditProfilePage() {
   const userId = MOCK_USER_PROFILE.id; // This would come from auth in a real app
@@ -17,7 +17,7 @@ export default async function EditProfilePage() {
       <div className="container mx-auto py-12 px-4 max-w-2xl">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <CardTitle>Error Loading Profile</CardTitle>
+          <AlertTitle>Error Loading Profile</AlertTitle>
           <AlertDescription>
             Could not load your profile for editing. Please try again later.
           </AlertDescription>

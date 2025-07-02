@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { CalendarDays, MapPinIcon, ArrowLeft, UserCircle, AlertCircle } from "lucide-react";
 import Link from 'next/link';
 import { getUserProfile } from "@/lib/actions";
-import { Alert } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface UserProfileViewPageProps {
   params: {
@@ -20,26 +20,19 @@ export default async function UserProfileViewPage({ params }: UserProfileViewPag
 
   if (!viewedUser) {
     return (
-      <div className="container mx-auto py-12 px-4">
-        <Link href="/" passHref>
+      <div className="container mx-auto py-12 px-4 max-w-2xl">
+        <Link href="/plando-couples" passHref>
           <Button variant="outline" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Safety
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
         </Link>
-        <Card className="text-center py-10">
-          <CardHeader>
-            <UserCircle className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <CardTitle className="text-2xl">User Not Found</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <CardDescription>
-                The profile you are trying to view does not exist or could not be loaded.
-              </CardDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>User Not Found</AlertTitle>
+          <AlertDescription>
+            The profile you are trying to view does not exist or could not be loaded.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
