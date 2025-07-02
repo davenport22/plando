@@ -124,7 +124,7 @@ export function RegisterForm() {
             <FormItem>
               <FormLabel>Bio (Optional)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Tell us a bit about your travel style or what you love about traveling." {...field} rows={3} />
+                <Textarea placeholder="Tell us a bit about yourself." {...field} rows={3} />
               </FormControl>
               <FormMessage />
             </FormItem>

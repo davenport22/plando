@@ -88,7 +88,11 @@ export async function enhanceActivityDescriptionAction(
 }
 
 // Type for data coming from the NewTripForm
-type NewTripData = Omit<Trip, 'id' | 'ownerId' | 'participantIds'>;
+type NewTripData = Omit<Trip, 'id' | 'ownerId' | 'participantIds' | 'imageUrl'> & {
+    startDate: string;
+    endDate: string;
+};
+
 
 export async function createTrip(data: NewTripData): Promise<{ error: string } | void> {
     try {
@@ -96,14 +100,23 @@ export async function createTrip(data: NewTripData): Promise<{ error: string } |
             return { error: 'Missing required fields.' };
         }
         
-        const newTrip = {
-            ...data,
+        // Construct the new trip object safely, ensuring no invalid data types (like NaN) are sent.
+        const newTrip: Omit<Trip, 'id'> = {
+            name: data.name,
+            destination: data.destination,
+            startDate: data.startDate,
+            endDate: data.endDate,
             ownerId: 'user1', // In a real app, get this from the authenticated session
             participantIds: ['user1'],
-            // Use a generic placeholder and let the AI hint drive image selection later
-            imageUrl: `https://placehold.co/600x400.png`
+            imageUrl: `https://placehold.co/600x400.png`,
+            // Sanitize optional fields to be either a valid value or undefined.
+            // This prevents invalid data like NaN from being sent to Firestore.
+            latitude: data.latitude && !isNaN(data.latitude) ? data.latitude : undefined,
+            longitude: data.longitude && !isNaN(data.longitude) ? data.longitude : undefined,
+            placeId: data.placeId || undefined,
         };
 
+        // Firestore's 'add' method automatically ignores keys with 'undefined' values.
         await firestore.collection('trips').add(newTrip);
 
     } catch (e) {
@@ -115,6 +128,7 @@ export async function createTrip(data: NewTripData): Promise<{ error: string } |
     revalidatePath('/login'); // Invalidate cache for the trips list page
     redirect('/login'); // Navigate to the trips list page
 }
+
 
 // --- User Profile Actions ---
 
