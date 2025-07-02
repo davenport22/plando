@@ -3,7 +3,7 @@
 
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
 import { generateActivityDescription, type GenerateActivityDescriptionInput, type GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
-import type { ActivityInput, Trip } from '@/types';
+import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE } from '@/types';
 import { firestore } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -114,4 +114,66 @@ export async function createTrip(data: NewTripData): Promise<{ error: string } |
 
     revalidatePath('/'); // Invalidate cache for the trips list page
     redirect('/'); // Navigate to the trips list page
+}
+
+// --- User Profile Actions ---
+
+/**
+ * Fetches a user profile from Firestore. If the user doesn't exist and it's the
+ * primary mock user, it seeds the database with the mock data.
+ * @param userId The ID of the user to fetch.
+ * @returns A UserProfile object or null if not found.
+ */
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+    try {
+        const userDoc = await firestore.collection('users').doc(userId).get();
+
+        if (!userDoc.exists) {
+            // For this prototype, if the main user doesn't exist, create them from mock data.
+            // This ensures the app works on first run without manual DB setup.
+            if (userId === MOCK_USER_PROFILE.id) {
+                await firestore.collection('users').doc(userId).set(MOCK_USER_PROFILE);
+                return MOCK_USER_PROFILE;
+            }
+            // In a real app, you might want to fetch other mock users as well or just return null.
+            const otherMockUser = (await import('@/types')).ALL_MOCK_USERS.find(u => u.id === userId);
+            if (otherMockUser) {
+                await firestore.collection('users').doc(userId).set(otherMockUser);
+                return otherMockUser;
+            }
+            return null;
+        }
+
+        return userDoc.data() as UserProfile;
+    } catch (error) {
+        console.error(`Error fetching user profile for ${userId}:`, error);
+        // To prevent app crashes, return null on error. The UI should handle this.
+        return null;
+    }
+}
+
+
+/**
+ * Updates a user profile in Firestore.
+ * @param userId The ID of the user to update.
+ * @param data A partial UserProfile object with the fields to update.
+ * @returns An object indicating success or failure.
+ */
+export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> {
+    try {
+        if (!userId) {
+            return { success: false, error: "User ID is required." };
+        }
+        await firestore.collection('users').doc(userId).update(data);
+
+        // Revalidate paths where this user's data might be displayed
+        revalidatePath('/profile');
+        revalidatePath(`/users/${userId}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error(`Error updating user profile for ${userId}:`, error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
 }

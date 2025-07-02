@@ -1,30 +1,37 @@
 
-"use client"; 
-
-import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MOCK_USER_PROFILE, MOCK_TRIPS, type Trip, type UserProfile } from "@/types"; 
-import { CalendarDays, MapPinIcon, CheckCircle2, Edit } from "lucide-react";
+import { MOCK_TRIPS, type Trip, MOCK_USER_PROFILE } from "@/types"; 
+import { CalendarDays, MapPinIcon, CheckCircle2, Edit, AlertCircle } from "lucide-react";
 import Link from 'next/link';
+import { getUserProfile } from '@/lib/actions';
+import { Alert, AlertTitle } from "@/components/ui/alert";
 
-export default function ProfilePage() {
-  const [user, setUser] = useState<UserProfile>(MOCK_USER_PROFILE); 
-  const [completedTrips, setCompletedTrips] = useState<Trip[]>([]);
+export default async function ProfilePage() {
+  const userId = MOCK_USER_PROFILE.id; // In a real app, this would come from the auth session
+  const user = await getUserProfile(userId);
 
-  useEffect(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); 
+  // In a real app, you might fetch these from the DB as well
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const completedTrips = MOCK_TRIPS.filter(trip => {
+    const endDate = new Date(trip.endDate);
+    return endDate < today;
+  });
 
-    const filteredTrips = MOCK_TRIPS.filter(trip => {
-      const endDate = new Date(trip.endDate);
-      return endDate < today;
-    });
-    setCompletedTrips(filteredTrips);
-  }, []);
-
+  if (!user) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error Loading Profile</AlertTitle>
+          <p>Could not load your profile. Please check your connection or try again later. Ensure your Firebase backend is configured correctly.</p>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">

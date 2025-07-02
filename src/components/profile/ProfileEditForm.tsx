@@ -11,6 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import type { UserProfile } from "@/types";
 import { Loader2, Save } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
+import { useToast } from "@/hooks/use-toast";
+import { updateUserProfile } from "@/lib/actions";
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -23,7 +26,6 @@ const profileEditSchema = z.object({
   bio: z.string().max(500, "Bio is too long.").optional().default(""),
   location: z.string().max(100, "Location is too long.").optional().default(""),
   avatarUrl: z.string().url("Please enter a valid URL.").or(z.literal("")).optional().default(""),
-  // Interests will be handled by local state, but we can keep schema for potential future direct RHF integration
   interests: z.array(z.string()).optional().default([]), 
 });
 
@@ -31,10 +33,11 @@ type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
 
 interface ProfileEditFormProps {
   initialData: UserProfile;
-  onSubmit: (data: Partial<UserProfile>) => Promise<void>;
 }
 
-export function ProfileEditForm({ initialData, onSubmit }: ProfileEditFormProps) {
+export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
+  const router = useRouter();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialData.interests || []);
 
@@ -45,7 +48,7 @@ export function ProfileEditForm({ initialData, onSubmit }: ProfileEditFormProps)
       bio: initialData.bio || "",
       location: initialData.location || "",
       avatarUrl: initialData.avatarUrl || "",
-      interests: initialData.interests || [], // RHF keeps a copy, but display/logic uses local state
+      interests: initialData.interests || [],
     },
   });
 
@@ -76,10 +79,26 @@ export function ProfileEditForm({ initialData, onSubmit }: ProfileEditFormProps)
       bio: data.bio,
       location: data.location,
       avatarUrl: data.avatarUrl,
-      interests: selectedInterests, // Use local state for interests
+      interests: selectedInterests,
     };
-    await onSubmit(updateData);
+    
+    const result = await updateUserProfile(initialData.id, updateData);
     setIsLoading(false);
+
+    if (result.success) {
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been successfully updated.",
+      });
+      router.push('/profile');
+      router.refresh(); // Ask Next.js to refresh the new page data
+    } else {
+      toast({
+        title: "Update Failed",
+        description: result.error || "An unknown error occurred.",
+        variant: "destructive",
+      });
+    }
   }
 
   return (
@@ -166,7 +185,6 @@ export function ProfileEditForm({ initialData, onSubmit }: ProfileEditFormProps)
               </Button>
             ))}
           </div>
-           {/* Hidden FormField to satisfy schema if RHF validation is strict, though we use local state primarily */}
            <FormField
               control={form.control}
               name="interests"
