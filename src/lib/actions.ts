@@ -117,16 +117,62 @@ export async function createTrip(data: NewTripData): Promise<{ error: string } |
         };
 
         // Firestore's 'add' method automatically ignores keys with 'undefined' values.
-        await firestore.collection('trips').add(newTrip);
+        const docRef = await firestore.collection('trips').add(newTrip);
+
+        // Instead of just redirecting, we can redirect to the newly created trip's page
+        revalidatePath('/login'); // Invalidate cache for the trips list page
+        redirect(`/trips/${docRef.id}`); // Navigate to the new trip's detail page
 
     } catch (e) {
         console.error('Error creating trip in Firestore:', e);
         if (e instanceof Error) return { error: e.message };
         return { error: 'An unknown error occurred while creating the trip.' };
     }
+}
 
-    revalidatePath('/login'); // Invalidate cache for the trips list page
-    redirect('/login'); // Navigate to the trips list page
+export async function getTrip(tripId: string): Promise<Trip | null> {
+    try {
+        const tripDoc = await firestore.collection('trips').doc(tripId).get();
+        if (!tripDoc.exists) {
+            return null;
+        }
+        const data = tripDoc.data()!;
+        // Ensure all fields of the Trip interface are present
+        return {
+            id: tripDoc.id,
+            name: data.name || 'Untitled Trip',
+            destination: data.destination || 'Unknown Destination',
+            startDate: data.startDate,
+            endDate: data.endDate,
+            ownerId: data.ownerId,
+            participantIds: data.participantIds || [],
+            imageUrl: data.imageUrl,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            placeId: data.placeId,
+        };
+    } catch (error) {
+        console.error(`Error fetching trip ${tripId}:`, error);
+        return null;
+    }
+}
+
+export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{ success: boolean; error?: string }> {
+    try {
+        if (!tripId) {
+            return { success: false, error: "Trip ID is required." };
+        }
+        await firestore.collection('trips').doc(tripId).update(data);
+
+        revalidatePath(`/trips/${tripId}`);
+        revalidatePath('/login');
+
+        return { success: true };
+    } catch (error) {
+        console.error(`Error updating trip for ${tripId}:`, error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
 }
 
 

@@ -21,8 +21,8 @@ const newTripFormSchema = z.object({
   destination: z.string().min(2, "Destination must be at least 2 characters.").max(100, "Destination must be at most 100 characters."),
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
   placeId: z.string().optional(),
 }).refine(data => data.endDate >= data.startDate, {
   message: "End date cannot be before start date.",

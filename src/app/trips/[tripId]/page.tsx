@@ -4,14 +4,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Trip, Activity, Itinerary, ActivityInput } from '@/types';
-import { MOCK_TRIPS, MOCK_DESTINATION_ACTIVITIES } from '@/types'; 
+import { MOCK_DESTINATION_ACTIVITIES } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
 import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { suggestItineraryAction } from '@/lib/actions';
+import { suggestItineraryAction, getTrip, updateTrip } from '@/lib/actions';
 import { calculateTripDuration } from '@/lib/utils';
 import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,6 +73,7 @@ export default function TripDetailPage() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [userActivities, setUserActivities] = useState<Activity[]>([]);
   const [generatedItinerary, setGeneratedItinerary] = useState<Itinerary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingItinerary, setIsLoadingItinerary] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [tripDuration, setTripDuration] = useState<string>("");
@@ -84,32 +85,33 @@ export default function TripDetailPage() {
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
   useEffect(() => {
-    const currentTrip = MOCK_TRIPS.find(t => t.id === tripId);
-    if (currentTrip) {
-      const formattedTrip = {
-        ...currentTrip,
-        startDate: typeof currentTrip.startDate === 'string' ? currentTrip.startDate : format(currentTrip.startDate, 'yyyy-MM-dd'),
-        endDate: typeof currentTrip.endDate === 'string' ? currentTrip.endDate : format(currentTrip.endDate, 'yyyy-MM-dd'),
-      };
-      setTrip(formattedTrip);
-      if (formattedTrip.startDate && formattedTrip.endDate) {
-        setTripDuration(calculateTripDuration(formattedTrip.startDate, formattedTrip.endDate));
+    if (!tripId) return;
+
+    const fetchTripData = async () => {
+      setIsLoading(true);
+      const fetchedTrip = await getTrip(tripId);
+      if (fetchedTrip) {
+        setTrip(fetchedTrip);
+        // Once trip is fetched, setup activities (still using mock data for this part)
+        const destinationActivities = MOCK_DESTINATION_ACTIVITIES[fetchedTrip.destination] || [];
+        const initialActivities = destinationActivities.map(act => ({ ...act, tripId, isLiked: undefined }));
+        setUserActivities(initialActivities);
+      } else {
+        toast({ title: "Trip not found", description: "The trip you are looking for does not exist.", variant: "destructive" });
+        router.push('/login'); // Redirect to the main trips list
       }
-      
-      const destinationActivities = MOCK_DESTINATION_ACTIVITIES[currentTrip.destination] || [];
-      const initialActivities = destinationActivities.map(act => ({ ...act, tripId, isLiked: undefined }));
-      setUserActivities(initialActivities);
-    } else {
-      toast({ title: "Trip not found", variant: "destructive" });
-      router.push('/');
-    }
+      setIsLoading(false);
+    };
+
+    fetchTripData();
   }, [tripId, router, toast]);
+
 
   useEffect(() => {
     if (trip && trip.startDate && trip.endDate) {
       setTripDuration(calculateTripDuration(trip.startDate, trip.endDate));
     }
-  }, [trip?.startDate, trip?.endDate]);
+  }, [trip]);
 
   useEffect(() => {
     if (generatedItinerary && activitiesAtLastGeneration) {
@@ -213,27 +215,19 @@ export default function TripDetailPage() {
     setIsLoadingItinerary(false);
   };
 
-  const handleUpdateTripDetails = async (updatedData: Partial<Omit<Trip, 'id' | 'ownerId' | 'participantIds' | 'imageUrl'>>) => {
+  const handleUpdateTripDetails = async (updatedData: Partial<Omit<Trip, 'id' | 'ownerId' | 'participantIds'>>) => {
     if (!trip) return;
 
-    const formattedStartDate = updatedData.startDate instanceof Date ? format(updatedData.startDate, 'yyyy-MM-dd') : updatedData.startDate;
-    const formattedEndDate = updatedData.endDate instanceof Date ? format(updatedData.endDate, 'yyyy-MM-dd') : updatedData.endDate;
+    // The form data already includes formatted date strings
+    const result = await updateTrip(trip.id, updatedData as Partial<Trip>);
 
-    const updatedTrip = {
-      ...trip,
-      ...updatedData,
-      startDate: formattedStartDate || trip.startDate,
-      endDate: formattedEndDate || trip.endDate,
-    };
-    setTrip(updatedTrip);
-    
-    const tripIndex = MOCK_TRIPS.findIndex(t => t.id === tripId);
-    if (tripIndex !== -1) {
-      MOCK_TRIPS[tripIndex] = updatedTrip;
+    if (result.success) {
+      setTrip(prevTrip => ({ ...prevTrip!, ...updatedData } as Trip));
+      toast({ title: "Trip Updated!", description: `Details for trip "${trip.name}" have been saved.`});
+      setIsEditDialogOpen(false);
+    } else {
+      toast({ title: "Update Failed", description: result.error, variant: "destructive" });
     }
-
-    toast({ title: "Trip Updated!", description: `Details for "${updatedTrip.name}" have been saved.`});
-    setIsEditDialogOpen(false); 
   };
 
   const handleOpenActivityDetail = (activity: Activity) => {
@@ -242,7 +236,7 @@ export default function TripDetailPage() {
   };
 
 
-  if (!trip) {
+  if (isLoading || !trip) {
     return (
       <div className="container mx-auto py-10 px-4 text-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
@@ -272,7 +266,7 @@ export default function TripDetailPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <Button variant="outline" onClick={() => router.back()} className="mb-6">
+      <Button variant="outline" onClick={() => router.push('/login')} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Trips
       </Button>
 
@@ -441,4 +435,3 @@ export default function TripDetailPage() {
     </div>
   );
 }
-
