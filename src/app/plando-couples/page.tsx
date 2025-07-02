@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Activity, UserProfile } from '@/types';
-import { MOCK_COUPLES_ACTIVITIES_BY_CITY, MOCK_USER_PROFILE, MOCK_POTENTIAL_PARTNERS, JULIA_MOCKED_LIKES } from '@/types'; 
+import { MOCK_USER_PROFILE, MOCK_POTENTIAL_PARTNERS, JULIA_MOCKED_LIKES } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle as MatchDialogTitle } 
 import { plandoModules } from "@/config/plandoModules";
 import Link from 'next/link';
 import { PartnerConnection } from '@/components/couples/PartnerConnection';
+import { useLocalActivities } from '@/hooks/useLocalActivities';
 
 const LOCAL_STORAGE_LIKED_ACTIVITIES_KEY = `plandoCouplesLikedActivities_${MOCK_USER_PROFILE.id}`;
 const LOCAL_STORAGE_CONNECTED_PARTNER_KEY = `plandoCouplesConnectedPartner_${MOCK_USER_PROFILE.id}`;
@@ -27,12 +28,17 @@ export default function PlandoCouplesPage() {
   const couplesModule = plandoModules.find(m => m.id === 'couples');
   const Icon = couplesModule?.Icon || Heart;
 
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const { 
+    activities, 
+    setActivities, 
+    isLoading, 
+    locationStatusMessage, 
+    currentLocationKey, 
+    fetchActivities: fetchNewActivities 
+  } = useLocalActivities('couples');
+
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [showEndOfList, setShowEndOfList] = useState(false);
-  const [locationStatusMessage, setLocationStatusMessage] = useState<string | null>(null);
-  const [currentLocationKey, setCurrentLocationKey] = useState<string>("Default");
 
   const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
@@ -47,6 +53,12 @@ export default function PlandoCouplesPage() {
   // Match animation state
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   const [matchedAnimationActivityName, setMatchedAnimationActivityName] = useState<string>("");
+  
+  // This effect will run when activities are loaded or reloaded by the hook
+  useEffect(() => {
+    setCurrentActivityIndex(0);
+    setShowEndOfList(activities.length > 0 ? false : true);
+  }, [activities]);
 
   useEffect(() => {
     const storedLikedActivities = localStorage.getItem(LOCAL_STORAGE_LIKED_ACTIVITIES_KEY);
@@ -68,52 +80,7 @@ export default function PlandoCouplesPage() {
             localStorage.removeItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
         }
     }
-
-    fetchActivitiesBasedOnLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const fetchActivitiesBasedOnLocation = async () => {
-    setIsLoading(true);
-    setLocationStatusMessage("Fetching location and activities for couples...");
-
-    let determinedLocationKey = "Default";
-    let statusMsg = "";
-
-    if (navigator.geolocation) {
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-        });
-        determinedLocationKey = MOCK_USER_PROFILE.location || "Default";
-        statusMsg = `Using profile location for couples activities: ${determinedLocationKey}. (Live location: ${position.coords.latitude.toFixed(2)}, ${position.coords.longitude.toFixed(2)})`;
-      } catch (error: any) {
-        determinedLocationKey = MOCK_USER_PROFILE.location || "Default";
-        statusMsg = `Could not get live location for couples activities. Using profile location: ${determinedLocationKey}.`;
-        if (error.code === error.PERMISSION_DENIED) {
-          statusMsg = `Location access denied for couples activities. Using profile location: ${determinedLocationKey}.`;
-        }
-      }
-    } else {
-      determinedLocationKey = MOCK_USER_PROFILE.location || "Default";
-      statusMsg = `Geolocation not supported. Using profile location for couples activities: ${determinedLocationKey}.`;
-    }
-    
-    setCurrentLocationKey(determinedLocationKey);
-    setLocationStatusMessage(statusMsg);
-
-    const activitiesToShow = (MOCK_COUPLES_ACTIVITIES_BY_CITY[determinedLocationKey] || MOCK_COUPLES_ACTIVITIES_BY_CITY["Default"])
-                              .map(act => ({ ...act, isLiked: undefined }));
-    
-    setActivities(activitiesToShow);
-    setCurrentActivityIndex(0);
-    setShowEndOfList(activitiesToShow.length === 0);
-    setIsLoading(false);
-    if (activitiesToShow.length === 0) {
-        toast({ title: "No Activities Found", description: `No local couples activities found in ${determinedLocationKey}.`, variant: "default"});
-    }
-  };
-
 
   const handleVote = (activityId: string, liked: boolean) => {
     const votedActivity = activities.find(act => act.id === activityId);
@@ -171,7 +138,7 @@ export default function PlandoCouplesPage() {
 
   const handleResetDeck = () => {
     toast({ title: "Resetting Date Ideas Deck...", description: `Reloading couples activities for ${currentLocationKey}.`});
-    fetchActivitiesBasedOnLocation();
+    fetchNewActivities();
   };
 
   const handleConnectPartner = async () => {
@@ -211,7 +178,7 @@ export default function PlandoCouplesPage() {
     ? activities[currentActivityIndex] 
     : null;
 
-  if (isLoading && activities.length === 0 && !connectedPartner) { 
+  if (isLoading && activities.length === 0) { 
     return (
       <div className="container mx-auto py-12 px-4 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

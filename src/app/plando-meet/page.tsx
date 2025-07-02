@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import type { Activity } from '@/types';
-import { MOCK_ACTIVITIES_BY_CITY, MOCK_USER_PROFILE } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
@@ -11,73 +10,32 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, Users, RotateCcw, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { plandoModules } from "@/config/plandoModules";
+import { useLocalActivities } from '@/hooks/useLocalActivities';
 
 export default function PlandoMeetPage() {
   const { toast } = useToast();
   const meetModule = plandoModules.find(m => m.id === 'meet');
   const Icon = meetModule?.Icon || Sparkles;
 
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showEndOfList, setShowEndOfList] = useState(false);
-  const [locationStatusMessage, setLocationStatusMessage] = useState<string | null>(null);
-  const [currentLocationKey, setCurrentLocationKey] = useState<string>("Default");
+  const { 
+    activities, 
+    setActivities, 
+    isLoading, 
+    locationStatusMessage, 
+    currentLocationKey, 
+    fetchActivities: fetchNewActivities 
+  } = useLocalActivities('meet');
 
+  const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
+  const [showEndOfList, setShowEndOfList] = useState(false);
 
   const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
-  const fetchActivitiesBasedOnLocation = async () => {
-    setIsLoading(true);
-    setLocationStatusMessage("Fetching location and activities...");
-
-    let determinedLocationKey = "Default";
-    let statusMsg = "";
-
-    if (navigator.geolocation) {
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-        });
-        console.log("User coordinates:", position.coords.latitude, position.coords.longitude);
-        // In a real app, we might use reverse geocoding here to get city name
-        // For prototype, we'll acknowledge live location but still use profile location for activity selection
-        determinedLocationKey = MOCK_USER_PROFILE.location || "Default";
-        statusMsg = `Using your profile location: ${determinedLocationKey}. (Live location: ${position.coords.latitude.toFixed(2)}, ${position.coords.longitude.toFixed(2)})`;
-      } catch (error: any) {
-        console.error("Geolocation error:", error.message);
-        determinedLocationKey = MOCK_USER_PROFILE.location || "Default";
-        statusMsg = `Could not get live location. Using profile location: ${determinedLocationKey}.`;
-        if (error.code === error.PERMISSION_DENIED) {
-          statusMsg = `Location access denied. Using profile location: ${determinedLocationKey}.`;
-        }
-      }
-    } else {
-      determinedLocationKey = MOCK_USER_PROFILE.location || "Default";
-      statusMsg = `Geolocation not supported. Using profile location: ${determinedLocationKey}.`;
-    }
-    
-    setCurrentLocationKey(determinedLocationKey);
-    setLocationStatusMessage(statusMsg);
-
-    const activitiesToShow = (MOCK_ACTIVITIES_BY_CITY[determinedLocationKey] || MOCK_ACTIVITIES_BY_CITY["Default"])
-                              .map(act => ({ ...act, isLiked: undefined }));
-    
-    setActivities(activitiesToShow);
-    setCurrentActivityIndex(0);
-    setShowEndOfList(activitiesToShow.length === 0);
-    setIsLoading(false);
-    if (activitiesToShow.length === 0) {
-        toast({ title: "No Activities Found", description: `No local activities found for ${determinedLocationKey}.`, variant: "default"});
-    }
-  };
-
   useEffect(() => {
-    fetchActivitiesBasedOnLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+    setCurrentActivityIndex(0);
+    setShowEndOfList(activities.length > 0 ? false : true);
+  }, [activities]);
 
   const handleVote = (activityId: string, liked: boolean) => {
     setActivities(prevActivities =>
@@ -86,7 +44,6 @@ export default function PlandoMeetPage() {
       )
     );
     
-    // Find the activity to get its name for the toast
     const votedActivity = activities.find(act => act.id === activityId);
     if (votedActivity) {
         toast({
@@ -94,7 +51,6 @@ export default function PlandoMeetPage() {
         description: `You ${liked ? 'liked' : 'skipped'} "${votedActivity.name}".`,
         });
     }
-
 
     if (currentActivityIndex < activities.length - 1) {
       setCurrentActivityIndex(prevIndex => prevIndex + 1);
@@ -110,14 +66,14 @@ export default function PlandoMeetPage() {
 
   const handleResetDeck = () => {
     toast({ title: "Resetting Activity Deck...", description: `Reloading activities for ${currentLocationKey}.`});
-    fetchActivitiesBasedOnLocation();
+    fetchNewActivities();
   };
   
   const currentActivity = !isLoading && !showEndOfList && activities.length > 0 
     ? activities[currentActivityIndex] 
     : null;
 
-  if (isLoading && activities.length === 0) { // Only show full page loader on initial load
+  if (isLoading && activities.length === 0) {
     return (
       <div className="container mx-auto py-12 px-4 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -143,7 +99,7 @@ export default function PlandoMeetPage() {
                 <span>{locationStatusMessage}</span>
             </div>
           )}
-          {isLoading && activities.length > 0 && ( // Show loader if resetting but activities are already there
+          {isLoading && activities.length > 0 && (
             <div className="flex flex-col items-center justify-center h-full">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 <p className="mt-3 text-sm text-muted-foreground">Reloading activities...</p>
@@ -158,7 +114,7 @@ export default function PlandoMeetPage() {
                 onCardClick={handleOpenActivityDetail}
               />
             </div>
-          ) : !isLoading && ( // Placed here to show after loading finishes and no current activity
+          ) : !isLoading && (
             <div className="text-center text-muted-foreground space-y-4">
               <Users className="h-20 w-20 mx-auto text-primary/40" />
               <p className="text-xl">
@@ -184,4 +140,3 @@ export default function PlandoMeetPage() {
     </div>
   );
 }
-
