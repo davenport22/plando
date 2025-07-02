@@ -27,7 +27,7 @@ const AppHeader = () => {
     setCurrentModule(getModuleByPath(pathname));
   }, [pathname]);
   
-  const isAuthPage = pathname === '/login' || pathname === '/register';
+  const isAuthPage = pathname === '/' || pathname === '/register';
   
   // Check if the current module determined by getModuleByPath is one of the main application modules (not global)
   // and specifically if it's the 'travel' module for showing "My Trips".
@@ -44,7 +44,6 @@ const AppHeader = () => {
      // For simplicity, let's keep displayBasePath as currentModule.path for global modules.
      // This means clicking "My Profile" logo on /profile/edit will go to /profile.
      // Clicking "User Profile" logo on /users/some-id will link to /users (which might not be a page, consider this UX).
-     // A better UX for /users/[id] logo might be to link to '/' or the couples page if context is available.
      // For now, it links to currentModule.path.
   }
 
@@ -81,7 +80,7 @@ const AppHeader = () => {
         {!isAuthPage && (
           <nav className="flex items-center gap-2 sm:gap-4">
             {showMyTripsButton && (
-              <Link href="/" passHref> 
+              <Link href="/login" passHref> 
                 <Button variant="ghost">
                   <LayoutGrid className="mr-2 h-5 w-5" />
                   My Trips
@@ -97,4 +96,3 @@ const AppHeader = () => {
 };
 
 export default AppHeader;
-    

@@ -42,13 +42,13 @@ export function UserNav() {
       title: "Logged Out",
       description: "You have been successfully logged out.",
     });
-    router.push('/login');
+    router.push('/');
   };
 
 
   if (!user) {
     return (
-      <Link href="/login">
+      <Link href="/">
         <Button variant="outline">Login</Button>
       </Link>
     );

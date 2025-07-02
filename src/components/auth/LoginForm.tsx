@@ -39,7 +39,7 @@ export function LoginForm() {
     console.log("Login Data:", data);
     toast({ title: "Login Successful!", description: "Welcome back!" });
     setIsLoading(false);
-    router.push("/"); // Redirect to homepage
+    router.push("/login"); // Redirect to trips page
   }
 
   return (

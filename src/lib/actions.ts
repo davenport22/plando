@@ -112,8 +112,8 @@ export async function createTrip(data: NewTripData): Promise<{ error: string } |
         return { error: 'An unknown error occurred while creating the trip.' };
     }
 
-    revalidatePath('/'); // Invalidate cache for the trips list page
-    redirect('/'); // Navigate to the trips list page
+    revalidatePath('/login'); // Invalidate cache for the trips list page
+    redirect('/login'); // Navigate to the trips list page
 }
 
 // --- User Profile Actions ---
