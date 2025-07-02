@@ -3,23 +3,44 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MOCK_TRIPS, type Trip, MOCK_USER_PROFILE } from "@/types"; 
+import { type Trip, MOCK_USER_PROFILE } from "@/types"; 
 import { CalendarDays, MapPinIcon, CheckCircle2, Edit, AlertCircle } from "lucide-react";
 import Link from 'next/link';
 import { getUserProfile } from '@/lib/actions';
 import { Alert, AlertTitle } from "@/components/ui/alert";
+import { firestore } from "@/lib/firebase";
 
 export default async function ProfilePage() {
   const userId = MOCK_USER_PROFILE.id; // In a real app, this would come from the auth session
   const user = await getUserProfile(userId);
 
-  // In a real app, you might fetch these from the DB as well
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const completedTrips = MOCK_TRIPS.filter(trip => {
-    const endDate = new Date(trip.endDate);
-    return endDate < today;
-  });
+  let completedTrips: Trip[] = [];
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const tripsSnapshot = await firestore
+        .collection('trips')
+        .where('ownerId', '==', userId)
+        .where('endDate', '<', today)
+        .get();
+        
+    completedTrips = tripsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name || 'Untitled Trip',
+        destination: data.destination || 'Unknown',
+        startDate: data.startDate || 'N/A',
+        endDate: data.endDate || 'N/A',
+        ownerId: data.ownerId || '',
+        participantIds: data.participantIds || [],
+        imageUrl: data.imageUrl,
+      } as Trip;
+    });
+  } catch (error) {
+    console.error("Failed to fetch completed trips from Firestore:", error);
+    // If this fails (e.g., Firebase not configured), we'll just show an empty list.
+    // The main error will be the user profile failing to load.
+  }
 
   if (!user) {
     return (
