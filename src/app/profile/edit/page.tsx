@@ -7,8 +7,32 @@ import { MOCK_USER_PROFILE } from '@/types';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { isFirebaseInitialized } from '@/lib/firebase';
 
 export default async function EditProfilePage() {
+  if (!isFirebaseInitialized) {
+    return (
+      <div className="container mx-auto py-12 px-4 max-w-2xl">
+        <div className="mb-6">
+          <Link href="/profile" passHref>
+            <Button variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Profile
+            </Button>
+          </Link>
+        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Backend Not Configured</AlertTitle>
+          <AlertDescription>
+            Profile editing is disabled because the Firebase backend has not been configured.
+            Please set the required FIREBASE environment variables in your .env file to enable this feature.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   const userId = MOCK_USER_PROFILE.id; // This would come from auth in a real app
   const user = await getUserProfile(userId);
 

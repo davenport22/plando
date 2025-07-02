@@ -1,6 +1,8 @@
 
 import admin from 'firebase-admin';
 
+let isFirebaseInitialized = false;
+
 // Check if we have already initialized the app
 if (!admin.apps.length) {
   try {
@@ -18,6 +20,7 @@ if (!admin.apps.length) {
                 privateKey: serviceAccount.privateKey.replace(/\\n/g, '\n'),
             }),
         });
+        isFirebaseInitialized = true;
     } else {
         // This is a helpful warning for developers during setup
         console.warn("Firebase Admin credentials not set in .env. Backend features will be disabled.");
@@ -25,12 +28,14 @@ if (!admin.apps.length) {
   } catch (error) {
     console.error('Firebase admin initialization error:', error);
   }
+} else {
+    isFirebaseInitialized = true;
 }
 
 // If initialization was successful, export the real firestore instance.
 // Otherwise, export a proxy that will throw a clear error when used.
 let firestore: admin.firestore.Firestore;
-if (admin.apps.length > 0) {
+if (isFirebaseInitialized) {
     firestore = admin.firestore();
 } else {
     // This proxy prevents the app from crashing on startup if Firebase is not configured.
@@ -49,4 +54,4 @@ if (admin.apps.length > 0) {
     }) as admin.firestore.Firestore; // Cast to the correct type to satisfy TypeScript
 }
 
-export { firestore };
+export { firestore, isFirebaseInitialized };
