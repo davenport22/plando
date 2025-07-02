@@ -65,7 +65,7 @@ const AppHeader = () => {
               <DropdownMenuContent align="start" className="w-56">
                 <DropdownMenuLabel>Plando Suite</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {plandoModules.filter(m => !m.isGlobal || m.id === 'profile' || m.id === 'settings').map((module) => ( // Filter out 'userProfileView' from dropdown
+                {plandoModules.filter(m => !m.isGlobal).map((module) => (
                   <DropdownMenuItem key={module.id} asChild data-active={module.id === currentModule.id}>
                     <Link href={module.path} className="flex items-center">
                       <module.Icon className="mr-2 h-4 w-4" />
