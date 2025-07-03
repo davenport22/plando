@@ -203,13 +203,9 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
         const userDoc = await firestore.collection('users').doc(userId).get();
-
         if (userDoc.exists) {
             return userDoc.data() as UserProfile;
         }
-        
-        // If the document doesn't exist, return null. 
-        // We no longer seed from mock data here to keep the function's purpose clear.
         return null;
     } catch (error) {
         console.error(`Error fetching user profile for ${userId}:`, error);
@@ -442,5 +438,3 @@ export async function updateTripActivity(tripId: string, activityId: string, dat
         return { success: false, error: 'Failed to update activity.' };
     }
 }
-
-    
