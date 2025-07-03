@@ -6,14 +6,14 @@ To get started, take a look at src/app/page.tsx.
 
 ## Connecting to Firebase
 
-To use backend features like creating trips and managing user profiles, you need to connect the application to your Firebase project. This requires a service account.
+Every Firebase project is also a Google Cloud project. They share the same underlying resources, and you can confirm this by matching the **Project ID** between the two consoles. To use backend features like creating trips and managing user profiles, you need to connect the application to your Firebase project by providing a service account.
 
 ### 1. Find your Project ID
 
 - Go to the [Firebase Console](https://console.firebase.google.com/).
 - Select your project.
 - Click the gear icon next to "Project Overview" and select **Project settings**.
-- Under the **General** tab, find and copy your **Project ID**.
+- Under the **General** tab, find and copy your **Project ID**. You can use this ID to find the same project in the [Google Cloud Console](https://console.cloud.google.com/) to confirm they are linked and to manage advanced services like enabling APIs.
 
 ### 2. Generate a Private Key
 
