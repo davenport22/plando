@@ -442,3 +442,5 @@ export async function updateTripActivity(tripId: string, activityId: string, dat
         return { success: false, error: 'Failed to update activity.' };
     }
 }
+
+    
