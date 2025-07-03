@@ -268,16 +268,19 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
         const userDoc = snapshot.docs[0];
         return { id: userDoc.id, ...userDoc.data() } as UserProfile;
     } catch (error: any) {
-        // gRPC error code 5 is 'NOT_FOUND'. This occurs when a query is made
-        // on a collection that does not exist yet. We can safely treat this
-        // as "user not found" and return null.
-        if (error.code === 5) {
-            console.log("Handled 'NOT_FOUND' error: 'users' collection likely doesn't exist yet. This is normal on the first run.");
+        // This is a robust check for when the 'users' collection does not exist yet.
+        // The gRPC error code for "NOT_FOUND" is 5. We also check the error message text
+        // to be sure we catch this specific "cold start" database error.
+        const errorMessage = String(error.message || '').toUpperCase();
+        if (error.code === 5 || errorMessage.includes('NOT_FOUND')) {
+            // This is an expected error on the first run, it means the user doesn't exist.
+            console.log("Handled 'NOT_FOUND' error by returning null. This is expected if the 'users' collection is empty.");
             return null;
         }
-        // For any other type of error, we log it and return null to prevent a crash.
-        console.error(`An unexpected error occurred while finding user by email "${email}":`, error);
-        return null;
+
+        // For any other type of error, we throw it to be handled by the calling function.
+        console.error(`An unexpected error occurred in findUserByEmail for "${email}":`, error);
+        throw error; // Re-throw unexpected errors.
     }
 }
 
@@ -445,3 +448,5 @@ export async function updateTripActivity(tripId: string, activityId: string, dat
         return { success: false, error: 'Failed to update activity.' };
     }
 }
+
+    
