@@ -4,7 +4,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import AppHeader from '@/components/layout/AppHeader';
-import ThemeApplicator from '@/components/layout/ThemeApplicator'; // Import ThemeApplicator
+import ThemeApplicator from '@/components/layout/ThemeApplicator';
+import { AuthProvider } from '@/context/AuthContext';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -24,15 +25,15 @@ export default function RootLayout({
         {/* Google Fonts are managed via next/font */}
       </head>
       <body className={`${inter.variable} font-body antialiased flex flex-col min-h-screen`}>
-        <ThemeApplicator /> {/* Add ThemeApplicator here */}
-        <AppHeader />
-        <main className="flex-grow">
-          {children}
-        </main>
-        <Toaster />
+        <AuthProvider>
+          <ThemeApplicator />
+          <AppHeader />
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
 }
-
-    

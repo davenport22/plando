@@ -196,11 +196,56 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
 // --- User Profile Actions ---
 
 /**
+ * Creates or retrieves a user profile in Firestore after authentication.
+ * @param user The authenticated user object from Firebase Auth.
+ * @returns The user's profile from Firestore.
+ */
+export async function getOrCreateUserProfile(user: {
+  uid: string;
+  email: string | null;
+  name: string | null;
+  photoURL: string | null;
+}): Promise<UserProfile | null> {
+  if (!isFirebaseInitialized) {
+    console.error('Backend is not configured. Cannot get or create user profile.');
+    return null;
+  }
+  
+  const userRef = firestore.collection('users').doc(user.uid);
+  
+  try {
+    const doc = await userRef.get();
+    if (doc.exists) {
+      // User profile already exists, return it.
+      return doc.data() as UserProfile;
+    } else {
+      // User profile doesn't exist, create a new one.
+      const newUserProfile: UserProfile = {
+        id: user.uid,
+        email: user.email || '',
+        name: user.name || 'New User',
+        avatarUrl: user.photoURL || `https://avatar.vercel.sh/${user.email}.png`,
+        bio: '',
+        location: '',
+        memberSince: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+        interests: [],
+      };
+      await userRef.set(newUserProfile);
+      return newUserProfile;
+    }
+  } catch (error) {
+    console.error(`Error getting or creating profile for user ${user.uid}:`, error);
+    return null;
+  }
+}
+
+/**
  * Fetches a user profile from Firestore. This function ONLY reads data.
  * @param userId The ID of the user to fetch.
  * @returns A UserProfile object or null if not found.
  */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+    if (!isFirebaseInitialized) return null;
     try {
         const userDoc = await firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
@@ -259,8 +304,15 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
         }
         const userDoc = snapshot.docs[0];
         return { id: userDoc.id, ...userDoc.data() } as UserProfile;
-    } catch (error) {
+    } catch (error: any) {
+        // This is a specific check for Firestore's "collection not found" error.
+        // The error code is 5 (NOT_FOUND).
+        if (error.code === 5 || (error.message && error.message.includes("NOT_FOUND"))) {
+          console.log(`'users' collection not found while searching for email, which is expected on first run. Treating as "user not found".`);
+          return null; // The collection doesn't exist, so the user can't exist.
+        }
         console.error(`An unexpected error occurred in findUserByEmail for "${email}":`, error);
+        // For any other error, re-throw it to be handled by the caller.
         throw error;
     }
 }
@@ -302,120 +354,6 @@ export async function getLikedCouplesActivityIds(userId: string): Promise<string
     }
 }
 
-
-// --- Authentication Actions ---
-
-const registerFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters."),
-  email: z.string().email("Invalid email address."),
-  password: z.string().min(6, "Password must be at least 6 characters."),
-  location: z.string().min(2, "Location is required.").max(100, "Location is too long."),
-  bio: z.string().max(500).optional().default(""),
-  avatarUrl: z.string().url().or(z.literal("")).optional().default(""),
-  interests: z.array(z.string()).optional().default([]),
-});
-
-export async function registerUserAction(values: z.infer<typeof registerFormSchema>): Promise<{ error?: string; success?: boolean }> {
-  if (!isFirebaseInitialized) {
-    return { error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
-  }
-
-  // Ensure the 'users' collection exists by checking for a seed document.
-  try {
-    const seedUserRef = firestore.collection('users').doc('--seed-user--');
-    const seedUserDoc = await seedUserRef.get();
-
-    if (!seedUserDoc.exists) {
-      console.log("Seeding database: 'users' collection does not exist. Creating seed user.");
-      await seedUserRef.set({
-        id: '--seed-user--',
-        name: 'Admin User',
-        email: 'admin@plando.app',
-        bio: 'Initial user to seed the database.',
-        location: 'Plando HQ',
-        memberSince: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
-        interests: ['Admin'],
-      });
-      console.log("Seed user created successfully.");
-    }
-  } catch (e) {
-      console.error('CRITICAL: Failed to seed or check for seed user.', e);
-      return { error: 'Failed to connect to the database. Please verify your Firebase credentials in .env.' };
-  }
-
-  const validation = registerFormSchema.safeParse(values);
-  if (!validation.success) {
-    return { error: "Invalid form data." };
-  }
-  const { email, name, ...otherData } = validation.data;
-
-  try {
-    const existingUser = await findUserByEmail(email.toLowerCase());
-
-    if (existingUser) {
-      return { error: 'A user with this email address already exists.' };
-    }
-    
-    const usersRef = firestore.collection('users');
-    const newUserId = usersRef.doc().id;
-    const newUserProfile: UserProfile = {
-      id: newUserId,
-      email: email.toLowerCase(),
-      name,
-      memberSince: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
-      ...otherData,
-    };
-    
-    await usersRef.doc(newUserId).set(newUserProfile);
-    
-    revalidatePath('/');
-    return { success: true };
-
-  } catch (e) {
-    console.error('Error during user registration:', e);
-    const errorMessage = e instanceof Error ? e.message : "An unknown server error occurred.";
-    return { error: errorMessage };
-  }
-}
-
-const loginFormSchema = z.object({
-  email: z.string().email("Invalid email address."),
-  password: z.string().min(6, "Password must be at least 6 characters."),
-});
-
-export async function loginUserAction(values: z.infer<typeof loginFormSchema>): Promise<{ error?: string; success?: boolean } | void> {
-    if (!isFirebaseInitialized) {
-        return { error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
-    }
-    const validation = loginFormSchema.safeParse(values);
-    if (!validation.success) {
-        return { error: "Invalid form data." };
-    }
-    const { email } = validation.data;
-
-    try {
-        const user = await findUserByEmail(email.toLowerCase());
-
-        if (!user) {
-            return { error: 'No user found with this email address.' };
-        }
-        
-        // In a real app, you would compare a hashed password here.
-        // For this prototype, we just check if the user exists.
-        
-        // On successful login, we redirect to the main trips page.
-        // Note: The app still uses a hardcoded user ID for data fetching.
-        // This action just simulates the login process.
-        redirect('/login');
-
-    } catch (e) {
-        console.error('Error during login:', e);
-        const errorMessage = e instanceof Error ? e.message : "An unknown server error occurred.";
-        return { error: errorMessage };
-    }
-}
-
-
 // --- Trip Activities Actions ---
 
 export async function getTripActivities(tripId: string): Promise<Activity[]> {
@@ -453,4 +391,31 @@ export async function updateTripActivity(tripId: string, activityId: string, dat
     }
 }
 
-    
+export async function getCompletedTripsForUser(userId: string): Promise<Trip[]> {
+  if (!isFirebaseInitialized) return [];
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const tripsSnapshot = await firestore
+        .collection('trips')
+        .where('ownerId', '==', userId)
+        .where('endDate', '<', today)
+        .get();
+        
+    return tripsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name || 'Untitled Trip',
+        destination: data.destination || 'Unknown',
+        startDate: data.startDate || 'N/A',
+        endDate: data.endDate || 'N/A',
+        ownerId: data.ownerId || '',
+        participantIds: data.participantIds || [],
+        imageUrl: data.imageUrl,
+      } as Trip;
+    });
+  } catch (error) {
+    console.error(`Error fetching completed trips for user ${userId}:`, error);
+    return [];
+  }
+}

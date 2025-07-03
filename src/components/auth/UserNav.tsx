@@ -14,39 +14,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
-import { MOCK_USER_PROFILE } from '@/types'; 
-import { useState, useEffect } from 'react'; 
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 export function UserNav() {
-  const user = MOCK_USER_PROFILE; 
-  const router = useRouter();
+  const { user, userProfile, logout } = useAuth();
   const { toast } = useToast();
-
-  const [fallbackInitial, setFallbackInitial] = useState<string>(''); 
-
-  useEffect(() => {
-    if (user && user.name) {
-      setFallbackInitial(user.name.charAt(0).toUpperCase());
-    } else if (user && user.email) { 
-      setFallbackInitial(user.email.charAt(0).toUpperCase());
-    } else {
-      setFallbackInitial("U"); 
-    }
-  }, [user]);
-
-  const handleLogout = () => {
-    // In a real app, you would also clear any authentication tokens or session data.
+  const router = useRouter();
+  
+  const handleLogout = async () => {
+    await logout();
     toast({
       title: "Logged Out",
-      description: "You have been successfully logged out.",
+      description: "You have been successfully signed out.",
     });
     router.push('/');
   };
 
-
-  if (!user) {
+  if (!user || !userProfile) {
+    // This case should ideally not be hit if the AuthProvider handles loading state,
+    // but it's a good fallback.
     return (
       <Link href="/">
         <Button variant="outline">Login</Button>
@@ -54,12 +42,14 @@ export function UserNav() {
     );
   }
 
+  const fallbackInitial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : (userProfile.email ? userProfile.email.charAt(0).toUpperCase() : 'U');
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10 border-2 border-primary">
-            <AvatarImage src={user.avatarUrl || `https://avatar.vercel.sh/${user.email}.png`} alt={user.name} />
+            <AvatarImage src={userProfile.avatarUrl || `https://avatar.vercel.sh/${userProfile.email}.png`} alt={userProfile.name} />
             <AvatarFallback>{fallbackInitial}</AvatarFallback> 
           </Avatar>
         </Button>
@@ -67,9 +57,9 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-sm font-medium leading-none">{userProfile.name}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
+              {userProfile.email}
             </p>
           </div>
         </DropdownMenuLabel>
