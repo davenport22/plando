@@ -23,7 +23,7 @@ const customActivitySchema = z.object({
 type CustomActivityFormValues = z.infer<typeof customActivitySchema>;
 
 interface CustomActivityFormProps {
-  onAddActivity: (activity: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrl'>) => void;
+  onAddActivity: (activity: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes'>) => Promise<void>;
 }
 
 export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
@@ -40,9 +40,7 @@ export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
 
   async function onSubmit(data: CustomActivityFormValues) {
     setIsLoading(true);
-    // Simulate adding activity
-    await new Promise(resolve => setTimeout(resolve, 500));
-    onAddActivity(data);
+    await onAddActivity(data);
     form.reset();
     setIsLoading(false);
     // Dialog will be closed by DialogClose wrapper on the button

@@ -11,7 +11,7 @@ import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { suggestItineraryAction, getTrip, updateTrip } from '@/lib/actions';
+import { suggestItineraryAction, getTrip, updateTrip, getTripActivities, addTripActivity, updateTripActivity } from '@/lib/actions';
 import { calculateTripDuration } from '@/lib/utils';
 import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,15 +90,36 @@ export default function TripDetailPage() {
     const fetchTripData = async () => {
       setIsLoading(true);
       const fetchedTrip = await getTrip(tripId);
+      
       if (fetchedTrip) {
         setTrip(fetchedTrip);
-        // Once trip is fetched, setup activities (still using mock data for this part)
-        const destinationActivities = MOCK_DESTINATION_ACTIVITIES[fetchedTrip.destination] || [];
-        const initialActivities = destinationActivities.map(act => ({ ...act, tripId, isLiked: undefined }));
-        setUserActivities(initialActivities);
+        
+        let activities = await getTripActivities(tripId);
+
+        // If no activities are in the DB for this trip, seed them from mock data
+        if (activities.length === 0) {
+          const destinationActivities = MOCK_DESTINATION_ACTIVITIES[fetchedTrip.destination] || [];
+          if (destinationActivities.length > 0) {
+              toast({ title: "Finding Activities...", description: `Adding suggested activities for ${fetchedTrip.destination}.`});
+              const seedPromises = destinationActivities.map(act => {
+                  const activityPayload: Omit<Activity, 'id'> = {
+                      ...act,
+                      id: act.id, // Keep mock ID for consistency if needed, though Firestore will assign a new one
+                      tripId,
+                      isLiked: undefined,
+                  };
+                  return addTripActivity(tripId, activityPayload);
+              });
+              await Promise.all(seedPromises);
+              // After seeding, refetch activities to get their DB-generated IDs
+              activities = await getTripActivities(tripId);
+          }
+        }
+        setUserActivities(activities);
+
       } else {
         toast({ title: "Trip not found", description: "The trip you are looking for does not exist.", variant: "destructive" });
-        router.push('/login'); // Redirect to the main trips list
+        router.push('/login');
       }
       setIsLoading(false);
     };
@@ -135,25 +156,45 @@ export default function TripDetailPage() {
 
 
   const handleVote = (activityId: string, liked: boolean) => {
+    // Optimistic UI update
     setUserActivities(prevActivities =>
       prevActivities.map(act =>
         act.id === activityId ? { ...act, isLiked: liked } : act
       )
     );
+
+    // Update the backend
+    updateTripActivity(tripId, activityId, { isLiked: liked }).then(result => {
+        if (!result.success) {
+            console.error("Failed to save vote:", result.error);
+            toast({ title: "Vote Sync Failed", description: "Your vote might not have been saved.", variant: "destructive"});
+            // Optional: Add logic here to revert the UI state on failure
+        }
+    });
   };
 
-  const handleAddCustomActivity = (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes'>) => {
-    const newActivity: Activity = {
+  const handleAddCustomActivity = async (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes'>) => {
+    const activityPayload: Omit<Activity, 'id'> = {
       ...newActivityData,
-      id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       tripId,
-      isLiked: undefined, 
+      isLiked: true, // Let's auto-like custom activities
       imageUrls: ["https://placehold.co/400x300.png?text=Custom+Activity"], 
-      likes: 0,
+      likes: 1, // Assume the creator likes it
       dislikes: 0,
     };
-    setUserActivities(prevActivities => [newActivity, ...prevActivities]);
-    toast({ title: "Custom activity added!", description: `"${newActivity.name}" is ready for voting.` });
+    
+    const result = await addTripActivity(tripId, activityPayload);
+
+    if (result.success && result.activityId) {
+      const newActivity: Activity = {
+        ...activityPayload,
+        id: result.activityId,
+      };
+      setUserActivities(prevActivities => [newActivity, ...prevActivities]);
+      toast({ title: "Custom activity added!", description: `"${newActivity.name}" has been saved and liked.` });
+    } else {
+      toast({ title: "Error", description: result.error || "Failed to add custom activity.", variant: "destructive" });
+    }
   };
 
   const handleGenerateItinerary = async () => {
@@ -171,11 +212,12 @@ export default function TripDetailPage() {
     setIsLoadingItinerary(true);
 
     const activitiesInput: ActivityInput[] = userActivities
+      .filter(act => act.isLiked !== undefined) // Only include voted activities
       .map(act => ({
         name: act.name,
         duration: act.duration,
         location: act.location,
-        isLiked: act.isLiked === undefined ? false : !!act.isLiked, 
+        isLiked: !!act.isLiked, 
       }));
     
     const noActivitiesLiked = activitiesInput.filter(act => act.isLiked).length === 0;
@@ -189,8 +231,8 @@ export default function TripDetailPage() {
     
     if (activitiesInput.length === 0) {
         toast({
-            title: "No Activities",
-            description: "Add or vote on some activities to generate an itinerary.",
+            title: "No Voted Activities",
+            description: "Add and vote on some activities to generate an itinerary.",
             variant: "destructive"
         });
         setIsLoadingItinerary(false);
