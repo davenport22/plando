@@ -5,9 +5,10 @@ import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type 
 import { generateActivityDescription, type GenerateActivityDescriptionInput, type GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
 import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS } from '@/types';
-import { firestore } from '@/lib/firebase';
+import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { z } from 'zod';
 
 // This function will be called from client components to generate the itinerary.
 export async function suggestItineraryAction(
@@ -96,6 +97,10 @@ type NewTripData = Omit<Trip, 'id' | 'ownerId' | 'participantIds' | 'imageUrl'> 
 
 
 export async function createTrip(data: NewTripData): Promise<{ error: string } | void> {
+    if (!isFirebaseInitialized) {
+        return { error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
+    }
+
     try {
         if (!data.name || !data.destination || !data.startDate || !data.endDate) {
             return { error: 'Missing required fields.' };
@@ -232,6 +237,9 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
  * @returns An object indicating success or failure.
  */
 export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) {
+        return { success: false, error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
+    }
     try {
         if (!userId) {
             return { success: false, error: "User ID is required." };
@@ -306,5 +314,96 @@ export async function getLikedCouplesActivityIds(userId: string): Promise<string
         console.error(`Error fetching liked activity IDs for user ${userId}:`, error);
         // Return an empty array on error to prevent the app from crashing.
         return [];
+    }
+}
+
+
+// --- Authentication Actions ---
+
+const registerFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  email: z.string().email("Invalid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+  bio: z.string().max(500).optional().default(""),
+  location: z.string().max(100).optional().default(""),
+  avatarUrl: z.string().url().or(z.literal("")).optional().default(""),
+  interests: z.array(z.string()).optional().default([]),
+});
+
+export async function registerUserAction(values: z.infer<typeof registerFormSchema>): Promise<{ error?: string; success?: boolean }> {
+  if (!isFirebaseInitialized) {
+    return { error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
+  }
+  const validation = registerFormSchema.safeParse(values);
+  if (!validation.success) {
+    return { error: "Invalid form data." };
+  }
+  const { email, name, ...otherData } = validation.data;
+
+  try {
+    const usersRef = firestore.collection('users');
+    const existingUser = await usersRef.where('email', '==', email.toLowerCase()).limit(1).get();
+
+    if (!existingUser.empty) {
+      return { error: 'A user with this email address already exists.' };
+    }
+    
+    const newUserId = usersRef.doc().id;
+    const newUserProfile: UserProfile = {
+      id: newUserId,
+      email: email.toLowerCase(),
+      name,
+      memberSince: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+      ...otherData,
+    };
+    
+    // In a real app, you would hash the password here before saving.
+    // For this prototype, we are not storing passwords.
+    await usersRef.doc(newUserId).set(newUserProfile);
+    
+    revalidatePath('/');
+    return { success: true };
+
+  } catch (e) {
+    console.error('Error during user registration:', e);
+    const errorMessage = e instanceof Error ? e.message : "An unknown server error occurred.";
+    return { error: errorMessage };
+  }
+}
+
+const loginFormSchema = z.object({
+  email: z.string().email("Invalid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+});
+
+export async function loginUserAction(values: z.infer<typeof loginFormSchema>): Promise<{ error?: string; success?: boolean } | void> {
+    if (!isFirebaseInitialized) {
+        return { error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
+    }
+    const validation = loginFormSchema.safeParse(values);
+    if (!validation.success) {
+        return { error: "Invalid form data." };
+    }
+    const { email } = validation.data;
+
+    try {
+        const user = await findUserByEmail(email.toLowerCase());
+
+        if (!user) {
+            return { error: 'No user found with this email address.' };
+        }
+        
+        // In a real app, you would compare a hashed password here.
+        // For this prototype, we just check if the user exists.
+        
+        // On successful login, we redirect to the main trips page.
+        // Note: The app still uses a hardcoded user ID for data fetching.
+        // This action just simulates the login process.
+        redirect('/login');
+
+    } catch (e) {
+        console.error('Error during login:', e);
+        const errorMessage = e instanceof Error ? e.message : "An unknown server error occurred.";
+        return { error: errorMessage };
     }
 }

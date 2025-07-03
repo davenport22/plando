@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { registerUserAction } from "@/lib/actions";
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -65,14 +66,17 @@ export function RegisterForm() {
 
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
-    // The 'interests' field in 'data' will be correctly populated 
-    // due to the useEffect syncing selectedInterests to form.setValue
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Register Data:", data); 
-    toast({ title: "Registration Successful!", description: "Welcome to Plando! Please log in." });
+    
+    const result = await registerUserAction(data);
+    
     setIsLoading(false);
-    router.push("/login");
+
+    if (result.success) {
+      toast({ title: "Registration Successful!", description: "Welcome to Plando! Please log in." });
+      router.push("/");
+    } else if (result.error) {
+      toast({ title: "Registration Failed", description: result.error, variant: "destructive" });
+    }
   }
 
   return (
@@ -124,7 +128,7 @@ export function RegisterForm() {
             <FormItem>
               <FormLabel>Bio (Optional)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Tell us a bit about yourself." {...field} rows={3} />
+                <Textarea placeholder="A little about yourself." {...field} rows={3} />
               </FormControl>
               <FormMessage />
             </FormItem>

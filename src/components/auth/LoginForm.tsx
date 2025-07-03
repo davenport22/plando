@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { loginUserAction } from "@/lib/actions";
 
 const loginFormSchema = z.object({
   email: z.string().email("Invalid email address."),
@@ -34,12 +35,15 @@ export function LoginForm() {
 
   async function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Login Data:", data);
-    toast({ title: "Login Successful!", description: "Welcome back!" });
+    
+    const result = await loginUserAction(data);
+
+    // If login is successful, the action redirects, so this code will only execute on failure.
     setIsLoading(false);
-    router.push("/login"); // Redirect to trips page
+    
+    if (result?.error) {
+        toast({ title: "Login Failed", description: result.error, variant: "destructive" });
+    }
   }
 
   return (
