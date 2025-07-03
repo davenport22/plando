@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { registerUserAction } from "@/lib/actions";
+import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -24,8 +25,8 @@ const registerFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
+  location: z.string().min(2, "Location is required.").max(100, "Location is too long."),
   bio: z.string().max(500, "Bio is too long. Please keep it under 500 characters.").optional().default(""),
-  location: z.string().max(100, "Location is too long. Please keep it under 100 characters.").optional().default(""),
   avatarUrl: z.string().url("Please enter a valid URL for your avatar, e.g., https://example.com/avatar.png").or(z.literal("")).optional().default(""),
   interests: z.array(z.string()).optional().default([]),
 });
@@ -44,8 +45,8 @@ export function RegisterForm() {
       name: "",
       email: "",
       password: "",
-      bio: "",
       location: "",
+      bio: "",
       avatarUrl: "",
       interests: [],
     },
@@ -123,25 +124,30 @@ export function RegisterForm() {
         />
         <FormField
           control={form.control}
-          name="bio"
+          name="location"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Bio (Optional)</FormLabel>
+              <FormLabel>Your Home City</FormLabel>
               <FormControl>
-                <Textarea placeholder="A little about yourself." {...field} rows={3} />
+                <CityAutocompleteInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="e.g., City, Country"
+                />
               </FormControl>
+              <FormDescription>This helps us suggest local activities.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
         <FormField
           control={form.control}
-          name="location"
+          name="bio"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Location (Optional)</FormLabel>
+              <FormLabel>Bio (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., City, Country" {...field} />
+                <Textarea placeholder="A little about yourself." {...field} rows={3} />
               </FormControl>
               <FormMessage />
             </FormItem>

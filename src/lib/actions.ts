@@ -4,7 +4,7 @@
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
 import { generateActivityDescription, type GenerateActivityDescriptionInput, type GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
-import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS } from '@/types';
+import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS, type Activity } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -324,8 +324,8 @@ const registerFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
+  location: z.string().min(2, "Location is required.").max(100, "Location is too long."),
   bio: z.string().max(500).optional().default(""),
-  location: z.string().max(100).optional().default(""),
   avatarUrl: z.string().url().or(z.literal("")).optional().default(""),
   interests: z.array(z.string()).optional().default([]),
 });
@@ -405,5 +405,43 @@ export async function loginUserAction(values: z.infer<typeof loginFormSchema>): 
         console.error('Error during login:', e);
         const errorMessage = e instanceof Error ? e.message : "An unknown server error occurred.";
         return { error: errorMessage };
+    }
+}
+
+
+// --- Trip Activities Actions ---
+
+export async function getTripActivities(tripId: string): Promise<Activity[]> {
+    if (!isFirebaseInitialized) return [];
+    try {
+        const activitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
+        return activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+    } catch (error) {
+        console.error(`Error fetching activities for trip ${tripId}:`, error);
+        return [];
+    }
+}
+
+export async function addTripActivity(tripId: string, activityData: Omit<Activity, 'id'>): Promise<{ success: boolean; activityId?: string; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
+    try {
+        const docRef = await firestore.collection('trips').doc(tripId).collection('activities').add(activityData);
+        revalidatePath(`/trips/${tripId}`);
+        return { success: true, activityId: docRef.id };
+    } catch (error) {
+        console.error(`Error adding activity to trip ${tripId}:`, error);
+        return { success: false, error: 'Failed to add activity.' };
+    }
+}
+
+export async function updateTripActivity(tripId: string, activityId: string, data: Partial<Activity>): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
+    try {
+        await firestore.collection('trips').doc(tripId).collection('activities').doc(activityId).update(data);
+        revalidatePath(`/trips/${tripId}`);
+        return { success: true };
+    } catch (error) {
+        console.error(`Error updating activity ${activityId} in trip ${tripId}:`, error);
+        return { success: false, error: 'Failed to update activity.' };
     }
 }
