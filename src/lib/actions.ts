@@ -90,7 +90,7 @@ export async function enhanceActivityDescriptionAction(
 }
 
 // Type for data coming from the NewTripForm
-type NewTripData = Omit<Trip, 'id' | 'ownerId' | 'participantIds' | 'imageUrl'> & {
+type NewTripData = Omit<Trip, 'id' | 'ownerId' | 'participantIds'> & {
     startDate: string;
     endDate: string;
 };
@@ -342,6 +342,14 @@ export async function registerUserAction(values: z.infer<typeof registerFormSche
 
   try {
     const usersRef = firestore.collection('users');
+
+    // Ensure the 'users' collection exists before querying it. This is a workaround
+    // for Firestore 'cold start' issues on an empty database.
+    const dummyDoc = usersRef.doc('__dummy__');
+    if (!(await dummyDoc.get()).exists) {
+        await dummyDoc.set({ initialized: true });
+    }
+    
     const existingUser = await usersRef.where('email', '==', email.toLowerCase()).limit(1).get();
 
     if (!existingUser.empty) {
