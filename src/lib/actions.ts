@@ -259,18 +259,9 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
         }
         const userDoc = snapshot.docs[0];
         return { id: userDoc.id, ...userDoc.data() } as UserProfile;
-    } catch (error: any) {
-        // This is a robust check for when the 'users' collection does not exist yet.
-        // It handles the "cold start" database error gracefully.
-        const errorMessage = String(error.message || '').toUpperCase();
-        if (error.code === 5 || error.code === 'not-found' || errorMessage.includes('NOT_FOUND')) {
-            console.log("Handled 'NOT_FOUND' error: This is expected if the 'users' collection is empty or doesn't exist. Assuming user not found.");
-            return null;
-        }
-
-        // For any other type of error, we throw it to be handled by the calling function.
+    } catch (error) {
         console.error(`An unexpected error occurred in findUserByEmail for "${email}":`, error);
-        throw error; // Re-throw unexpected errors.
+        throw error;
     }
 }
 
@@ -328,6 +319,30 @@ export async function registerUserAction(values: z.infer<typeof registerFormSche
   if (!isFirebaseInitialized) {
     return { error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
   }
+
+  // Ensure the 'users' collection exists by checking for a seed document.
+  try {
+    const seedUserRef = firestore.collection('users').doc('--seed-user--');
+    const seedUserDoc = await seedUserRef.get();
+
+    if (!seedUserDoc.exists) {
+      console.log("Seeding database: 'users' collection does not exist. Creating seed user.");
+      await seedUserRef.set({
+        id: '--seed-user--',
+        name: 'Admin User',
+        email: 'admin@plando.app',
+        bio: 'Initial user to seed the database.',
+        location: 'Plando HQ',
+        memberSince: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+        interests: ['Admin'],
+      });
+      console.log("Seed user created successfully.");
+    }
+  } catch (e) {
+      console.error('CRITICAL: Failed to seed or check for seed user.', e);
+      return { error: 'Failed to connect to the database. Please verify your Firebase credentials in .env.' };
+  }
+
   const validation = registerFormSchema.safeParse(values);
   if (!validation.success) {
     return { error: "Invalid form data." };
@@ -437,3 +452,5 @@ export async function updateTripActivity(tripId: string, activityId: string, dat
         return { success: false, error: 'Failed to update activity.' };
     }
 }
+
+    
