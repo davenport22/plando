@@ -3,6 +3,7 @@
 
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
 import { generateActivityDescription, type GenerateActivityDescriptionInput, type GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
+import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
 import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS } from '@/types';
 import { firestore } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
@@ -100,7 +101,18 @@ export async function createTrip(data: NewTripData): Promise<{ error: string } |
             return { error: 'Missing required fields.' };
         }
         
-        // Construct the new trip object safely, ensuring no invalid data types (like NaN) are sent.
+        // Generate a unique image for the trip destination
+        let imageUrl = `https://placehold.co/600x400.png`; // Fallback image
+        try {
+            const generatedImageUrl = await generateDestinationImage({ destination: data.destination });
+            if (generatedImageUrl) {
+                imageUrl = generatedImageUrl;
+            }
+        } catch (imageError) {
+            console.warn(`AI image generation failed for destination "${data.destination}". Using fallback.`, imageError);
+            // We don't block trip creation if image generation fails, just use the fallback.
+        }
+
         const newTrip: Omit<Trip, 'id'> = {
             name: data.name,
             destination: data.destination,
@@ -108,7 +120,7 @@ export async function createTrip(data: NewTripData): Promise<{ error: string } |
             endDate: data.endDate,
             ownerId: 'user1', // In a real app, get this from the authenticated session
             participantIds: ['user1'],
-            imageUrl: `https://placehold.co/600x400.png`,
+            imageUrl: imageUrl,
             // Sanitize optional fields to be either a valid value or undefined.
             // This prevents invalid data like NaN from being sent to Firestore.
             latitude: data.latitude && !isNaN(data.latitude) ? data.latitude : undefined,
