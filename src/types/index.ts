@@ -442,10 +442,3 @@ export const MOCK_COUPLES_ACTIVITIES_BY_CITY: Record<string, Activity[]> = {
   "Vienna, Austria": MOCK_COUPLES_VIENNA_ACTIVITIES,
   "Default": MOCK_COUPLES_DEFAULT_ACTIVITIES,
 };
-
-// Add this declaration to allow data-ai-hint on intrinsic elements
-declare module 'react' {
-  interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
-    dataAiHint?: string;
-  }
-}
