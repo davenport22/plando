@@ -335,15 +335,6 @@ export async function registerUserAction(values: z.infer<typeof registerFormSche
   const { email, name, ...otherData } = validation.data;
 
   try {
-    // Ensure the mock user exists to guarantee the 'users' collection is created.
-    // This is a robust way to handle the "cold start" Firestore error.
-    const mockUserRef = firestore.collection('users').doc(MOCK_USER_PROFILE.id);
-    const mockUserDoc = await mockUserRef.get();
-    if (!mockUserDoc.exists) {
-      await mockUserRef.set(MOCK_USER_PROFILE);
-      console.log(`Created mock user '${MOCK_USER_PROFILE.name}' to seed the database.`);
-    }
-    
     const existingUser = await findUserByEmail(email.toLowerCase());
 
     if (existingUser) {
