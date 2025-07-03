@@ -205,26 +205,18 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     try {
         const userDoc = await firestore.collection('users').doc(userId).get();
 
-        if (!userDoc.exists) {
-            // For this prototype, if a known mock user doesn't exist, create them from mock data.
-            const userToSeed = ALL_MOCK_USERS.find(u => u.id === userId);
-            if (userToSeed) {
-                await firestore.collection('users').doc(userId).set(userToSeed);
-                // Also ensure the "users" collection exists for queries.
-                // This is a bit of a hack for demo purposes to ensure the first query on an empty collection works.
-                const dummyDoc = firestore.collection('users').doc('__dummy__');
-                if (!(await dummyDoc.get()).exists) {
-                    await dummyDoc.set({ initialized: true });
-                }
-                return userToSeed;
-            }
-            return null;
+        if (userDoc.exists) {
+            return userDoc.data() as UserProfile;
         }
 
-        return userDoc.data() as UserProfile;
+        const userToSeed = ALL_MOCK_USERS.find(u => u.id === userId);
+        if (userToSeed) {
+            await firestore.collection('users').doc(userId).set(userToSeed);
+            return userToSeed;
+        }
+        return null;
     } catch (error) {
         console.error(`Error fetching user profile for ${userId}:`, error);
-        // To prevent app crashes, return null on error. The UI should handle this.
         return null;
     }
 }
@@ -261,7 +253,8 @@ export async function updateUserProfile(userId: string, data: Partial<UserProfil
 // --- Plando Couples Actions ---
 
 /**
- * Finds a user by their email address.
+ * Finds a user by their email address. This function is robust against "NOT_FOUND"
+ * errors that occur when the 'users' collection does not yet exist.
  * @param email The email of the user to find.
  * @returns A UserProfile object or null if not found.
  */
@@ -275,13 +268,15 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
         const userDoc = snapshot.docs[0];
         return { id: userDoc.id, ...userDoc.data() } as UserProfile;
     } catch (error: any) {
-        // If the error is 'NOT_FOUND' (code 5), it signifies the collection doesn't exist.
-        // In this scenario, it's correct to return null as no user can exist.
+        // gRPC error code 5 is 'NOT_FOUND'. This occurs when a query is made
+        // on a collection that does not exist yet. We can safely treat this
+        // as "user not found" and return null.
         if (error.code === 5) {
+            console.log("Handled 'NOT_FOUND' error: 'users' collection likely doesn't exist yet. This is normal on the first run.");
             return null;
         }
         // For any other type of error, we log it and return null to prevent a crash.
-        console.error(`An unexpected error occurred while finding user by email ${email}:`, error);
+        console.error(`An unexpected error occurred while finding user by email "${email}":`, error);
         return null;
     }
 }
@@ -347,16 +342,6 @@ export async function registerUserAction(values: z.infer<typeof registerFormSche
   const { email, name, ...otherData } = validation.data;
 
   try {
-    // --- DATABASE SEEDING LOGIC ---
-    // This block ensures the 'users' collection exists before we try to query it.
-    // It checks for our default mock user and creates them if they don't exist.
-    const mockUserDoc = await firestore.collection('users').doc(MOCK_USER_PROFILE.id).get();
-    if (!mockUserDoc.exists) {
-        console.log("Default user not found, seeding database...");
-        await firestore.collection('users').doc(MOCK_USER_PROFILE.id).set(MOCK_USER_PROFILE);
-    }
-    // --- END SEEDING LOGIC ---
-
     const existingUser = await findUserByEmail(email.toLowerCase());
 
     if (existingUser) {
