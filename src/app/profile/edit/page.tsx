@@ -1,4 +1,3 @@
-
 import { ProfileEditForm } from '@/components/profile/ProfileEditForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,10 +6,12 @@ import { MOCK_USER_PROFILE } from '@/types';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { isFirebaseInitialized } from '@/lib/firebase';
 
 export default async function EditProfilePage() {
-  if (!isFirebaseInitialized) {
+  const userId = MOCK_USER_PROFILE.id; // This would come from auth in a real app
+  const user = await getUserProfile(userId);
+
+  if (!user) {
     return (
       <div className="container mx-auto py-12 px-4 max-w-2xl">
         <div className="mb-6">
@@ -23,27 +24,10 @@ export default async function EditProfilePage() {
         </div>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Backend Not Configured</AlertTitle>
-          <AlertDescription>
-            Profile editing is disabled because the Firebase backend has not been configured.
-            Please set the required FIREBASE environment variables in your .env file to enable this feature.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  const userId = MOCK_USER_PROFILE.id; // This would come from auth in a real app
-  const user = await getUserProfile(userId);
-
-  if (!user) {
-    return (
-      <div className="container mx-auto py-12 px-4 max-w-2xl">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Profile</AlertTitle>
           <AlertDescription>
-            Could not load your profile for editing. Please try again later.
+            Could not load your profile for editing. Please check your backend
+            configuration and try again later.
           </AlertDescription>
         </Alert>
       </div>
