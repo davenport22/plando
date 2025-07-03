@@ -196,8 +196,7 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
 // --- User Profile Actions ---
 
 /**
- * Fetches a user profile from Firestore. If the user doesn't exist and it's a
- * mock user, it seeds the database with the mock data.
+ * Fetches a user profile from Firestore. This function ONLY reads data.
  * @param userId The ID of the user to fetch.
  * @returns A UserProfile object or null if not found.
  */
@@ -208,12 +207,9 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
         if (userDoc.exists) {
             return userDoc.data() as UserProfile;
         }
-
-        const userToSeed = ALL_MOCK_USERS.find(u => u.id === userId);
-        if (userToSeed) {
-            await firestore.collection('users').doc(userId).set(userToSeed);
-            return userToSeed;
-        }
+        
+        // If the document doesn't exist, return null. 
+        // We no longer seed from mock data here to keep the function's purpose clear.
         return null;
     } catch (error) {
         console.error(`Error fetching user profile for ${userId}:`, error);
@@ -269,12 +265,10 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
         return { id: userDoc.id, ...userDoc.data() } as UserProfile;
     } catch (error: any) {
         // This is a robust check for when the 'users' collection does not exist yet.
-        // The gRPC error code for "NOT_FOUND" is 5. We also check the error message text
-        // to be sure we catch this specific "cold start" database error.
+        // It handles the "cold start" database error gracefully.
         const errorMessage = String(error.message || '').toUpperCase();
-        if (error.code === 5 || errorMessage.includes('NOT_FOUND')) {
-            // This is an expected error on the first run, it means the user doesn't exist.
-            console.log("Handled 'NOT_FOUND' error by returning null. This is expected if the 'users' collection is empty.");
+        if (error.code === 5 || error.code === 'not-found' || errorMessage.includes('NOT_FOUND')) {
+            console.log("Handled 'NOT_FOUND' error: This is expected if the 'users' collection is empty or doesn't exist. Assuming user not found.");
             return null;
         }
 
@@ -448,5 +442,3 @@ export async function updateTripActivity(tripId: string, activityId: string, dat
         return { success: false, error: 'Failed to update activity.' };
     }
 }
-
-    
