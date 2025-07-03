@@ -307,7 +307,7 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     location: 'Schönbrunn Palace, Vienna',
     duration: 2.5,
     imageUrls: ['https://images.unsplash.com/photo-1587616596304-987fde18990d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
-    description: 'Wander through the magnificent gardens of the former imperial summer residence.',
+    description: 'Wander through the magnificent gardens of the former imperial summer residence, a UNESCO World Heritage site.',
     suggestedDurationHours: 2.5,
     bestTimeToVisit: "Spring or Summer mornings/afternoons",
     estimatedPriceRange: "Gardens mostly free, palace entry fee applies",
@@ -316,11 +316,11 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
   },
   {
     id: 'local-vienna-2',
-    name: 'St. Stephen\'s Cathedral Visit & Tower Climb',
+    name: 'St. Stephen\'s Cathedral & Tower Climb',
     location: 'Stephansplatz, Vienna',
     duration: 1.5,
     imageUrls: ['https://images.unsplash.com/photo-1608958449814-e896490174a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
-    description: 'Visit the iconic St. Stephen\'s Cathedral and consider climbing a tower for city views.',
+    description: 'Visit the iconic Gothic cathedral and climb the South Tower for breathtaking views of the city.',
     suggestedDurationHours: 1.5,
     bestTimeToVisit: "Mornings to avoid crowds, Any season",
     estimatedPriceRange: "Free entry to main area, tower/catacombs approx. €6-€10",
@@ -346,14 +346,119 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     location: 'Inner Stadt, Vienna',
     duration: 1,
     imageUrls: ['https://images.unsplash.com/photo-1559925198-8f03a9b70f8a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
-    description: 'Experience the unique culture of a traditional Viennese coffee house (Kaffeehaus).',
+    description: 'Experience the unique culture of a traditional Viennese coffee house (Kaffeehaus). Try a Melange coffee and a slice of Sachertorte.',
     suggestedDurationHours: 1,
     bestTimeToVisit: "Anytime, often busier in afternoons",
     estimatedPriceRange: "€5-€15 per person for coffee & cake",
     address: "Various locations, e.g., Cafe Central, Cafe Sacher",
     dataAiHint: "viennese coffee"
   },
+  {
+    id: 'local-vienna-5',
+    name: 'Explore the Hofburg Palace Complex',
+    location: 'Hofburg, Vienna',
+    duration: 3,
+    imageUrls: ['https://images.unsplash.com/photo-1629367462687-3e4b787b6192?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Discover the vast former imperial palace of the Habsburg dynasty. The complex includes the Imperial Apartments, the Sisi Museum, and the Imperial Treasury.',
+    suggestedDurationHours: 3,
+    bestTimeToVisit: "Weekday mornings to avoid large crowds",
+    estimatedPriceRange: "€15-€25 per person depending on ticket",
+    address: "Michaelerkuppel, 1010 Wien",
+    dataAiHint: "hofburg palace vienna"
+  },
+  {
+    id: 'local-vienna-6',
+    name: 'Attend a Performance at the Vienna State Opera',
+    location: 'Vienna State Opera',
+    duration: 3,
+    imageUrls: ['https://images.unsplash.com/photo-1571166319809-54d588942b00?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Experience a world-class opera or ballet performance in one of the most famous opera houses in the world. Book tickets well in advance or try for affordable last-minute standing room tickets.',
+    suggestedDurationHours: 3,
+    bestTimeToVisit: "Evenings (check schedule)",
+    estimatedPriceRange: "Varies widely (€10 for standing room to €250+)",
+    address: "Opernring 2, 1010 Wien",
+    dataAiHint: "vienna opera house"
+  },
+  {
+    id: 'local-vienna-7',
+    name: 'See the Lipizzaner Stallions',
+    location: 'Spanish Riding School, Hofburg',
+    duration: 1.5,
+    imageUrls: ['https://images.unsplash.com/photo-1599427303039-4f5186b8c495?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Watch the famous Lipizzaner horses perform their classical dressage "ballet". Morning exercises are a more affordable way to see them in training.',
+    suggestedDurationHours: 1.5,
+    bestTimeToVisit: "Morning exercises or performance times",
+    estimatedPriceRange: "€15 (morning exercise) to €100+ (performance)",
+    address: "Michaelerplatz 1, 1010 Wien",
+    dataAiHint: "lipizzaner horse vienna"
+  },
+  {
+    id: 'local-vienna-8',
+    name: 'Immerse Yourself in Art at the Museumsquartier',
+    location: 'Museumsquartier, Vienna',
+    duration: 4,
+    imageUrls: ['https://images.unsplash.com/photo-1587569192425-a86477e81156?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Explore one of the world\'s largest art and culture complexes, home to the Leopold Museum (Schiele), MUMOK (modern art), and vibrant courtyards with cafes.',
+    suggestedDurationHours: 4,
+    bestTimeToVisit: "Anytime, lively in the afternoon/evening",
+    estimatedPriceRange: "Museum entry €14-€18 per museum, courtyards free",
+    address: "Museumsplatz 1, 1070 Wien",
+    dataAiHint: "museumsquartier vienna"
+  },
+  {
+    id: 'local-vienna-9',
+    name: 'Visit the Belvedere Palace & Gardens',
+    location: 'Belvedere Palace, Vienna',
+    duration: 2.5,
+    imageUrls: ['https://images.unsplash.com/photo-1580054604995-7478f2f58cee?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Discover two magnificent Baroque palaces, beautiful gardens, and the world\'s largest collection of Gustav Klimt paintings, including "The Kiss".',
+    suggestedDurationHours: 2.5,
+    bestTimeToVisit: "Mornings or late afternoons",
+    estimatedPriceRange: "€16-€24 per person (Upper/Lower Belvedere)",
+    address: "Prinz Eugen-Straße 27, 1030 Wien",
+    dataAiHint: "belvedere palace vienna"
+  },
+  {
+    id: 'local-vienna-10',
+    name: 'Ride the Giant Ferris Wheel at the Prater',
+    location: 'Prater Amusement Park, Vienna',
+    duration: 3,
+    imageUrls: ['https://images.unsplash.com/photo-1597843799635-3c138a0f4438?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Enjoy the nostalgic atmosphere of one of the world\'s oldest amusement parks and take a ride on the iconic Wiener Riesenrad for stunning city views.',
+    suggestedDurationHours: 3,
+    bestTimeToVisit: "Afternoons and evenings, especially in summer",
+    estimatedPriceRange: "Free entry, pay per ride (Ferris Wheel ~€13.50)",
+    address: "Riesenradplatz, 1020 Wien",
+    dataAiHint: "prater park vienna"
+  },
+  {
+    id: 'local-vienna-11',
+    name: 'Photograph the Hundertwasser House',
+    location: 'Landstraße district, Vienna',
+    duration: 0.5,
+    imageUrls: ['https://images.unsplash.com/photo-1579523620984-99ef177533a1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Visit the unique and colorful apartment building designed by artist Friedensreich Hundertwasser, a landmark of expressionist architecture.',
+    suggestedDurationHours: 0.5,
+    bestTimeToVisit: "Daytime for best photos",
+    estimatedPriceRange: "Free (view from outside only)",
+    address: "Kegelgasse 36-38, 1030 Wien",
+    dataAiHint: "hundertwasser house vienna"
+  },
+  {
+    id: 'local-vienna-12',
+    name: 'Discover Masterpieces at the Albertina Museum',
+    location: 'Albertina Museum, Vienna',
+    duration: 2,
+    imageUrls: ['https://images.unsplash.com/photo-1629367462608-2c2f7b2e8f1d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Explore impressive collections ranging from Monet to Picasso and view world-class graphic art in a former Habsburg palace.',
+    suggestedDurationHours: 2,
+    bestTimeToVisit: "Anytime, less crowded on weekday mornings",
+    estimatedPriceRange: "Around €18 per person",
+    address: "Albertinaplatz 1, 1010 Wien",
+    dataAiHint: "albertina museum vienna"
+  }
 ];
+
 
 export const MOCK_ACTIVITIES_BY_CITY: Record<string, Activity[]> = {
   "Vienna, Austria": MOCK_VIENNA_ACTIVITIES,
@@ -432,6 +537,39 @@ const MOCK_COUPLES_VIENNA_ACTIVITIES: Activity[] = [
     bestTimeToVisit: "Late afternoons or evenings, especially in summer/autumn",
     estimatedPriceRange: "€15-€30 per person"
   },
+  {
+    id: 'couples-vienna-4',
+    name: 'Attend a Classical Concert',
+    location: 'Various churches (e.g., St. Anne\'s, Karlskirche)',
+    duration: 1.5,
+    imageUrls: ['https://images.unsplash.com/photo-1608958449764-16a13b41d471?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Experience the music of Mozart and Strauss in an intimate, historical setting. A truly romantic Viennese evening.',
+    dataAiHint: "vienna classical concert",
+    bestTimeToVisit: "Evenings",
+    estimatedPriceRange: "€30-€50 per person"
+  },
+  {
+    id: 'couples-vienna-5',
+    name: 'Stroll Through the Volksgarten Rose Garden',
+    location: 'Volksgarten, Vienna',
+    duration: 1,
+    imageUrls: ['https://images.unsplash.com/photo-1587327956460-a2943411b542?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Enjoy a romantic walk among thousands of beautiful roses. A perfect spot for photos and quiet moments.',
+    dataAiHint: "vienna rose garden",
+    bestTimeToVisit: "Late Spring/Summer when roses are in bloom",
+    estimatedPriceRange: "Free"
+  },
+  {
+    id: 'couples-vienna-6',
+    name: 'Take a Fiaker Ride Through the City Center',
+    location: 'Inner Stadt, departs from Stephansplatz or Hofburg',
+    duration: 0.75,
+    imageUrls: ['https://images.unsplash.com/photo-1599881858349-8bd3c2180e6e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    description: 'Experience old-world charm with a traditional horse-drawn carriage ride through Vienna\'s historic streets.',
+    dataAiHint: "fiaker vienna carriage",
+    bestTimeToVisit: "Anytime, especially charming in the evening",
+    estimatedPriceRange: "€55-€95 per carriage"
+  }
 ];
 
 // Specific list of activity IDs that Julia Musterfrau is mocked to have "liked"
@@ -442,3 +580,9 @@ export const MOCK_COUPLES_ACTIVITIES_BY_CITY: Record<string, Activity[]> = {
   "Vienna, Austria": MOCK_COUPLES_VIENNA_ACTIVITIES,
   "Default": MOCK_COUPLES_DEFAULT_ACTIVITIES,
 };
+
+declare module 'react' {
+  interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
+    dataAiHint?: string;
+  }
+}
