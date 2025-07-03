@@ -347,6 +347,16 @@ export async function registerUserAction(values: z.infer<typeof registerFormSche
   const { email, name, ...otherData } = validation.data;
 
   try {
+    // --- DATABASE SEEDING LOGIC ---
+    // This block ensures the 'users' collection exists before we try to query it.
+    // It checks for our default mock user and creates them if they don't exist.
+    const mockUserDoc = await firestore.collection('users').doc(MOCK_USER_PROFILE.id).get();
+    if (!mockUserDoc.exists) {
+        console.log("Default user not found, seeding database...");
+        await firestore.collection('users').doc(MOCK_USER_PROFILE.id).set(MOCK_USER_PROFILE);
+    }
+    // --- END SEEDING LOGIC ---
+
     const existingUser = await findUserByEmail(email.toLowerCase());
 
     if (existingUser) {
