@@ -274,8 +274,14 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
         }
         const userDoc = snapshot.docs[0];
         return { id: userDoc.id, ...userDoc.data() } as UserProfile;
-    } catch (error) {
-        console.error(`Error finding user by email ${email}:`, error);
+    } catch (error: any) {
+        // If the error is 'NOT_FOUND' (code 5), it signifies the collection doesn't exist.
+        // In this scenario, it's correct to return null as no user can exist.
+        if (error.code === 5) {
+            return null;
+        }
+        // For any other type of error, we log it and return null to prevent a crash.
+        console.error(`An unexpected error occurred while finding user by email ${email}:`, error);
         return null;
     }
 }
@@ -341,21 +347,13 @@ export async function registerUserAction(values: z.infer<typeof registerFormSche
   const { email, name, ...otherData } = validation.data;
 
   try {
-    const usersRef = firestore.collection('users');
+    const existingUser = await findUserByEmail(email.toLowerCase());
 
-    // Ensure the 'users' collection exists before querying it. This is a workaround
-    // for Firestore 'cold start' issues on an empty database.
-    const dummyDoc = usersRef.doc('__dummy__');
-    if (!(await dummyDoc.get()).exists) {
-        await dummyDoc.set({ initialized: true });
-    }
-    
-    const existingUser = await usersRef.where('email', '==', email.toLowerCase()).limit(1).get();
-
-    if (!existingUser.empty) {
+    if (existingUser) {
       return { error: 'A user with this email address already exists.' };
     }
     
+    const usersRef = firestore.collection('users');
     const newUserId = usersRef.doc().id;
     const newUserProfile: UserProfile = {
       id: newUserId,
@@ -365,8 +363,7 @@ export async function registerUserAction(values: z.infer<typeof registerFormSche
       ...otherData,
     };
     
-    // In a real app, you would hash the password here before saving.
-    // For this prototype, we are not storing passwords.
+    // The 'set' operation will automatically create the 'users' collection if it's the first document.
     await usersRef.doc(newUserId).set(newUserProfile);
     
     revalidatePath('/');
