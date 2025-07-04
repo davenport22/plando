@@ -51,10 +51,22 @@ export default async function TripsPage() {
       {fetchError ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Connecting to Database</AlertTitle>
+          <AlertTitle>Action Required: Configure Server Credentials</AlertTitle>
           <AlertDescription>
-            <p>Could not fetch your trips. This usually happens when the application can't connect to the Firestore database.</p>
-            <p className="mt-2"><strong>Action required:</strong> Please ensure your server-side Firebase credentials (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`) are correctly set in your `.env` file. Instructions are in the `README.md` file.</p>
+            <p>Could not fetch your trips because the app failed to connect to the database. This is because the server is not configured.</p>
+            <p className="font-bold mt-4 mb-2">To fix this, add your server's private credentials to the `.env` file:</p>
+            <ol className="list-decimal list-inside text-sm space-y-1">
+                <li>Go to your Firebase Console &rarr; Project Settings &rarr; Service accounts.</li>
+                <li>Click <strong>Generate new private key</strong> and save the JSON file.</li>
+                <li>Open the file and copy the `project_id`, `client_email`, and `private_key`.</li>
+                <li>Paste them into your `.env` file like this:</li>
+            </ol>
+            <pre className="mt-2 text-xs bg-destructive-foreground/10 p-3 rounded font-mono whitespace-pre-wrap">
+                {`FIREBASE_PROJECT_ID="your-project-id"
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk-..."
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END PRIVATE KEY-----\\n"`}
+            </pre>
+            <p className="mt-4">After saving the `.env` file, the page will need to be refreshed.</p>
             <p className="mt-2 font-mono text-xs bg-destructive-foreground/10 p-2 rounded">Error details: {fetchError}</p>
           </AlertDescription>
         </Alert>
