@@ -206,10 +206,10 @@ export async function getOrCreateUserProfile(user: {
   email: string | null;
   name: string | null;
   photoURL: string | null;
-}): Promise<{ profile: UserProfile; isNewUser: boolean } | null> {
+}): Promise<{ profile: UserProfile; isNewUser: boolean }> {
   if (!isFirebaseInitialized) {
     console.error('Backend is not configured. Cannot get or create user profile.');
-    return null;
+    throw new Error('Server not configured. Please ensure Firebase credentials are in your .env file.');
   }
   
   const userRef = firestore.collection('users').doc(user.uid);
@@ -236,7 +236,10 @@ export async function getOrCreateUserProfile(user: {
     }
   } catch (error) {
     console.error(`Error getting or creating profile for user ${user.uid}:`, error);
-    return null;
+    if (error instanceof Error) {
+        throw new Error(error.message);
+    }
+    throw new Error("An unknown database error occurred while creating the user profile.");
   }
 }
 

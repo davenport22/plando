@@ -31,7 +31,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // This check is for the client-side configuration.
     const clientConfigured = !!(
         process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
         process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
@@ -39,22 +38,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
     setIsConfigured(clientConfigured);
     
-    if (!clientConfigured) {
-        console.warn("Firebase client config missing. Ensure NEXT_PUBLIC_FIREBASE... variables are in .env");
+    if (!clientConfigured || !auth) {
+        console.warn("Firebase client config missing or Auth failed to initialize. Ensure NEXT_PUBLIC_FIREBASE... variables are in .env");
         setLoading(false);
         return;
     }
     
-    // Auth must be initialized here if config is valid
-    if (!auth) {
-      console.error("Firebase Auth could not be initialized. Check your client config.");
-      setLoading(false);
-      return;
-    }
-
     getRedirectResult(auth)
       .catch((error) => {
-        console.error("Error during sign-in redirect:", error);
+        console.error("Error processing sign-in redirect result:", error);
         toast({
           title: "Sign-In Failed",
           description: `An error occurred during sign-in: ${error.message}`,
@@ -65,21 +57,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        const result = await getOrCreateUserProfile({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            name: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-        });
-        if (result) {
-            setUserProfile(result.profile);
-            setIsNewUser(result.isNewUser);
-            setProfileError(null);
-        } else {
-            console.error("Could not get or create user profile. This is likely a server-side configuration issue.");
-            setUserProfile(null);
-            setIsNewUser(null);
-            setProfileError("Failed to load your user profile from the database.");
+        try {
+          const result = await getOrCreateUserProfile({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              name: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+          });
+          setUserProfile(result.profile);
+          setIsNewUser(result.isNewUser);
+          setProfileError(null);
+        } catch(e) {
+          console.error("Critical error during profile synchronization:", e);
+          setUserProfile(null);
+          setIsNewUser(null);
+          const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+          setProfileError(`Could not sync your profile with the database. Error: ${errorMessage}`);
         }
       } else {
         setUser(null);
