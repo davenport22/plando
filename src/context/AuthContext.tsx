@@ -6,6 +6,7 @@ import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, type 
 import { auth } from '@/lib/firebase/client';
 import { getOrCreateUserProfile } from '@/lib/actions';
 import type { UserProfile } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +24,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isConfigured, setIsConfigured] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     // If auth is not initialized (e.g., missing .env config), don't set up the listener.
@@ -64,14 +66,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithGoogle = async () => {
     if (!auth) {
         console.error("Firebase Auth is not initialized. Cannot sign in.");
+        toast({
+          title: "Configuration Error",
+          description: "Firebase is not set up correctly in the app.",
+          variant: "destructive",
+        });
         return;
     }
     const provider = new GoogleAuthProvider();
     try {
       setLoading(true);
       await signInWithPopup(auth, provider);
-    } catch (error) {
+      // Successful sign-in is handled by the onAuthStateChanged listener
+    } catch (error: any) {
       console.error("Error signing in with Google:", error);
+      
+      let description = "An unknown error occurred during sign-in.";
+      if (error.code === 'auth/popup-closed-by-user') {
+        description = "The sign-in window was closed before completing."
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        description = "Multiple sign-in windows were opened. Please try again."
+      } else if (error.code) {
+        description = `Error: ${error.code}. Please check the console for more details.`
+      }
+
+      toast({
+        title: "Sign-In Failed",
+        description: description,
+        variant: "destructive",
+      });
+
       setLoading(false);
     }
   };
