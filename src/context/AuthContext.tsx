@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
@@ -5,12 +6,12 @@ import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, type 
 import { auth } from '@/lib/firebase/client';
 import { getOrCreateUserProfile } from '@/lib/actions';
 import type { UserProfile } from '@/types';
-import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  isConfigured: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -21,14 +22,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isConfigured, setIsConfigured] = useState(false);
 
   useEffect(() => {
     // If auth is not initialized (e.g., missing .env config), don't set up the listener.
     if (!auth) {
       console.warn("Firebase Auth is not initialized. Ensure your NEXT_PUBLIC_FIREBASE... variables are set in .env");
       setLoading(false); // Stop the loading state.
+      setIsConfigured(false);
       return;
     }
+    
+    setIsConfigured(true);
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -83,10 +88,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value = { user, userProfile, loading, signInWithGoogle, logout };
+  const value = { user, userProfile, loading, isConfigured, signInWithGoogle, logout };
 
-  // The loading screen is now handled by the logic inside the useEffect and consumed by pages.
-  // The AuthProvider itself should not block rendering.
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 

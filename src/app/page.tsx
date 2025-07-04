@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 // Inline SVG for Google icon for simplicity
 const GoogleIcon = () => (
@@ -19,7 +19,7 @@ const GoogleIcon = () => (
 );
 
 export default function LoginPage() {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, signInWithGoogle, isConfigured } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -49,12 +49,20 @@ export default function LoginPage() {
               onClick={signInWithGoogle} 
               size="lg" 
               className="w-full"
-              disabled={loading}
+              disabled={!isConfigured}
             >
               <GoogleIcon />
               Sign in with Google
             </Button>
-            <p className="text-xs text-muted-foreground text-center">
+            
+            {!isConfigured && (
+              <div className="text-xs text-destructive text-center p-2 bg-destructive/10 rounded-md flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Firebase not configured. Please add API keys to enable login.</span>
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground text-center pt-2">
               By signing in, you agree to our (non-existent) Terms of Service and Privacy Policy.
             </p>
           </div>
