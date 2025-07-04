@@ -41,7 +41,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-3xl font-headline">Welcome to Plando</CardTitle>
-          <CardDescription>Your AI-powered trip planner. Sign in to continue.</CardDescription>
+          <CardDescription>Your AI-powered planning assistant. Sign in to continue.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center space-y-4">

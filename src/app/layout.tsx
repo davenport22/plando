@@ -10,8 +10,8 @@ import { AuthProvider } from '@/context/AuthContext';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Plando - Your AI Trip Planner',
-  description: 'Collaboratively plan your trips with AI-powered suggestions.',
+  title: 'Plando - Your AI Planning Assistant',
+  description: 'Collaboratively plan your adventures with AI-powered suggestions.',
 };
 
 export default function RootLayout({
