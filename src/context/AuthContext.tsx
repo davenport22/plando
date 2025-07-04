@@ -14,6 +14,7 @@ interface AuthContextType {
   isNewUser: boolean | null;
   loading: boolean;
   isConfigured: boolean;
+  profileError: string | null;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -26,20 +27,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [isConfigured, setIsConfigured] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!auth) {
-      console.warn("Firebase Auth is not initialized. Ensure your NEXT_PUBLIC_FIREBASE... variables are set in .env");
-      setLoading(false);
-      setIsConfigured(false);
-      return;
+    // This check is for the client-side configuration.
+    const clientConfigured = !!(
+        process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
+        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
+        process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    );
+    setIsConfigured(clientConfigured);
+    
+    if (!clientConfigured) {
+        console.warn("Firebase client config missing. Ensure NEXT_PUBLIC_FIREBASE... variables are in .env");
+        setLoading(false);
+        return;
     }
     
-    setIsConfigured(true);
-    
-    // This handles the result of a sign-in redirect. It's called when the page
-    // loads after the user has been redirected back from Google.
+    // Auth must be initialized here if config is valid
+    if (!auth) {
+      console.error("Firebase Auth could not be initialized. Check your client config.");
+      setLoading(false);
+      return;
+    }
+
     getRedirectResult(auth)
       .catch((error) => {
         console.error("Error during sign-in redirect:", error);
@@ -62,15 +74,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (result) {
             setUserProfile(result.profile);
             setIsNewUser(result.isNewUser);
+            setProfileError(null);
         } else {
-            console.error("Could not get or create user profile.");
+            console.error("Could not get or create user profile. This is likely a server-side configuration issue.");
             setUserProfile(null);
             setIsNewUser(null);
+            setProfileError("Failed to load your user profile from the database.");
         }
       } else {
         setUser(null);
         setUserProfile(null);
         setIsNewUser(null);
+        setProfileError(null);
       }
       setLoading(false);
     });
@@ -79,8 +94,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   const signInWithGoogle = async () => {
-    if (!auth) {
-        console.error("Firebase Auth is not initialized. Cannot sign in.");
+    if (!isConfigured || !auth) {
+        console.error("Firebase Auth is not configured. Cannot sign in.");
         toast({
           title: "Configuration Error",
           description: "Firebase is not set up correctly in the app.",
@@ -91,7 +106,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       setLoading(true);
-      // We initiate the redirect here. The result is handled by getRedirectResult in the useEffect hook.
       await signInWithRedirect(auth, provider);
     } catch (error: any) {
       console.error("Error initiating sign-in with redirect:", error);
@@ -116,7 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value = { user, userProfile, isNewUser, loading, isConfigured, signInWithGoogle, logout };
+  const value = { user, userProfile, isNewUser, loading, isConfigured, profileError, signInWithGoogle, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

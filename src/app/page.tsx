@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 // Inline SVG for Google icon for simplicity
 const GoogleIcon = () => (
@@ -19,11 +20,14 @@ const GoogleIcon = () => (
 );
 
 export default function LoginPage() {
-  const { user, loading, signInWithGoogle, isConfigured, isNewUser } = useAuth();
+  const { user, loading, signInWithGoogle, isConfigured, isNewUser, profileError, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return; // Wait until loading is complete
+
+    // If there's an error, we won't redirect. The UI will show the error.
+    if (profileError) return;
 
     if (user) {
       if (isNewUser === true) {
@@ -31,11 +35,12 @@ export default function LoginPage() {
       } else if (isNewUser === false) { // explicitly check for false to avoid redirect on null
         router.push('/login'); // Redirect existing users to the main trips page
       }
+      // If user exists but isNewUser is still null, we wait. The loading=true or profileError state will handle the UI.
     }
-  }, [user, loading, isNewUser, router]);
+  }, [user, loading, isNewUser, profileError, router]);
 
-  // Show loading spinner while auth state is being determined or redirect is in progress
-  if (loading || user) {
+  // Show loading spinner while auth state is being determined
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -43,6 +48,44 @@ export default function LoginPage() {
     );
   }
 
+  // If user is logged in but profile failed to load, show a specific error.
+  if (user && profileError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-destructive/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="w-full max-w-lg shadow-2xl">
+          <CardHeader className="text-center space-y-2">
+            <CardTitle className="text-2xl font-headline text-destructive">Authentication Error</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Could Not Load Your Profile</AlertTitle>
+              <AlertDescription>
+                <p>{profileError}</p>
+                <p className="mt-2">This usually happens when the app's server can't connect to the database. Please ensure your server-side Firebase credentials (`FIREBASE_PRIVATE_KEY`, etc.) are correctly set in your `.env` file as described in the `README.md`.</p>
+              </AlertDescription>
+            </Alert>
+            <Button onClick={logout} variant="outline" className="w-full">
+              Sign Out and Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // If user is authenticated and everything is fine, show a redirecting state
+  // while the useEffect hook prepares to navigate away.
+  if (user && !profileError) {
+     return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+           <p className="ml-4 text-muted-foreground">Redirecting...</p>
+        </div>
+      );
+  }
+
+  // Default state: not logged in, show the login card.
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md shadow-2xl">
