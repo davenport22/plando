@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { onAuthStateChanged, signOut, signInWithRedirect, GoogleAuthProvider, getRedirectResult, type User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithRedirect, GoogleAuthProvider, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { getOrCreateUserProfile } from '@/lib/actions';
 import type { UserProfile } from '@/types';
@@ -43,20 +43,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
         return;
     }
-    
-    // This handles the result of the redirect sign-in
-    getRedirectResult(auth)
-      .catch((error) => {
-        console.error("Error processing sign-in redirect result:", error);
-        toast({
-          title: "Sign-In Failed",
-          description: `An error occurred during sign-in: ${error.message}`,
-          variant: "destructive",
-        });
-      });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
+      // Don't set loading to true here, let it be true only on initial load.
+      // This prevents spinners on subsequent auth state changes after the app is loaded.
       setProfileError(null); // Reset profile error on each auth state change
 
       if (firebaseUser) {
@@ -79,16 +69,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setProfileError(`Could not sync your profile with the database. Error: ${errorMessage}`);
         }
       } else {
-        // User is signed out
+        // User is signed out or was never signed in.
         setUser(null);
         setUserProfile(null);
         setIsNewUser(null);
       }
-      setLoading(false);
+      setLoading(false); // Signal that the entire auth process (including profile check) is complete.
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, []); // The dependency array is empty, so this effect runs only once on mount.
 
   const signInWithGoogle = async () => {
     if (!isConfigured || !auth) {
@@ -104,6 +94,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       await signInWithRedirect(auth, provider);
+      // The user will be redirected to Google. The onAuthStateChanged listener will
+      // handle the result when they are redirected back to the app.
     } catch (error: any) {
       console.error("Error initiating sign-in with redirect:", error);
        toast({
@@ -122,6 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       await signOut(auth);
+      // onAuthStateChanged will handle clearing user state.
     } catch (error) {
       console.error("Error signing out:", error);
     }

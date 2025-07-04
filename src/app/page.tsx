@@ -24,31 +24,34 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return; // Wait until loading is complete
+    // Wait until the initial loading and profile fetching is complete
+    if (loading) return;
 
-    // If there's a profile error, we won't redirect. The UI will show the error.
+    // If there's a profile error, we don't redirect. The UI will show the error.
     if (profileError) return;
 
-    if (user) {
-      if (isNewUser === true) {
+    // Redirect only when we have a user and we know if they are new or not.
+    if (user && isNewUser !== null) {
+      if (isNewUser) {
         router.push('/profile/edit'); // Redirect new users to edit their profile
-      } else if (isNewUser === false) { // explicitly check for false to avoid redirect on null
+      } else {
         router.push('/trips'); // Redirect existing users to the main trips page
       }
-      // If user exists but isNewUser is still null, we wait. The loading=true or profileError state will handle the UI.
     }
   }, [user, loading, isNewUser, profileError, router]);
 
-  // Show loading spinner while auth state is being determined
-  if (loading) {
+  // Show a persistent loading spinner until we have a final state (redirect or error).
+  // This covers initial auth check AND the profile fetching process.
+  if (loading || (user && !profileError && isNewUser === null)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-muted-foreground">{user ? 'Finalizing login...' : 'Loading...'}</p>
       </div>
     );
   }
 
-  // If user is logged in but profile failed to load, show a specific error.
+  // If there was a profile error after logging in, show the specific error card.
   if (user && profileError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-destructive/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
@@ -84,17 +87,6 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END 
         </Card>
       </div>
     );
-  }
-
-  // If user is authenticated and everything is fine, show a redirecting state
-  // while the useEffect hook prepares to navigate away.
-  if (user && !profileError) {
-     return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-           <p className="ml-4 text-muted-foreground">Redirecting...</p>
-        </div>
-      );
   }
 
   // Default state: not logged in, show the login card.
