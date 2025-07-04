@@ -23,16 +23,14 @@ export default function LoginPage() {
   const { user, loading, signInWithGoogle, isNewUser, profileError, logout } = useAuth();
   const router = useRouter();
 
-  // This effect handles the redirection logic. It will run whenever the dependencies change.
-  // It's separated from the rendering logic to make the component's behavior clearer.
+  // This effect handles the redirection logic for the success case.
+  // It will run ONLY when the user is successfully logged in and there's no profile error.
   useEffect(() => {
-    // We only want to redirect if authentication is not in a loading state,
-    // we have a confirmed user, there's no profile error, and we know their status (new/existing).
-    if (!loading && user && !profileError && isNewUser !== null) {
+    if (user && !profileError) {
       const destination = isNewUser ? '/profile/edit' : '/trips';
       router.replace(destination);
     }
-  }, [user, loading, isNewUser, profileError, router]);
+  }, [user, isNewUser, profileError, router]);
 
   // STATE 1: Loading
   // Show a spinner while the auth state is being determined. This is the default initial state.
@@ -40,7 +38,7 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-muted-foreground">Loading...</p>
+        <p className="ml-4 text-muted-foreground">Verifying your identity...</p>
       </div>
     );
   }
