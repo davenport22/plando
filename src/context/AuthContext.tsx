@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { getAuth, onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, type User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { getOrCreateUserProfile } from '@/lib/actions';
 import type { UserProfile } from '@/types';
@@ -23,6 +23,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If auth is not initialized (e.g., missing .env config), don't set up the listener.
+    if (!auth) {
+      console.warn("Firebase Auth is not initialized. Ensure your NEXT_PUBLIC_FIREBASE... variables are set in .env");
+      setLoading(false); // Stop the loading state.
+      return;
+    }
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
@@ -50,11 +57,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signInWithGoogle = async () => {
+    if (!auth) {
+        console.error("Firebase Auth is not initialized. Cannot sign in.");
+        return;
+    }
     const provider = new GoogleAuthProvider();
     try {
       setLoading(true);
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle setting the user and profile
     } catch (error) {
       console.error("Error signing in with Google:", error);
       setLoading(false);
@@ -62,6 +72,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    if (!auth) {
+      console.error("Firebase Auth is not initialized. Cannot sign out.");
+      return;
+    }
     try {
       await signOut(auth);
     } catch (error) {
@@ -71,14 +85,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = { user, userProfile, loading, signInWithGoogle, logout };
 
-  if (loading) {
-    return (
-        <div className="flex items-center justify-center h-screen bg-background">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-    );
-  }
-
+  // The loading screen is now handled by the logic inside the useEffect and consumed by pages.
+  // The AuthProvider itself should not block rendering.
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
