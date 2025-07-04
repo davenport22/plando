@@ -19,27 +19,23 @@ const GoogleIcon = () => (
   </svg>
 );
 
-
-// A dedicated component to handle redirection to avoid side-effects in the main render body.
-const Redirector = ({ to }: { to: string }) => {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace(to);
-  }, [router, to]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      <p className="ml-4 text-muted-foreground">Redirecting...</p>
-    </div>
-  );
-};
-
-
 export default function LoginPage() {
   const { user, loading, signInWithGoogle, isNewUser, profileError, logout } = useAuth();
+  const router = useRouter();
 
-  // 1. Handle loading state: Show a spinner while the auth state is being determined.
+  // This effect handles the redirection logic. It will run whenever the dependencies change.
+  // It's separated from the rendering logic to make the component's behavior clearer.
+  useEffect(() => {
+    // We only want to redirect if authentication is not in a loading state,
+    // we have a confirmed user, there's no profile error, and we know their status (new/existing).
+    if (!loading && user && !profileError && isNewUser !== null) {
+      const destination = isNewUser ? '/profile/edit' : '/trips';
+      router.replace(destination);
+    }
+  }, [user, loading, isNewUser, profileError, router]);
+
+  // STATE 1: Loading
+  // Show a spinner while the auth state is being determined. This is the default initial state.
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -49,8 +45,9 @@ export default function LoginPage() {
     );
   }
 
-  // 2. Handle profile error state: If the user is logged in but we failed to get/create a profile, show an error.
-  // This is a high-priority check.
+  // STATE 2: Error
+  // If we have an authenticated user but encountered an error creating their profile,
+  // display a specific error card. This breaks the loop and gives the user a clear action.
   if (user && profileError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-destructive/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
@@ -88,13 +85,20 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END 
     );
   }
 
-  // 3. Handle successful login and redirect state: If we have a user and know their status, redirect them.
-  if (user && isNewUser !== null) {
-    const destination = isNewUser ? '/profile/edit' : '/trips';
-    return <Redirector to={destination} />;
+  // STATE 3: Redirecting
+  // If the user is logged in and there's no error, but the redirection effect hasn't fired yet,
+  // show a redirecting state. This prevents the login card from flashing before the redirect happens.
+  if (user && !profileError) {
+    return (
+       <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-muted-foreground">Redirecting...</p>
+      </div>
+    );
   }
 
-  // 4. Handle default (not logged in) state: Show the main login card.
+  // STATE 4: Logged Out
+  // If none of the above conditions are met, the user is not logged in. Show the main login card.
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md shadow-2xl">
