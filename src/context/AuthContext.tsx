@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, type User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithRedirect, GoogleAuthProvider, getRedirectResult, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { getOrCreateUserProfile } from '@/lib/actions';
 import type { UserProfile } from '@/types';
@@ -27,16 +27,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // If auth is not initialized (e.g., missing .env config), don't set up the listener.
     if (!auth) {
       console.warn("Firebase Auth is not initialized. Ensure your NEXT_PUBLIC_FIREBASE... variables are set in .env");
-      setLoading(false); // Stop the loading state.
+      setLoading(false);
       setIsConfigured(false);
       return;
     }
     
     setIsConfigured(true);
     
+    // This handles the result of a sign-in redirect. It's called when the page
+    // loads after the user has been redirected back from Google.
+    getRedirectResult(auth)
+      .catch((error) => {
+        console.error("Error during sign-in redirect:", error);
+        toast({
+          title: "Sign-In Failed",
+          description: `An error occurred during sign-in: ${error.message}`,
+          variant: "destructive",
+        });
+      });
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
@@ -49,7 +60,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (profile) {
             setUserProfile(profile);
         } else {
-            // Handle case where profile couldn't be fetched/created
             console.error("Could not get or create user profile.");
             setUserProfile(null);
         }
@@ -61,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const signInWithGoogle = async () => {
     if (!auth) {
@@ -76,26 +86,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       setLoading(true);
-      await signInWithPopup(auth, provider);
-      // Successful sign-in is handled by the onAuthStateChanged listener
+      // We initiate the redirect here. The result is handled by getRedirectResult in the useEffect hook.
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
-      console.error("Error signing in with Google:", error);
-      
-      let description = "An unknown error occurred during sign-in.";
-      if (error.code === 'auth/popup-closed-by-user') {
-        description = "The sign-in window was closed before completing."
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        description = "Multiple sign-in windows were opened. Please try again."
-      } else if (error.code) {
-        description = `Error: ${error.code}. Please check the console for more details.`
-      }
-
-      toast({
-        title: "Sign-In Failed",
-        description: description,
+      console.error("Error initiating sign-in with redirect:", error);
+       toast({
+        title: "Sign-In Error",
+        description: `Could not start the sign-in process: ${error.message}`,
         variant: "destructive",
       });
-
       setLoading(false);
     }
   };
