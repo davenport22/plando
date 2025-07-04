@@ -45,40 +45,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      // Don't set loading to true here, let it be true only on initial load.
-      // This prevents spinners on subsequent auth state changes after the app is loaded.
-      setProfileError(null); // Reset profile error on each auth state change
+      // Set loading to true whenever auth state is being checked to prevent UI flashes
+      setLoading(true);
 
       if (firebaseUser) {
-        setUser(firebaseUser);
         try {
-          const result = await getOrCreateUserProfile({
+          // First, get or create the user profile from the backend.
+          const { profile, isNewUser: newUserStatus } = await getOrCreateUserProfile({
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               name: firebaseUser.displayName,
               photoURL: firebaseUser.photoURL,
           });
-          setUserProfile(result.profile);
-          setIsNewUser(result.isNewUser);
+
+          // If successful, update all states together to present a consistent view.
+          setUserProfile(profile);
+          setIsNewUser(newUserStatus);
+          setUser(firebaseUser); // Set Firebase user object last after profile is confirmed.
+          setProfileError(null);
+
         } catch(e) {
           console.error("Critical error during profile synchronization:", e);
-          // Keep the firebaseUser, but flag the profile error. The UI will handle this state.
+          const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+          
+          // In case of a profile error, we still have an authenticated user.
+          // Set the error state so the UI can show a specific message.
+          setUser(firebaseUser);
           setUserProfile(null);
           setIsNewUser(null);
-          const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
           setProfileError(`Could not sync your profile with the database. Error: ${errorMessage}`);
         }
       } else {
-        // User is signed out or was never signed in.
+        // User is signed out, clear all user-related state.
         setUser(null);
         setUserProfile(null);
         setIsNewUser(null);
+        setProfileError(null);
       }
-      setLoading(false); // Signal that the entire auth process (including profile check) is complete.
+      // Signal that the entire auth process for this change is complete.
+      setLoading(false); 
     });
 
     return () => unsubscribe();
-  }, []); // The dependency array is empty, so this effect runs only once on mount.
+  }, []);
 
   const signInWithGoogle = async () => {
     if (!isConfigured || !auth) {
@@ -92,6 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const provider = new GoogleAuthProvider();
     try {
+      // Set loading to true to indicate a sign-in process has started.
       setLoading(true);
       await signInWithRedirect(auth, provider);
       // The user will be redirected to Google. The onAuthStateChanged listener will

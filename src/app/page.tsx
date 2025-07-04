@@ -37,19 +37,20 @@ const Redirector = ({ to }: { to: string }) => {
 
 
 export default function LoginPage() {
-  const { user, loading, signInWithGoogle, isConfigured, isNewUser, profileError, logout } = useAuth();
+  const { user, loading, signInWithGoogle, isNewUser, profileError, logout } = useAuth();
 
-  // 1. Handle loading state: Show a spinner during the initial auth check OR while fetching the profile for a logged-in user.
-  if (loading || (user && !profileError && isNewUser === null)) {
+  // 1. Handle loading state: Show a spinner while the auth state is being determined.
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-muted-foreground">{user ? 'Finalizing login...' : 'Loading...'}</p>
+        <p className="ml-4 text-muted-foreground">Loading...</p>
       </div>
     );
   }
 
   // 2. Handle profile error state: If the user is logged in but we failed to get/create a profile, show an error.
+  // This is a high-priority check.
   if (user && profileError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-destructive/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
@@ -107,19 +108,11 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END 
               onClick={signInWithGoogle} 
               size="lg" 
               className="w-full"
-              disabled={!isConfigured}
             >
               <GoogleIcon />
               Sign in with Google
             </Button>
             
-            {!isConfigured && (
-              <div className="text-xs text-destructive text-center p-2 bg-destructive/10 rounded-md flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Client-side Firebase keys not found. Please add NEXT_PUBLIC variables to your .env file to enable login.</span>
-              </div>
-            )}
-
             <p className="text-xs text-muted-foreground text-center pt-2">
               By signing in, you agree to our (non-existent) Terms of Service and Privacy Policy.
             </p>
