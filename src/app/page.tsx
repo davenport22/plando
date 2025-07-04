@@ -19,29 +19,27 @@ const GoogleIcon = () => (
   </svg>
 );
 
+
+// A dedicated component to handle redirection to avoid side-effects in the main render body.
+const Redirector = ({ to }: { to: string }) => {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace(to);
+  }, [router, to]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <p className="ml-4 text-muted-foreground">Redirecting...</p>
+    </div>
+  );
+};
+
+
 export default function LoginPage() {
   const { user, loading, signInWithGoogle, isConfigured, isNewUser, profileError, logout } = useAuth();
-  const router = useRouter();
 
-  useEffect(() => {
-    // Wait until the initial loading and profile fetching is complete
-    if (loading) return;
-
-    // If there's a profile error, we don't redirect. The UI will show the error.
-    if (profileError) return;
-
-    // Redirect only when we have a user and we know if they are new or not.
-    if (user && isNewUser !== null) {
-      if (isNewUser) {
-        router.push('/profile/edit'); // Redirect new users to edit their profile
-      } else {
-        router.push('/trips'); // Redirect existing users to the main trips page
-      }
-    }
-  }, [user, loading, isNewUser, profileError, router]);
-
-  // Show a persistent loading spinner until we have a final state (redirect or error).
-  // This covers initial auth check AND the profile fetching process.
+  // 1. Handle loading state: Show a spinner during the initial auth check OR while fetching the profile for a logged-in user.
   if (loading || (user && !profileError && isNewUser === null)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -51,7 +49,7 @@ export default function LoginPage() {
     );
   }
 
-  // If there was a profile error after logging in, show the specific error card.
+  // 2. Handle profile error state: If the user is logged in but we failed to get/create a profile, show an error.
   if (user && profileError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-destructive/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
@@ -89,7 +87,13 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END 
     );
   }
 
-  // Default state: not logged in, show the login card.
+  // 3. Handle successful login and redirect state: If we have a user and know their status, redirect them.
+  if (user && isNewUser !== null) {
+    const destination = isNewUser ? '/profile/edit' : '/trips';
+    return <Redirector to={destination} />;
+  }
+
+  // 4. Handle default (not logged in) state: Show the main login card.
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md shadow-2xl">
