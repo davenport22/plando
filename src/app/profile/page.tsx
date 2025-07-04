@@ -56,7 +56,7 @@ export default function ProfilePage() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Profile</AlertTitle>
           <AlertDescription>
-            Could not load your profile. Please try logging out and back in.
+            Could not load your user profile from the database. This is often due to a server configuration issue. Please ensure your backend Firebase credentials (service account) are set correctly in your `.env` file as described in the README.
           </AlertDescription>
         </Alert>
       </div>

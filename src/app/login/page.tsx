@@ -3,11 +3,14 @@ import { TripCard } from '@/components/trips/TripCard';
 import { Button } from '@/components/ui/button';
 import { firestore } from '@/lib/firebase';
 import type { Trip } from '@/types';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default async function TripsPage() {
   let trips: Trip[] = [];
+  let fetchError: string | null = null;
+
   try {
     const tripsSnapshot = await firestore.collection('trips').get();
     trips = tripsSnapshot.docs.map(doc => {
@@ -25,7 +28,11 @@ export default async function TripsPage() {
     });
   } catch (error) {
     console.error("Failed to fetch trips from Firestore:", error);
-    // You could render an error message to the user here
+    if (error instanceof Error) {
+        fetchError = error.message;
+    } else {
+        fetchError = "An unknown error occurred while fetching trips."
+    }
   }
 
 
@@ -41,7 +48,17 @@ export default async function TripsPage() {
         </Link>
       </div>
       
-      {trips.length === 0 ? (
+      {fetchError ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error Connecting to Database</AlertTitle>
+          <AlertDescription>
+            <p>Could not fetch your trips. This usually happens when the application can't connect to the Firestore database.</p>
+            <p className="mt-2"><strong>Action required:</strong> Please ensure your server-side Firebase credentials (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`) are correctly set in your `.env` file. Instructions are in the `README.md` file.</p>
+            <p className="mt-2 font-mono text-xs bg-destructive-foreground/10 p-2 rounded">Error details: {fetchError}</p>
+          </AlertDescription>
+        </Alert>
+      ) : trips.length === 0 ? (
         <div className="text-center py-20 bg-muted/50 rounded-lg">
           <p className="text-xl text-muted-foreground">You haven&apos;t created or joined any trips yet.</p>
           <p className="text-sm text-muted-foreground mt-2">Click "Create New Trip" to get started.</p>
