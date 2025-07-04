@@ -71,9 +71,7 @@ export async function enhanceActivityDescriptionAction(
       location,
     };
 
-    // console.log("Calling generateActivityDescription with input:", JSON.stringify(input, null, 2));
     const result = await generateActivityDescription(input);
-    // console.log("Received enhanced description from AI:", JSON.stringify(result, null, 2));
 
     if (!result || !result.description) {
       console.error("AI did not return a valid description.");
@@ -97,7 +95,7 @@ type NewTripData = Omit<Trip, 'id' | 'ownerId' | 'participantIds'> & {
 };
 
 
-export async function createTrip(data: NewTripData): Promise<{ error: string } | void> {
+export async function createTrip(data: NewTripData, ownerId: string): Promise<{ error: string } | void> {
     if (!isFirebaseInitialized) {
         return { error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
     }
@@ -124,22 +122,18 @@ export async function createTrip(data: NewTripData): Promise<{ error: string } |
             destination: data.destination,
             startDate: data.startDate,
             endDate: data.endDate,
-            ownerId: 'user1', // In a real app, get this from the authenticated session
-            participantIds: ['user1'],
+            ownerId: ownerId, 
+            participantIds: [ownerId],
             imageUrl: imageUrl,
-            // Sanitize optional fields to be either a valid value or undefined.
-            // This prevents invalid data like NaN from being sent to Firestore.
             latitude: data.latitude && !isNaN(data.latitude) ? data.latitude : undefined,
             longitude: data.longitude && !isNaN(data.longitude) ? data.longitude : undefined,
             placeId: data.placeId || undefined,
         };
 
-        // Firestore's 'add' method automatically ignores keys with 'undefined' values.
         const docRef = await firestore.collection('trips').add(newTrip);
 
-        // Instead of just redirecting, we can redirect to the newly created trip's page
-        revalidatePath('/login'); // Invalidate cache for the trips list page
-        redirect(`/trips/${docRef.id}`); // Navigate to the new trip's detail page
+        revalidatePath('/trips');
+        redirect(`/trips/${docRef.id}`);
 
     } catch (e) {
         console.error('Error creating trip in Firestore:', e);
@@ -155,7 +149,6 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
             return null;
         }
         const data = tripDoc.data()!;
-        // Ensure all fields of the Trip interface are present
         return {
             id: tripDoc.id,
             name: data.name || 'Untitled Trip',
@@ -175,6 +168,34 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
     }
 }
 
+export async function getTripsForUser(userId: string): Promise<{ success: boolean; trips?: Trip[]; error?: string }> {
+    if (!isFirebaseInitialized) {
+        return { success: false, error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
+    }
+    try {
+        const tripsSnapshot = await firestore.collection('trips').where('participantIds', 'array-contains', userId).get();
+        const trips = tripsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name || 'Untitled Trip',
+                destination: data.destination || 'Unknown',
+                startDate: data.startDate || 'N/A',
+                endDate: data.endDate || 'N/A',
+                ownerId: data.ownerId || '',
+                participantIds: data.participantIds || [],
+                imageUrl: data.imageUrl,
+            } as Trip;
+        });
+        return { success: true, trips };
+    } catch (error) {
+        console.error("Failed to fetch trips from Firestore:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching trips.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+
 export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{ success: boolean; error?: string }> {
     try {
         if (!tripId) {
@@ -183,7 +204,7 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         await firestore.collection('trips').doc(tripId).update(data);
 
         revalidatePath(`/trips/${tripId}`);
-        revalidatePath('/login');
+        revalidatePath('/trips');
 
         return { success: true };
     } catch (error) {

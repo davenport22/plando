@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { createTrip } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 const newTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
@@ -34,9 +36,17 @@ const newTripFormSchema = z.object({
 type NewTripFormValues = z.infer<typeof newTripFormSchema>;
 
 export function NewTripForm() {
+  const { user } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [durationDisplay, setDurationDisplay] = useState<string>("");
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/');
+    }
+  }, [user, router]);
 
   const form = useForm<NewTripFormValues>({
     resolver: zodResolver(newTripFormSchema),
@@ -62,6 +72,11 @@ export function NewTripForm() {
   }, [startDate, endDate]);
 
   async function onSubmit(data: NewTripFormValues) {
+    if (!user) {
+        toast({ title: "Not Authenticated", description: "You must be logged in to create a trip.", variant: "destructive"});
+        return;
+    }
+
     setIsLoading(true);
     
     const tripData = {
@@ -70,7 +85,7 @@ export function NewTripForm() {
       endDate: format(data.endDate, "yyyy-MM-dd"),
     };
 
-    const result = await createTrip(tripData);
+    const result = await createTrip(tripData, user.uid);
 
     if (result?.error) {
       toast({
@@ -87,6 +102,15 @@ export function NewTripForm() {
       // The redirect is handled by the server action, so we don't need to do anything here.
       // The page will navigate away, so no need to set isLoading to false.
     }
+  }
+
+  if (!user) {
+    return (
+        <div className="flex items-center justify-center p-8">
+            <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+            <p>Redirecting to login...</p>
+        </div>
+    );
   }
 
   return (

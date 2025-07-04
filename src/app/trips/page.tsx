@@ -1,40 +1,54 @@
 
+"use client";
+
+import { useState, useEffect } from 'react';
 import { TripCard } from '@/components/trips/TripCard';
 import { Button } from '@/components/ui/button';
-import { firestore } from '@/lib/firebase';
+import { getTripsForUser } from '@/lib/actions';
 import type { Trip } from '@/types';
-import { PlusCircle, AlertCircle } from 'lucide-react';
+import { PlusCircle, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
-export default async function TripsPage() {
-  let trips: Trip[] = [];
-  let fetchError: string | null = null;
+export default function TripsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  try {
-    const tripsSnapshot = await firestore.collection('trips').get();
-    trips = tripsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            id: doc.id,
-            name: data.name || 'Untitled Trip',
-            destination: data.destination || 'Unknown',
-            startDate: data.startDate || 'N/A',
-            endDate: data.endDate || 'N/A',
-            ownerId: data.ownerId || '',
-            participantIds: data.participantIds || [],
-            imageUrl: data.imageUrl,
-        } as Trip;
-    });
-  } catch (error) {
-    console.error("Failed to fetch trips from Firestore:", error);
-    if (error instanceof Error) {
-        fetchError = error.message;
-    } else {
-        fetchError = "An unknown error occurred while fetching trips."
+  useEffect(() => {
+    // If auth has loaded and there's no user, redirect to login page
+    if (!authLoading && !user) {
+      router.push('/');
+      return;
     }
-  }
 
+    // If there is a user, fetch their trips
+    if (user) {
+      setDataLoading(true);
+      getTripsForUser(user.uid)
+        .then(result => {
+          if (result.success && result.trips) {
+            setTrips(result.trips);
+          } else {
+            setFetchError(result.error || 'An unknown error occurred while fetching trips.');
+          }
+        })
+        .catch(err => {
+            const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
+            setFetchError(errorMessage);
+        })
+        .finally(() => {
+          setDataLoading(false);
+        });
+    }
+  }, [user, authLoading, router]);
+
+  const isLoading = authLoading || dataLoading;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -48,7 +62,12 @@ export default async function TripsPage() {
         </Link>
       </div>
       
-      {fetchError ? (
+      {isLoading ? (
+        <div className="text-center py-20">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Loading your trips...</p>
+        </div>
+      ) : fetchError ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Action Required: Configure Server Credentials</AlertTitle>
