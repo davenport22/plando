@@ -19,15 +19,22 @@ const GoogleIcon = () => (
 );
 
 export default function LoginPage() {
-  const { user, loading, signInWithGoogle, isConfigured } = useAuth();
+  const { user, loading, signInWithGoogle, isConfigured, isNewUser } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
-      router.push('/login'); // Redirect to the main trips page
-    }
-  }, [user, loading, router]);
+    if (loading) return; // Wait until loading is complete
 
+    if (user) {
+      if (isNewUser === true) {
+        router.push('/profile/edit'); // Redirect new users to edit their profile
+      } else if (isNewUser === false) { // explicitly check for false to avoid redirect on null
+        router.push('/login'); // Redirect existing users to the main trips page
+      }
+    }
+  }, [user, loading, isNewUser, router]);
+
+  // Show loading spinner while auth state is being determined or redirect is in progress
   if (loading || user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

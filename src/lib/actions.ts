@@ -9,6 +9,7 @@ import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import { format } from 'date-fns';
 
 // This function will be called from client components to generate the itinerary.
 export async function suggestItineraryAction(
@@ -198,14 +199,14 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
 /**
  * Creates or retrieves a user profile in Firestore after authentication.
  * @param user The authenticated user object from Firebase Auth.
- * @returns The user's profile from Firestore.
+ * @returns The user's profile from Firestore and a flag indicating if the user was newly created.
  */
 export async function getOrCreateUserProfile(user: {
   uid: string;
   email: string | null;
   name: string | null;
   photoURL: string | null;
-}): Promise<UserProfile | null> {
+}): Promise<{ profile: UserProfile; isNewUser: boolean } | null> {
   if (!isFirebaseInitialized) {
     console.error('Backend is not configured. Cannot get or create user profile.');
     return null;
@@ -217,7 +218,7 @@ export async function getOrCreateUserProfile(user: {
     const doc = await userRef.get();
     if (doc.exists) {
       // User profile already exists, return it.
-      return doc.data() as UserProfile;
+      return { profile: doc.data() as UserProfile, isNewUser: false };
     } else {
       // User profile doesn't exist, create a new one.
       const newUserProfile: UserProfile = {
@@ -227,11 +228,11 @@ export async function getOrCreateUserProfile(user: {
         avatarUrl: user.photoURL || `https://avatar.vercel.sh/${user.email}.png`,
         bio: '',
         location: '',
-        memberSince: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+        memberSince: format(new Date(), 'MMMM yyyy'),
         interests: [],
       };
       await userRef.set(newUserProfile);
-      return newUserProfile;
+      return { profile: newUserProfile, isNewUser: true };
     }
   } catch (error) {
     console.error(`Error getting or creating profile for user ${user.uid}:`, error);

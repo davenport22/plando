@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
+  isNewUser: boolean | null;
   loading: boolean;
   isConfigured: boolean;
   signInWithGoogle: () => Promise<void>;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [isConfigured, setIsConfigured] = useState(false);
   const { toast } = useToast();
@@ -51,21 +53,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        const profile = await getOrCreateUserProfile({
+        const result = await getOrCreateUserProfile({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: firebaseUser.displayName,
             photoURL: firebaseUser.photoURL,
         });
-        if (profile) {
-            setUserProfile(profile);
+        if (result) {
+            setUserProfile(result.profile);
+            setIsNewUser(result.isNewUser);
         } else {
             console.error("Could not get or create user profile.");
             setUserProfile(null);
+            setIsNewUser(null);
         }
       } else {
         setUser(null);
         setUserProfile(null);
+        setIsNewUser(null);
       }
       setLoading(false);
     });
@@ -111,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value = { user, userProfile, loading, isConfigured, signInWithGoogle, logout };
+  const value = { user, userProfile, isNewUser, loading, isConfigured, signInWithGoogle, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
