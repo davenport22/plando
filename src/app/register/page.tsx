@@ -24,7 +24,7 @@ export default function RegisterPage() {
 
     useEffect(() => {
         if (!loading && user) {
-            router.push('/login'); // Redirect to the main trips page
+            router.push('/trips'); // Redirect to the main trips page
         }
     }, [user, loading, router]);
 

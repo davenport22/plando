@@ -119,7 +119,7 @@ export default function TripDetailPage() {
 
       } else {
         toast({ title: "Trip not found", description: "The trip you are looking for does not exist.", variant: "destructive" });
-        router.push('/login');
+        router.push('/trips');
       }
       setIsLoading(false);
     };
@@ -308,7 +308,7 @@ export default function TripDetailPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <Button variant="outline" onClick={() => router.push('/login')} className="mb-6">
+      <Button variant="outline" onClick={() => router.push('/trips')} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Trips
       </Button>
 

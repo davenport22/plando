@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
     
+    // This handles the result of the redirect sign-in
     getRedirectResult(auth)
       .catch((error) => {
         console.error("Error processing sign-in redirect result:", error);
@@ -55,6 +56,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      setProfileError(null); // Reset profile error on each auth state change
+
       if (firebaseUser) {
         setUser(firebaseUser);
         try {
@@ -66,19 +70,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           });
           setUserProfile(result.profile);
           setIsNewUser(result.isNewUser);
-          setProfileError(null);
         } catch(e) {
           console.error("Critical error during profile synchronization:", e);
+          // Keep the firebaseUser, but flag the profile error. The UI will handle this state.
           setUserProfile(null);
           setIsNewUser(null);
           const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
           setProfileError(`Could not sync your profile with the database. Error: ${errorMessage}`);
         }
       } else {
+        // User is signed out
         setUser(null);
         setUserProfile(null);
         setIsNewUser(null);
-        setProfileError(null);
       }
       setLoading(false);
     });

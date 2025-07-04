@@ -86,7 +86,7 @@ export const plandoModules: PlandoModuleConfig[] = [
     id: 'travel',
     name: 'Plando Travel',
     displayName: 'Travel',
-    path: '/login',
+    path: '/trips',
     Icon: PlaneTakeoff,
     themeClass: 'theme-plando-travel', // This is the default theme in globals.css via :root
     light: defaultTravelThemeLight,

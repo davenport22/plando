@@ -26,14 +26,14 @@ export default function LoginPage() {
   useEffect(() => {
     if (loading) return; // Wait until loading is complete
 
-    // If there's an error, we won't redirect. The UI will show the error.
+    // If there's a profile error, we won't redirect. The UI will show the error.
     if (profileError) return;
 
     if (user) {
       if (isNewUser === true) {
         router.push('/profile/edit'); // Redirect new users to edit their profile
       } else if (isNewUser === false) { // explicitly check for false to avoid redirect on null
-        router.push('/login'); // Redirect existing users to the main trips page
+        router.push('/trips'); // Redirect existing users to the main trips page
       }
       // If user exists but isNewUser is still null, we wait. The loading=true or profileError state will handle the UI.
     }
@@ -103,7 +103,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END 
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-3xl font-headline">Welcome to Plando</CardTitle>
-          <CardDescription>Stop Planning, Start Doing! Sign in to continue.</CardDescription>
+          <CardDescription>Stop Planning, Start Doing!</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center space-y-4">
@@ -120,7 +120,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END 
             {!isConfigured && (
               <div className="text-xs text-destructive text-center p-2 bg-destructive/10 rounded-md flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
-                <span>Firebase not configured. Please add API keys to enable login.</span>
+                <span>Client-side Firebase keys not found. Please add NEXT_PUBLIC variables to your .env file to enable login.</span>
               </div>
             )}
 

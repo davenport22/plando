@@ -81,7 +81,7 @@ const AppHeader = () => {
         {!isAuthPage && (
           <nav className="flex items-center gap-2 sm:gap-4">
             {showMyTripsButton && (
-              <Link href="/login" passHref> 
+              <Link href="/trips" passHref> 
                 <Button variant="ghost">
                   <LayoutGrid className="mr-2 h-5 w-5" />
                   My Trips
