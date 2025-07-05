@@ -262,8 +262,15 @@ export async function getOrCreateUserProfile(user: {
       await userRef.set(newUserProfile);
       return { profile: newUserProfile, isNewUser: true };
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error getting or creating profile for user ${user.uid}:`, error);
+    
+    // Specific check for Firestore "NOT_FOUND" error (code 5)
+    if (error.code === 5 || (error.message && error.message.includes("NOT_FOUND"))) {
+        const helpfulError = `Database not found or not accessible. Please ensure you have created a Firestore database in your Firebase project and selected the 'europe-west1' region. Original error: ${error.message}`;
+        throw new Error(helpfulError);
+    }
+
     if (error instanceof Error) {
         throw new Error(error.message);
     }
@@ -451,5 +458,3 @@ export async function getCompletedTripsForUser(userId: string): Promise<Trip[]> 
     return [];
   }
 }
-
-    
