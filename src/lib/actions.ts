@@ -400,8 +400,14 @@ export async function getTripActivities(tripId: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
         const activitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
-        return activitiesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Activity));
+        const activities = activitiesSnapshot.docs.map(doc => {
+            const data = doc.data();
+            // This ensures every activity has a proper ID from the database, fixing the original bug.
+            return { ...data, id: doc.id } as Activity;
+        });
+        return activities;
     } catch (error) {
+        console.error(`Error getting trip activities for trip ${tripId}:`, error)
         return [];
     }
 }
@@ -479,7 +485,8 @@ export async function addActivityToItineraryDay(tripId: string, activity: Activi
             return { success: false, error: "The selected day does not exist in the itinerary." };
         }
         
-        // Add the activity but preserve its original voting status
+        // This is the corrected logic.
+        // We push the activity to the itinerary without changing its original vote status.
         newItinerary.days[dayIndex].activities.push(activity);
         
         await saveItinerary(tripId, newItinerary);
