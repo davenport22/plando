@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 
 // This flag tracks whether the Firebase Admin SDK has been successfully initialized.
 let isFirebaseInitialized = false;
+let firebaseInitializationError: Error | null = null;
 
 // The `firebase-admin` package is used for server-side communication with Firebase services.
 // We check if the app has already been initialized to prevent errors on hot-reloads in development.
@@ -31,10 +32,18 @@ if (!admin.apps.length) {
         isFirebaseInitialized = true;
     } else {
         // This is a helpful warning for developers during setup to let them know the backend is not connected.
-        console.warn("Firebase Admin credentials not set in .env. Backend features will be disabled.");
+        const missingKeys = [
+            !serviceAccount.projectId && "FIREBASE_PROJECT_ID",
+            !serviceAccount.clientEmail && "FIREBASE_CLIENT_EMAIL",
+            !serviceAccount.privateKey && "FIREBASE_PRIVATE_KEY"
+        ].filter(Boolean).join(', ');
+        const errorMessage = `Firebase Admin credentials not set in .env. Missing: ${missingKeys || 'one or more keys'}.`;
+        firebaseInitializationError = new Error(errorMessage);
+        console.warn(errorMessage);
     }
   } catch (error) {
     console.error('Firebase admin initialization error:', error);
+    firebaseInitializationError = error instanceof Error ? error : new Error(String(error));
   }
 } else {
     // If admin.apps.length is not 0, it means the app is already initialized.
@@ -57,9 +66,9 @@ if (isFirebaseInitialized) {
             // Throw an error when any method is called on the uninitialized firestore object.
             // We ignore special properties that might be accessed during module inspection.
             if (typeof prop === 'string' && prop !== 'then' && prop !== 'catch') {
-                 throw new Error(
-                    'Firebase is not initialized. Please ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set in your .env file.'
-                );
+                 const baseMessage = 'Firebase is not initialized.';
+                 const detailMessage = firebaseInitializationError ? `Details: ${firebaseInitializationError.message}` : 'Please ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set correctly in your .env file.';
+                 throw new Error(`${baseMessage} ${detailMessage}`);
             }
             return undefined;
         },

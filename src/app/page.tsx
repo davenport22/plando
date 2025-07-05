@@ -59,22 +59,13 @@ export default function LoginPage() {
           <CardContent className="space-y-4">
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Action Required: Configure Server Credentials</AlertTitle>
+              <AlertTitle>Action Required: Server Configuration Error</AlertTitle>
               <AlertDescription>
-                <p>You have successfully logged in, but the app failed to create your user profile in the database. This is because the server is not configured.</p>
-                <p className="font-bold mt-4 mb-2">To fix this, add your server's private credentials to the `.env` file:</p>
-                <ol className="list-decimal list-inside text-sm space-y-1">
-                  <li>Go to your Firebase Console &rarr; Project Settings &rarr; Service accounts.</li>
-                  <li>Click <strong>Generate new private key</strong> and save the JSON file.</li>
-                  <li>Open the file and copy the `project_id`, `client_email`, and `private_key`.</li>
-                  <li>Paste them into your `.env` file like this:</li>
-                </ol>
-                <pre className="mt-2 text-xs bg-destructive-foreground/10 p-3 rounded font-mono whitespace-pre-wrap">
-                  {`FIREBASE_PROJECT_ID="your-project-id"
-FIREBASE_CLIENT_EMAIL="firebase-adminsdk-..."
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END PRIVATE KEY-----\\n"`}
+                 <p>You have successfully logged in, but the app failed to create your user profile in the database. Please check the error details below and ensure your server's private credentials are correctly set in the <strong>.env</strong> file.</p>
+                <pre className="mt-4 text-xs bg-destructive-foreground/10 p-3 rounded-md font-mono whitespace-pre-wrap">
+                  {profileError}
                 </pre>
-                 <p className="mt-4">After saving the `.env` file, click below to try again.</p>
+                 <p className="mt-4">After updating the <strong>.env</strong> file, click the button below to sign out and try signing in again.</p>
               </AlertDescription>
             </Alert>
             <Button onClick={logout} variant="outline" className="w-full">
