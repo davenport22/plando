@@ -258,33 +258,36 @@ export async function addParticipantToTrip(tripId: string, email: string, invite
             revalidatePath(`/trips/${tripId}`);
             return { success: true, message: `${userToAdd.name} has been added to the trip.` };
         } else {
-             // User not found, send invitation
-            try {
-                const tripDoc = await firestore.collection('trips').doc(tripId).get();
-                if (!tripDoc.exists) {
-                    return { success: false, error: "Trip not found." };
-                }
-                const tripName = tripDoc.data()!.name;
-
-                const emailContent = await generateInvitationEmail({
-                    recipientEmail: email,
-                    tripName: tripName,
-                    inviterName: inviterName
-                });
-                
-                // This is a mock service. It logs to the console instead of sending.
-                await sendEmail({
-                    to: email,
-                    subject: emailContent.subject,
-                    html: emailContent.body
-                });
-                
-                return { success: true, message: `User not found. An invitation email has been sent to ${email}.` };
-
-            } catch (inviteError: any) {
-                console.error("Failed to send invitation:", inviteError);
-                return { success: false, error: "The user was not found, and the invitation could not be sent." };
+            // User not found, send invitation in the background
+            const tripDoc = await firestore.collection('trips').doc(tripId).get();
+            if (!tripDoc.exists) {
+                return { success: false, error: "Trip not found." };
             }
+            const tripName = tripDoc.data()!.name;
+
+            // Fire-and-forget the email generation and sending
+            generateInvitationEmail({
+                recipientEmail: email,
+                tripName: tripName,
+                inviterName: inviterName,
+            }).then(emailContent => {
+                if (emailContent && emailContent.subject && emailContent.body) {
+                    sendEmail({
+                        to: email,
+                        subject: emailContent.subject,
+                        html: emailContent.body,
+                    }).catch(emailError => {
+                        console.error(`Background email sending failed for ${email}:`, emailError);
+                    });
+                } else {
+                     console.error(`Background email generation failed for ${email}: AI did not return valid content.`);
+                }
+            }).catch(genError => {
+                console.error(`Background email generation failed for ${email}:`, genError);
+            });
+
+            // Return success to the user immediately
+            return { success: true, message: `User not found. An invitation is being sent to ${email}.` };
         }
 
     } catch (error) {
