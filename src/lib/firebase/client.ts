@@ -23,15 +23,20 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase for client-side only to avoid server-side errors.
-const app: FirebaseApp | undefined =
-  typeof window !== 'undefined' && firebaseConfig.apiKey && !getApps().length
-    ? initializeApp(firebaseConfig)
-    : typeof window !== 'undefined' && firebaseConfig.apiKey
-    ? getApp()
-    : undefined;
+// Check if all necessary client-side config values are present.
+// This provides a clearer error if the .env file is not set up.
+const isClientConfigured = !!(
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId
+);
 
-// We only get auth if the app has been initialized
-const auth: Auth | undefined = app ? getAuth(app) : undefined;
+if (typeof window !== 'undefined' && !isClientConfigured) {
+  console.error("Firebase client configuration is missing or incomplete. Please check your .env file for NEXT_PUBLIC_FIREBASE_... variables.");
+}
 
-export { app, auth };
+// Initialize Firebase for client-side only.
+const app: FirebaseApp = !getApps().length && isClientConfigured ? initializeApp(firebaseConfig) : getApp();
+const auth: Auth = getAuth(app);
+
+export { app, auth, isClientConfigured };

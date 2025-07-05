@@ -20,17 +20,17 @@ const GoogleIcon = () => (
 );
 
 export default function LoginPage() {
-  const { user, loading, signInWithGoogle, isNewUser, profileError, logout } = useAuth();
+  const { user, userProfile, loading, signInWithGoogle, isNewUser, profileError, logout } = useAuth();
   const router = useRouter();
 
-  // This effect handles the redirection logic for the success case.
-  // It will run ONLY when the user is successfully logged in and there's no profile error.
+  // Redirect effect - runs ONLY when a user is fully authenticated and there are no errors.
   useEffect(() => {
-    if (user && !profileError) {
+    if (user && userProfile && !profileError) {
       const destination = isNewUser ? '/profile/edit' : '/trips';
       router.replace(destination);
     }
-  }, [user, isNewUser, profileError, router]);
+  }, [user, userProfile, isNewUser, profileError, router]);
+
 
   // STATE 1: Loading
   // Show a spinner while the auth state is being determined. This is the default initial state.
@@ -86,7 +86,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END 
   // STATE 3: Redirecting
   // If the user is logged in and there's no error, but the redirection effect hasn't fired yet,
   // show a redirecting state. This prevents the login card from flashing before the redirect happens.
-  if (user && !profileError) {
+  if (user && userProfile && !profileError) {
     return (
        <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
