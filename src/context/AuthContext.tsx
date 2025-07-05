@@ -1,8 +1,8 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { onAuthStateChanged, signOut, signInWithRedirect, GoogleAuthProvider, type User } from 'firebase/auth';
+import { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
+import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { getOrCreateUserProfile } from '@/lib/actions';
 import type { UserProfile } from '@/types';
@@ -28,6 +28,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profileError, setProfileError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const handleUserProfile = useCallback(async (firebaseUser: User) => {
+    setLoading(true);
+    try {
+      console.log("handleUserProfile: Getting or creating profile for", firebaseUser.uid);
+      const { profile, isNewUser: newUserStatus } = await getOrCreateUserProfile({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+      });
+      console.log("handleUserProfile: Profile received.", { isNewUser: newUserStatus });
+      
+      setUser(firebaseUser);
+      setUserProfile(profile);
+      setIsNewUser(newUserStatus);
+      setProfileError(null);
+    } catch(e) {
+      console.error("Critical error during profile synchronization:", e);
+      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+      
+      // IMPORTANT: Keep the user object but set the profile error.
+      // This allows the UI to render the error state instead of looping.
+      setUser(firebaseUser); 
+      setUserProfile(null);
+      setIsNewUser(null);
+      setProfileError(`Could not sync your profile. This is likely a server configuration issue. Details: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+
   useEffect(() => {
     const clientConfigured = !!(
         process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
@@ -41,47 +73,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
 
-    console.log("Setting up onAuthStateChanged listener...");
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("onAuthStateChanged fired. firebaseUser:", firebaseUser);
-      setLoading(true);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        console.log("User object received:", firebaseUser.uid);
-        try {
-          const { profile, isNewUser: newUserStatus } = await getOrCreateUserProfile({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              name: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-          });
-          
-          setUser(firebaseUser);
-          setUserProfile(profile);
-          setIsNewUser(newUserStatus);
-          setProfileError(null);
-
-        } catch(e) {
-          console.error("Critical error during profile synchronization:", e);
-          const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-          
-          setUser(firebaseUser); // Keep the authenticated user
-          setUserProfile(null);
-          setIsNewUser(null);
-          setProfileError(`Could not sync your profile with the database. Error: ${errorMessage}`);
+        // If the user object is present, but we don't have their profile yet, fetch it.
+        // This handles the case of a returning user opening a new tab.
+        if (!userProfile || userProfile.id !== firebaseUser.uid) {
+          handleUserProfile(firebaseUser);
         }
       } else {
-        console.log("No user object received. Clearing user state.");
+        // User is signed out
         setUser(null);
         setUserProfile(null);
         setIsNewUser(null);
         setProfileError(null);
+        setLoading(false);
       }
-      console.log("Finished processing auth state change. Setting loading to false.");
-      setLoading(false); 
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, [handleUserProfile, userProfile]);
 
   const signInWithGoogle = async () => {
     if (!auth) {
@@ -96,14 +106,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       setLoading(true);
-      await signInWithRedirect(auth, provider);
+      // Use signInWithPopup which is more reliable than redirect in some environments.
+      await signInWithPopup(auth, provider);
+      // The onAuthStateChanged listener will automatically handle the user creation and state updates.
     } catch (error: any) {
-      console.error("Error initiating sign-in with redirect:", error);
-       toast({
-        title: "Sign-In Error",
-        description: `Could not start the sign-in process: ${error.message}`,
-        variant: "destructive",
-      });
+      // Don't show an error toast if the user simply closes the popup.
+      if (error.code !== 'auth/popup-closed-by-user') {
+        console.error("Error during sign-in with popup:", error);
+         toast({
+          title: "Sign-In Error",
+          description: `Could not complete the sign-in process: ${error.message}`,
+          variant: "destructive",
+        });
+      }
       setLoading(false);
     }
   };
