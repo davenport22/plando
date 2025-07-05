@@ -43,8 +43,8 @@ const GenerateSuggestedItineraryOutputSchema = z.object({
               .describe('Duration of the activity in hours.'),
             location: z.string(),
             category: z
-              .enum(['Must Do', 'Recommended', 'Optional'])
-              .describe('Category based on group votes.'),
+              .enum(['Must Do', 'Optional'])
+              .describe("Category based on the user's vote. 'Must Do' for liked activities, 'Optional' for disliked ones."),
             likes: z.number().describe('Number of participants who liked this activity. Based on input, 1 if liked, 0 otherwise.'),
             dislikes: z.number().describe('Number of participants who disliked this activity. Based on input, 1 if disliked, 0 otherwise.'),
             description: z.string().optional().describe('Brief description of the activity.')
@@ -68,15 +68,16 @@ const prompt = ai.definePrompt({
   name: 'generateSuggestedItineraryPrompt',
   input: {schema: GenerateSuggestedItineraryInputSchema},
   output: {schema: GenerateSuggestedItineraryOutputSchema},
-  prompt: `You are an AI travel assistant. Your task is to generate a suggested itinerary based on a list of activities, their duration, location, and the user's vote (liked status).
+  prompt: `You are an AI travel assistant. Your task is to generate a suggested itinerary based on a list of activities and their liked status.
 
 The itinerary should balance the activity load per day and respect the trip's start and end dates.
 
-**Crucially, use the following strict rules for categorization:**
-- If an activity has 'isLiked: true', it MUST be categorized as 'Must Do'.
-- If an activity has 'isLiked: false', it MUST be categorized as 'Optional'.
+**Use these absolute, non-negotiable rules for categorization:**
+1.  If an activity's \`isLiked\` property is \`true\`, its category in the output MUST be 'Must Do'.
+2.  If an activity's \`isLiked\` property is \`false\`, its category in the output MUST be 'Optional'.
+3.  The category 'Recommended' MUST NOT be used.
 
-This ensures all liked activities are treated with the same high priority.
+This ensures all liked activities are treated with the highest priority and disliked ones are treated as secondary.
 
 For each activity you include in the generated itinerary:
 - If its 'isLiked' status in the input is true, set 'likes: 1' and 'dislikes: 0' in the output.
@@ -91,7 +92,7 @@ Here are the activities:
 Trip Start Date: {{startDate}}
 Trip End Date: {{endDate}}
 
-Generate a suggested itinerary in JSON format.
+Generate a suggested itinerary in the required JSON format.
   `,
 });
 
