@@ -96,7 +96,7 @@ type NewTripData = Omit<Trip, 'id' | 'ownerId' | 'participantIds'> & {
 
 
 export async function createTrip(data: NewTripData, ownerId: string): Promise<{ error: string } | void> {
-    if (!isFirebaseInitialized()) {
+    if (!isFirebaseInitialized) {
         const { firestore } = await import('@/lib/firebase');
         // The import itself will throw the detailed error if not initialized.
         // This is a safeguard, but the error should be caught before this.
@@ -171,7 +171,7 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
 }
 
 export async function getTripsForUser(userId: string): Promise<{ success: boolean; trips?: Trip[]; error?: string }> {
-    if (!isFirebaseInitialized()) {
+    if (!isFirebaseInitialized) {
         try {
              // This will trigger the proxy error if not initialized
             const { firestore } = await import('@/lib/firebase');
@@ -236,7 +236,7 @@ export async function getOrCreateUserProfile(user: {
   name: string | null;
   photoURL: string | null;
 }): Promise<{ profile: UserProfile; isNewUser: boolean }> {
-  if (!isFirebaseInitialized()) {
+  if (!isFirebaseInitialized) {
      throw new Error('Server not configured. Please ensure Firebase credentials are in your .env file.');
   }
   
@@ -277,7 +277,7 @@ export async function getOrCreateUserProfile(user: {
  * @returns A UserProfile object or null if not found.
  */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-    if (!isFirebaseInitialized()) return null;
+    if (!isFirebaseInitialized) return null;
     try {
         const userDoc = await firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
@@ -298,7 +298,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
  * @returns An object indicating success or failure.
  */
 export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> {
-    if (!isFirebaseInitialized()) {
+    if (!isFirebaseInitialized) {
         return { success: false, error: 'Backend is not configured. Please set up Firebase credentials in your .env file.' };
     }
     try {
@@ -389,7 +389,7 @@ export async function getLikedCouplesActivityIds(userId: string): Promise<string
 // --- Trip Activities Actions ---
 
 export async function getTripActivities(tripId: string): Promise<Activity[]> {
-    if (!isFirebaseInitialized()) return [];
+    if (!isFirebaseInitialized) return [];
     try {
         const activitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
         return activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
@@ -400,7 +400,7 @@ export async function getTripActivities(tripId: string): Promise<Activity[]> {
 }
 
 export async function addTripActivity(tripId: string, activityData: Omit<Activity, 'id'>): Promise<{ success: boolean; activityId?: string; error?: string }> {
-    if (!isFirebaseInitialized()) return { success: false, error: 'Backend not configured.'};
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
     try {
         const docRef = await firestore.collection('trips').doc(tripId).collection('activities').add(activityData);
         revalidatePath(`/trips/${tripId}`);
@@ -412,7 +412,7 @@ export async function addTripActivity(tripId: string, activityData: Omit<Activit
 }
 
 export async function updateTripActivity(tripId: string, activityId: string, data: Partial<Activity>): Promise<{ success: boolean; error?: string }> {
-    if (!isFirebaseInitialized()) return { success: false, error: 'Backend not configured.'};
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
     try {
         await firestore.collection('trips').doc(tripId).collection('activities').doc(activityId).update(data);
         revalidatePath(`/trips/${tripId}`);
@@ -424,7 +424,7 @@ export async function updateTripActivity(tripId: string, activityId: string, dat
 }
 
 export async function getCompletedTripsForUser(userId: string): Promise<Trip[]> {
-  if (!isFirebaseInitialized()) return [];
+  if (!isFirebaseInitialized) return [];
   try {
     const today = new Date().toISOString().split('T')[0];
     const tripsSnapshot = await firestore
@@ -451,3 +451,5 @@ export async function getCompletedTripsForUser(userId: string): Promise<Trip[]> 
     return [];
   }
 }
+
+    
