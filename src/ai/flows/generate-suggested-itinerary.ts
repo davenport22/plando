@@ -72,9 +72,11 @@ const prompt = ai.definePrompt({
 
 The itinerary should balance the activity load per day and respect the trip's start and end dates.
 
-**Crucially, use the following rules for categorization:**
-- If an activity has 'isLiked: true', you can categorize it as 'Must Do' or 'Recommended'. Prioritize these liked activities when building the schedule.
-- If an activity has 'isLiked: false', it MUST be categorized as 'Optional'. Do not categorize disliked activities as 'Must Do' or 'Recommended'.
+**Crucially, use the following strict rules for categorization:**
+- If an activity has 'isLiked: true', it MUST be categorized as 'Must Do'.
+- If an activity has 'isLiked: false', it MUST be categorized as 'Optional'.
+
+This ensures all liked activities are treated with the same high priority.
 
 For each activity you include in the generated itinerary:
 - If its 'isLiked' status in the input is true, set 'likes: 1' and 'dislikes: 0' in the output.
