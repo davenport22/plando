@@ -77,7 +77,8 @@ export function NewTripForm() {
     setIsLoading(true);
     
     const tripData = {
-      ...data,
+      name: data.name,
+      destination: data.destination,
       startDate: format(data.startDate, "yyyy-MM-dd"),
       endDate: format(data.endDate, "yyyy-MM-dd"),
     };

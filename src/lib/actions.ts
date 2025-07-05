@@ -104,6 +104,7 @@ export async function createTrip(data: NewTripData, ownerId: string): Promise<{ 
         // This is a safeguard, but the error should be caught before this.
     }
 
+    let docId: string;
     try {
         if (!data.name || !data.destination || !data.startDate || !data.endDate) {
             return { error: 'Missing required fields.' };
@@ -121,7 +122,7 @@ export async function createTrip(data: NewTripData, ownerId: string): Promise<{ 
             // We don't block trip creation if image generation fails, just use the fallback.
         }
 
-        const newTrip: Omit<Trip, 'id'> = {
+        const newTrip: Omit<Trip, 'id' | 'latitude' | 'longitude' | 'placeId'> = {
             name: data.name,
             destination: data.destination,
             startDate: data.startDate,
@@ -132,15 +133,16 @@ export async function createTrip(data: NewTripData, ownerId: string): Promise<{ 
         };
 
         const docRef = await firestore.collection('trips').add(newTrip);
-
-        revalidatePath('/trips');
-        redirect(`/trips/${docRef.id}`);
+        docId = docRef.id;
 
     } catch (e) {
         console.error('Error creating trip in Firestore:', e);
         if (e instanceof Error) return { error: e.message };
         return { error: 'An unknown error occurred while creating the trip.' };
     }
+
+    revalidatePath('/trips');
+    redirect(`/trips/${docId}`);
 }
 
 export async function getTrip(tripId: string): Promise<Trip | null> {
