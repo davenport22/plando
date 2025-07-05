@@ -103,9 +103,9 @@ export default function TripDetailPage() {
           if (destinationActivities.length > 0) {
               toast({ title: "Finding Activities...", description: `Adding suggested activities for ${fetchedTrip.destination}.`});
               const seedPromises = destinationActivities.map(act => {
+                  const { id, ...restOfAct } = act; // Destructure to remove mock ID
                   const activityPayload: Omit<Activity, 'id'> = {
-                      ...act,
-                      id: act.id, // Keep mock ID for consistency if needed, though Firestore will assign a new one
+                      ...restOfAct,
                       tripId,
                       isLiked: undefined,
                   };

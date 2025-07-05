@@ -503,7 +503,8 @@ export async function getTripActivities(tripId: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
         const activitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
-        return activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+        // Ensure the real document ID overwrites any "id" field in the data
+        return activitiesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Activity));
     } catch (error) {
         console.error(`Error fetching activities for trip ${tripId}:`, error);
         return [];
