@@ -21,6 +21,7 @@ export interface Trip {
   endDate: string; // YYYY-MM-DD
   ownerId: string;
   participantIds: string[];
+  participants: UserProfile[]; // Will be populated for detailed views
   imageUrl?: string; // Main trip image
   latitude?: number;
   longitude?: number;
@@ -138,6 +139,7 @@ export const MOCK_TRIPS: Trip[] = [
     endDate: '2024-09-17',
     ownerId: 'user1',
     participantIds: ['user1', 'user2'],
+    participants: [],
     imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     latitude: 48.8566,
     longitude: 2.3522,
@@ -151,6 +153,7 @@ export const MOCK_TRIPS: Trip[] = [
     endDate: '2024-11-15',
     ownerId: 'user2',
     participantIds: ['user1', 'user2'],
+    participants: [],
     imageUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
     latitude: 35.6895,
     longitude: 139.6917,

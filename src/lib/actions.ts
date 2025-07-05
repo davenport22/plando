@@ -6,6 +6,7 @@ import { generateActivityDescription, type GenerateActivityDescriptionInput, typ
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
 import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS, type Activity } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
+import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -122,7 +123,7 @@ export async function createTrip(data: NewTripData, ownerId: string): Promise<{ 
             // We don't block trip creation if image generation fails, just use the fallback.
         }
 
-        const newTrip: Omit<Trip, 'id' | 'latitude' | 'longitude' | 'placeId'> = {
+        const newTripData = {
             name: data.name,
             destination: data.destination,
             startDate: data.startDate,
@@ -132,7 +133,7 @@ export async function createTrip(data: NewTripData, ownerId: string): Promise<{ 
             imageUrl: imageUrl,
         };
 
-        const docRef = await firestore.collection('trips').add(newTrip);
+        const docRef = await firestore.collection('trips').add(newTripData);
         docId = docRef.id;
 
     } catch (e) {
@@ -152,6 +153,14 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
             return null;
         }
         const data = tripDoc.data()!;
+
+        const participantIds = data.participantIds || [];
+        const participantProfiles = await Promise.all(
+            participantIds.map((id: string) => getUserProfile(id))
+        );
+        
+        const participants = participantProfiles.filter((p): p is UserProfile => p !== null);
+
         return {
             id: tripDoc.id,
             name: data.name || 'Untitled Trip',
@@ -159,7 +168,8 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
             startDate: data.startDate,
             endDate: data.endDate,
             ownerId: data.ownerId,
-            participantIds: data.participantIds || [],
+            participantIds: participantIds,
+            participants: participants,
             imageUrl: data.imageUrl,
             latitude: data.latitude,
             longitude: data.longitude,
@@ -193,6 +203,7 @@ export async function getTripsForUser(userId: string): Promise<{ success: boolea
                 endDate: data.endDate || 'N/A',
                 ownerId: data.ownerId || '',
                 participantIds: data.participantIds || [],
+                participants: [], // Keep this empty for list view performance
                 imageUrl: data.imageUrl,
             } as Trip;
         });
@@ -218,6 +229,73 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         return { success: true };
     } catch (error) {
         console.error(`Error updating trip for ${tripId}:`, error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function addParticipantToTrip(tripId: string, email: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        if (!tripId || !email) {
+            return { success: false, error: "Trip ID and participant email are required." };
+        }
+
+        const userToAdd = await findUserByEmail(email);
+        if (!userToAdd) {
+            return { success: false, error: "No user found with that email address." };
+        }
+
+        const tripRef = firestore.collection('trips').doc(tripId);
+        const tripDoc = await tripRef.get();
+
+        if (!tripDoc.exists) {
+            return { success: false, error: "Trip not found." };
+        }
+
+        const tripData = tripDoc.data() as Trip;
+        if (tripData.participantIds.includes(userToAdd.id)) {
+            return { success: false, error: "This user is already a participant in the trip." };
+        }
+
+        await tripRef.update({
+            participantIds: FieldValue.arrayUnion(userToAdd.id)
+        });
+
+        revalidatePath(`/trips/${tripId}`);
+        return { success: true };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function removeParticipantFromTrip(tripId: string, participantId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        if (!tripId || !participantId) {
+            return { success: false, error: "Trip ID and participant ID are required." };
+        }
+
+        const tripRef = firestore.collection('trips').doc(tripId);
+        const tripDoc = await tripRef.get();
+
+        if (!tripDoc.exists) {
+            return { success: false, error: "Trip not found." };
+        }
+
+        const tripData = tripDoc.data() as Trip;
+        if (tripData.ownerId === participantId) {
+            return { success: false, error: "The trip owner cannot be removed." };
+        }
+
+        await tripRef.update({
+            participantIds: FieldValue.arrayRemove(participantId)
+        });
+
+        revalidatePath(`/trips/${tripId}`);
+        return { success: true };
+
+    } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }

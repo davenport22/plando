@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { EditTripForm } from '@/components/trips/EditTripForm';
 import { format, parseISO } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null => {
   if (!aiOutput || !aiOutput.itinerary) return null;
@@ -173,7 +174,7 @@ export default function TripDetailPage() {
     });
   };
 
-  const handleAddCustomActivity = async (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes'>) => {
+  const handleAddCustomActivity = async (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants'>) => {
     const activityPayload: Omit<Activity, 'id'> = {
       ...newActivityData,
       tripId,
@@ -181,6 +182,7 @@ export default function TripDetailPage() {
       imageUrls: ["https://placehold.co/400x300.png?text=Custom+Activity"], 
       likes: 1, // Assume the creator likes it
       dislikes: 0,
+      participants: [],
     };
     
     const result = await addTripActivity(tripId, activityPayload);
@@ -257,7 +259,7 @@ export default function TripDetailPage() {
     setIsLoadingItinerary(false);
   };
 
-  const handleUpdateTripDetails = async (updatedData: Partial<Omit<Trip, 'id' | 'ownerId' | 'participantIds'>>) => {
+  const handleUpdateTripDetails = async (updatedData: Partial<Omit<Trip, 'id' | 'ownerId' | 'participantIds' | 'imageUrl' | 'participants'>>) => {
     if (!trip) return;
 
     // The form data already includes formatted date strings
@@ -322,13 +324,23 @@ export default function TripDetailPage() {
             priority
             data-ai-hint="destination panorama"
           />
-          <div className="absolute inset-0 bg-black/30 flex flex-col justify-end p-8">
+          <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-8">
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
             <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>
-            <p className="text-md text-primary-foreground/80 mt-1 shadow-sm">
-              {trip.startDate ? format(parseISO(trip.startDate), "PPP") : 'N/A'} to {trip.endDate ? format(parseISO(trip.endDate), "PPP") : 'N/A'}
-              {tripDuration && <span className="ml-2">({tripDuration})</span>}
-            </p>
+            <div className="flex items-center gap-4 mt-2">
+                <p className="text-md text-primary-foreground/80 shadow-sm">
+                  {trip.startDate ? format(parseISO(trip.startDate), "PPP") : 'N/A'} to {trip.endDate ? format(parseISO(trip.endDate), "PPP") : 'N/A'}
+                  {tripDuration && <span className="ml-2">({tripDuration})</span>}
+                </p>
+                <div className="flex items-center -space-x-2">
+                  {trip.participants?.map(p => (
+                    <Avatar key={p.id} className="h-8 w-8 border-2 border-background" title={p.name}>
+                      <AvatarImage src={p.avatarUrl} alt={p.name} />
+                      <AvatarFallback>{p.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  ))}
+                </div>
+              </div>
           </div>
         </div>
       </Card>
@@ -436,9 +448,9 @@ export default function TripDetailPage() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="text-2xl font-headline text-primary">Edit Trip Details</DialogTitle>
+                    <DialogTitle className="text-2xl font-headline text-primary">Edit Trip</DialogTitle>
                     <DialogDescription>
-                      Modify the name, destination, or dates for your trip.
+                      Modify details and manage participants for your trip.
                     </DialogDescription>
                   </DialogHeader>
                   {trip && <EditTripForm currentTrip={trip} onSubmit={handleUpdateTripDetails} />}
