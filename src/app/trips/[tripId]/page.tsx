@@ -53,6 +53,33 @@ const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null
   };
 };
 
+/**
+ * Recalculates the start times for all activities in a given day.
+ * @param day The day object from the itinerary.
+ * @param startHour The hour (0-23) to start the day's activities.
+ * @returns The day object with updated activity start times.
+ */
+const recalculateTimesForDay = (day: ItineraryDay, startHour: number = 9): ItineraryDay => {
+  let currentHour = startHour; // Represents hours from midnight, e.g., 9.5 is 9:30 AM
+
+  const updatedActivities = day.activities.map(activity => {
+    // Format currentHour to HH:mm
+    const hours = Math.floor(currentHour);
+    const minutes = Math.round((currentHour - hours) * 60);
+    const formattedStartTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+
+    const newActivity = { ...activity, startTime: formattedStartTime };
+
+    // Increment currentHour by activity duration for the next activity's start time
+    currentHour += activity.duration;
+
+    return newActivity;
+  });
+
+  return { ...day, activities: updatedActivities };
+};
+
+
 export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -127,36 +154,41 @@ export default function TripDetailPage() {
     }
   }, [userActivities, generatedItinerary, activitiesAtLastGeneration]);
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
     setGeneratedItinerary((itinerary) => {
       if (!itinerary) return null;
 
-      const oldDayIndex = itinerary.days.findIndex(day => day.activities.some(act => act.id === active.id));
-      const newDayIndex = itinerary.days.findIndex(day => day.date === over.id || day.activities.some(act => act.id === over.id));
+      const newItinerary = { ...itinerary, days: itinerary.days.map(d => ({ ...d, activities: [...d.activities] })) };
 
-      if (oldDayIndex === -1 || newDayIndex === -1) return itinerary;
+      const oldDayIndex = newItinerary.days.findIndex(day => day.activities.some(act => act.id === active.id));
+      const newDayIndex = newItinerary.days.findIndex(day => day.date === over.id || day.activities.some(act => act.id === over.id));
 
-      const newItinerary = { ...itinerary, days: [...itinerary.days.map(d => ({ ...d, activities: [...d.activities] }))] };
+      if (oldDayIndex === -1 || newDayIndex === -1) return itinerary; // Should not happen
+
       const oldDay = newItinerary.days[oldDayIndex];
       const newDay = newItinerary.days[newDayIndex];
 
       const activityIndex = oldDay.activities.findIndex(act => act.id === active.id);
       const [movedActivity] = oldDay.activities.splice(activityIndex, 1);
 
-      const overIsDay = newDay.date === over.id;
-      if (overIsDay) {
+      const overIsDayContainer = newDay.date === over.id;
+      if (overIsDayContainer) {
         newDay.activities.push(movedActivity);
       } else {
         const overActivityIndex = newDay.activities.findIndex(act => act.id === over.id);
         newDay.activities.splice(overActivityIndex, 0, movedActivity);
       }
 
-      // Persist changes to the database
+      // Recalculate times for the affected day(s)
+      newItinerary.days[newDayIndex] = recalculateTimesForDay(newItinerary.days[newDayIndex]);
+      if (oldDayIndex !== newDayIndex) {
+        newItinerary.days[oldDayIndex] = recalculateTimesForDay(newItinerary.days[oldDayIndex]);
+      }
+      
       saveItinerary(tripId, newItinerary);
-
       return newItinerary;
     });
   };
