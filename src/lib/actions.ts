@@ -127,9 +127,9 @@ export async function createTrip(data: NewTripData, ownerId: string): Promise<{ 
             ownerId: ownerId, 
             participantIds: [ownerId],
             imageUrl: imageUrl,
-            latitude: data.latitude && !isNaN(data.latitude) ? data.latitude : undefined,
-            longitude: data.longitude && !isNaN(data.longitude) ? data.longitude : undefined,
-            placeId: data.placeId || undefined,
+            ...(data.latitude !== undefined && !isNaN(data.latitude) && { latitude: data.latitude }),
+            ...(data.longitude !== undefined && !isNaN(data.longitude) && { longitude: data.longitude }),
+            ...(data.placeId && { placeId: data.placeId }),
         };
 
         const docRef = await firestore.collection('trips').add(newTrip);
