@@ -5,9 +5,12 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Loader2, AlertTriangle, LogIn, UserPlus } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { LoginForm } from '@/components/auth/LoginForm';
+import Link from 'next/link';
 
 // Inline SVG for Google icon for simplicity
 const GoogleIcon = () => (
@@ -58,7 +61,7 @@ export default function LoginPage() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Action Required: Configure Server Credentials</AlertTitle>
               <AlertDescription>
-                <p>You have successfully logged in with Google, but the app failed to create your user profile in the database. This is because the server is not configured.</p>
+                <p>You have successfully logged in, but the app failed to create your user profile in the database. This is because the server is not configured.</p>
                 <p className="font-bold mt-4 mb-2">To fix this, add your server's private credentials to the `.env` file:</p>
                 <ol className="list-decimal list-inside text-sm space-y-1">
                   <li>Go to your Firebase Console &rarr; Project Settings &rarr; Service accounts.</li>
@@ -105,21 +108,34 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END 
           <CardDescription>Stop Planning, Start Doing!</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center space-y-4">
-            <Button 
-              onClick={signInWithGoogle} 
-              size="lg" 
-              className="w-full"
-            >
-              <GoogleIcon />
-              Sign in with Google
-            </Button>
-            
-            <p className="text-xs text-muted-foreground text-center pt-2">
-              By signing in, you agree to our (non-existent) Terms of Service and Privacy Policy.
-            </p>
-          </div>
+            <div className="space-y-4">
+                <LoginForm />
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                    </div>
+                </div>
+                <Button 
+                    variant="outline"
+                    onClick={signInWithGoogle} 
+                    className="w-full"
+                >
+                    <GoogleIcon />
+                    Sign in with Google
+                </Button>
+            </div>
         </CardContent>
+        <CardFooter className="flex flex-col items-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+                Don&apos;t have an account?
+                <Link href="/register" className="ml-1 text-primary hover:underline font-semibold">
+                    Sign up
+                </Link>
+            </p>
+        </CardFooter>
       </Card>
     </div>
   );
