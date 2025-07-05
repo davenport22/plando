@@ -22,18 +22,25 @@ const GoogleIcon = () => (
   </svg>
 );
 
+
+// This new component handles the redirect cleanly.
+const Redirecting = ({ to }: { to: string }) => {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace(to);
+  }, [to, router]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <p className="ml-4 text-muted-foreground">Redirecting...</p>
+    </div>
+  );
+};
+
+
 export default function LoginPage() {
   const { user, userProfile, loading, signInWithGoogle, isNewUser, profileError, logout } = useAuth();
-  const router = useRouter();
-
-  // Redirect effect - runs ONLY when a user is fully authenticated and there are no errors.
-  useEffect(() => {
-    if (user && userProfile && !profileError) {
-      const destination = isNewUser ? '/profile/edit' : '/trips';
-      router.replace(destination);
-    }
-  }, [user, userProfile, isNewUser, profileError, router]);
-
 
   // STATE 1: Loading
   // Show a spinner while the auth state is being determined. This is the default initial state.
@@ -54,18 +61,18 @@ export default function LoginPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-destructive/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
         <Card className="w-full max-w-lg shadow-2xl">
           <CardHeader className="text-center space-y-2">
-            <CardTitle className="text-2xl font-headline text-destructive">Authentication Error</CardTitle>
+            <CardTitle className="text-2xl font-headline text-destructive">Action Required: Server Configuration Error</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Action Required: Server Configuration Error</AlertTitle>
+              <AlertTitle>Could Not Create Profile</AlertTitle>
               <AlertDescription>
-                 <p>You have successfully logged in, but the app failed to create your user profile in the database. Please check the error details below and ensure your server's private credentials are correctly set in the <strong>.env</strong> file.</p>
+                 <p>You have successfully logged in, but the app failed to create your user profile in the database. Please check the error details below and ensure your server's private credentials are correctly set in the <strong>.env</strong> file and that your Firestore database is set up correctly.</p>
                 <pre className="mt-4 text-xs bg-destructive-foreground/10 p-3 rounded-md font-mono whitespace-pre-wrap">
                   {profileError}
                 </pre>
-                 <p className="mt-4">After updating the <strong>.env</strong> file, click the button below to sign out and try signing in again.</p>
+                 <p className="mt-4">After checking your configuration, click the button below to sign out and try signing in again.</p>
               </AlertDescription>
             </Alert>
             <Button onClick={logout} variant="outline" className="w-full">
@@ -78,15 +85,10 @@ export default function LoginPage() {
   }
 
   // STATE 3: Redirecting
-  // If the user is logged in and there's no error, but the redirection effect hasn't fired yet,
-  // show a redirecting state. This prevents the login card from flashing before the redirect happens.
+  // If the user is logged in and there's no error, render the Redirecting component.
   if (user && userProfile && !profileError) {
-    return (
-       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-muted-foreground">Redirecting...</p>
-      </div>
-    );
+    const destination = isNewUser ? '/profile/edit' : '/trips';
+    return <Redirecting to={destination} />;
   }
 
   // STATE 4: Logged Out

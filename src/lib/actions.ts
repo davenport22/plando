@@ -267,7 +267,7 @@ export async function getOrCreateUserProfile(user: {
     
     // Specific check for Firestore "NOT_FOUND" error (code 5)
     if (error.code === 5 || (error.message && error.message.includes("NOT_FOUND"))) {
-        const helpfulError = `Database not found or not accessible. Please ensure you have created a Firestore database in your Firebase project and selected the 'europe-west1' region. Original error: ${error.message}`;
+        const helpfulError = `The server connected to Firebase, but could not find the Firestore database. This means the database either does not exist or is in the wrong region.\n\nPLEASE CHECK THE FOLLOWING:\n1. In Firebase Console, go to Firestore Database.\n2. Make sure you see your data (a 'users' collection might be there).\n3. At the top, it should say 'Cloud Firestore location: europe-west1 (Belgium)'. If it shows a different location, the database must be deleted and recreated in 'europe-west1'.\n\nOriginal error: ${error.message}`;
         throw new Error(helpfulError);
     }
 
