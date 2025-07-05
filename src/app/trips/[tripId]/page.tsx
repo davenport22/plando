@@ -13,9 +13,10 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { suggestItineraryAction, getTrip, updateTrip, getTripActivities, addTripActivity, updateTripActivity } from '@/lib/actions';
 import { calculateTripDuration } from '@/lib/utils';
-import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit } from 'lucide-react';
+import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit, ThumbsUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from "next/image";
+import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
@@ -111,7 +112,7 @@ export default function TripDetailPage() {
                   };
                   return addTripActivity(tripId, activityPayload);
               });
-              await Promise.all(seedPromises);
+              const results = await Promise.all(seedPromises);
               // After seeding, refetch activities to get their DB-generated IDs
               activities = await getTripActivities(tripId);
           }
@@ -158,6 +159,7 @@ export default function TripDetailPage() {
 
   const handleVote = (activityId: string, liked: boolean) => {
     // Optimistic UI update
+    const originalActivities = userActivities;
     setUserActivities(prevActivities =>
       prevActivities.map(act =>
         act.id === activityId ? { ...act, isLiked: liked } : act
@@ -169,7 +171,8 @@ export default function TripDetailPage() {
         if (!result.success) {
             console.error("Failed to save vote:", result.error);
             toast({ title: "Vote Sync Failed", description: "Your vote might not have been saved.", variant: "destructive"});
-            // Optional: Add logic here to revert the UI state on failure
+            // Revert the UI state on failure
+            setUserActivities(originalActivities);
         }
     });
   };
@@ -292,7 +295,8 @@ export default function TripDetailPage() {
   const unvotedActivities = userActivities.filter(act => act.isLiked === undefined);
   const currentActivityToVote = unvotedActivities.length > 0 ? unvotedActivities[0] : null;
   
-  const noActivitiesLikedForInitialGen = !generatedItinerary && userActivities.filter(a => a.isLiked === true).length === 0;
+  const likedActivitiesCount = userActivities.filter(a => a.isLiked).length;
+  const noActivitiesLikedForInitialGen = !generatedItinerary && likedActivitiesCount === 0;
   const hasUnvotedActivitiesForInitialGen = userActivities.some(act => act.isLiked === undefined);
   const shouldPromptForInitialVote = noActivitiesLikedForInitialGen && hasUnvotedActivitiesForInitialGen && userActivities.length > 0;
 
@@ -357,19 +361,33 @@ export default function TripDetailPage() {
                     itinerary={generatedItinerary} 
                     onActivityClick={handleOpenActivityDetail}
                 />
-                <Button
-                  onClick={handleGenerateItinerary}
-                  disabled={disableGenerateButton}
-                  className="w-full text-lg py-3 mt-6"
-                  size="lg"
-                >
-                  {isLoadingItinerary ? (
-                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                  ) : (
-                    <Wand2 className="mr-2 h-6 w-6" />
-                  )}
-                  {generatedItinerary ? 'Update Itinerary' : 'Generate Itinerary'}
-                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                  <Button
+                    onClick={handleGenerateItinerary}
+                    disabled={disableGenerateButton}
+                    className="w-full text-lg py-3"
+                    size="lg"
+                  >
+                    {isLoadingItinerary ? (
+                      <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                    ) : (
+                      <Wand2 className="mr-2 h-6 w-6" />
+                    )}
+                    {generatedItinerary ? 'Update Itinerary' : 'Generate Itinerary'}
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full text-lg py-3"
+                    size="lg"
+                    disabled={likedActivitiesCount === 0}
+                  >
+                    <Link href={`/trips/${tripId}/liked`}>
+                      <ThumbsUp className="mr-2 h-6 w-6" />
+                      View Liked ({likedActivitiesCount})
+                    </Link>
+                  </Button>
+                </div>
                 {buttonHelperText}
               </CardContent>
             </Card>
