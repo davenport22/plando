@@ -41,9 +41,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
 
+    console.log("Setting up onAuthStateChanged listener...");
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("onAuthStateChanged fired. firebaseUser:", firebaseUser);
       setLoading(true);
       if (firebaseUser) {
+        console.log("User object received:", firebaseUser.uid);
         try {
           const { profile, isNewUser: newUserStatus } = await getOrCreateUserProfile({
               uid: firebaseUser.uid,
@@ -67,11 +70,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setProfileError(`Could not sync your profile with the database. Error: ${errorMessage}`);
         }
       } else {
+        console.log("No user object received. Clearing user state.");
         setUser(null);
         setUserProfile(null);
         setIsNewUser(null);
         setProfileError(null);
       }
+      console.log("Finished processing auth state change. Setting loading to false.");
       setLoading(false); 
     });
 
