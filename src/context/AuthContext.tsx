@@ -15,6 +15,7 @@ import { auth, isClientConfigured } from '@/lib/firebase/client';
 import { getOrCreateUserProfile } from '@/lib/actions';
 import type { UserProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { FirebaseClientConfigError } from '@/components/auth/FirebaseClientConfigError';
 
 // Define a mapping for Firebase Auth error codes to user-friendly messages
 const FIREBASE_ERROR_MESSAGES: { [key: string]: string } = {
@@ -53,6 +54,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+
+  // If the client-side Firebase config is missing, render a helpful error page.
+  // This prevents the app from crashing and guides the user to fix their .env file.
+  if (!isClientConfigured) {
+    return <FirebaseClientConfigError />;
+  }
 
   useEffect(() => {
     // This is the single source of truth for auth state changes.

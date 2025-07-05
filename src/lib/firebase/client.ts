@@ -36,7 +36,19 @@ if (typeof window !== 'undefined' && !isClientConfigured) {
 }
 
 // Initialize Firebase for client-side only.
-const app: FirebaseApp = !getApps().length && isClientConfigured ? initializeApp(firebaseConfig) : getApp();
-const auth: Auth = getAuth(app);
+let app: FirebaseApp;
+let auth: Auth;
+
+// This check prevents the app from crashing on import if firebase is not configured.
+// The AuthContext will use `isClientConfigured` to render a helpful error boundary.
+if (isClientConfigured) {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    auth = getAuth(app);
+} else {
+    // Provide dummy objects to prevent app crash on import.
+    app = {} as FirebaseApp;
+    auth = {} as Auth;
+}
+
 
 export { app, auth, isClientConfigured };
