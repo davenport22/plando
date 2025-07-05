@@ -14,6 +14,23 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { format } from 'date-fns';
 
+const handleAIError = (error: unknown, defaultMessage: string): { error: string } => {
+    console.error(defaultMessage, error);
+    if (error instanceof Error) {
+        if (error.message.includes("API key not valid")) {
+            return { error: 'The provided GOOGLE_API_KEY is not valid. Please generate a new key from Google AI Studio and add it to your .env file.' };
+        }
+        if (error.message.includes("API key not found")) {
+            return { error: 'The GOOGLE_API_KEY environment variable is not set. Please add it to your .env file.' };
+        }
+         if (error.message.includes("permission denied")) {
+            return { error: 'Permission denied. Please ensure the Generative Language API is enabled in your Google Cloud project for the provided API key.' };
+        }
+        return { error: `${defaultMessage}: ${error.message}` };
+    }
+    return { error: "An unknown error occurred." };
+}
+
 // This function will be called from client components to generate the itinerary.
 export async function suggestItineraryAction(
   tripId: string,
@@ -41,7 +58,6 @@ export async function suggestItineraryAction(
     
     console.log("Received itinerary from AI:", JSON.stringify(result, null, 2));
     
-    // Validate or transform the result if needed
     if (!result || !result.itinerary) {
         console.error("AI did not return a valid itinerary structure.");
         return { error: "Failed to generate itinerary: AI returned invalid data." };
@@ -50,12 +66,7 @@ export async function suggestItineraryAction(
     return result;
 
   } catch (error) {
-    console.error("Error generating itinerary:", error);
-    // Check if error is an instance of Error and has a message property
-    if (error instanceof Error) {
-        return { error: `Failed to generate itinerary: ${error.message}` };
-    }
-    return { error: "An unknown error occurred while generating the itinerary." };
+    return handleAIError(error, "Failed to generate itinerary");
   }
 }
 
@@ -83,11 +94,7 @@ export async function enhanceActivityDescriptionAction(
     return result;
 
   } catch (error) {
-    console.error("Error generating enhanced activity description:", error);
-    if (error instanceof Error) {
-      return { error: `Failed to generate enhanced description: ${error.message}` };
-    }
-    return { error: "An unknown error occurred while generating the enhanced description." };
+    return handleAIError(error, "Failed to generate enhanced description");
   }
 }
 
@@ -283,7 +290,9 @@ export async function addParticipantToTrip(tripId: string, email: string, invite
                      console.error(`Background email generation failed for ${email}: AI did not return valid content.`);
                 }
             }).catch(genError => {
-                console.error(`Background email generation failed for ${email}:`, genError);
+                // This will now catch more specific errors from the AI flow
+                const aiError = handleAIError(genError, "Failed to generate invitation email");
+                console.error(`Background email generation failed for ${email}: ${aiError.error}`);
             });
 
             // Return success to the user immediately
@@ -563,3 +572,5 @@ export async function getCompletedTripsForUser(userId: string): Promise<Trip[]> 
     return [];
   }
 }
+
+    
