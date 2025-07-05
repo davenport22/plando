@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import type { Trip, UserProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 import { addParticipantToTrip, removeParticipantFromTrip } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,20 +18,21 @@ interface ParticipantManagerProps {
 
 export function ParticipantManager({ trip }: ParticipantManagerProps) {
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const [email, setEmail] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const handleAddParticipant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !userProfile) return;
 
     setIsAdding(true);
-    const result = await addParticipantToTrip(trip.id, email);
+    const result = await addParticipantToTrip(trip.id, email, userProfile.name);
     setIsAdding(false);
 
-    if (result.success) {
-      toast({ title: 'Participant Added!', description: `${email} has been added to the trip.` });
+    if (result.success && result.message) {
+      toast({ title: 'Success!', description: result.message });
       setEmail('');
     } else {
       toast({ title: 'Error', description: result.error, variant: 'destructive' });
@@ -89,7 +91,7 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
         </div>
       </div>
       <form onSubmit={handleAddParticipant} className="space-y-2">
-        <Label htmlFor="participant-email" className="font-semibold">Add New Participant</Label>
+        <Label htmlFor="participant-email" className="font-semibold">Add or Invite Participant</Label>
         <div className="flex items-center gap-2">
           <Input
             id="participant-email"
@@ -99,11 +101,12 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
             onChange={(e) => setEmail(e.target.value)}
             disabled={isAdding}
           />
-          <Button type="submit" disabled={isAdding || !email.trim()}>
+          <Button type="submit" disabled={isAdding || !email.trim() || !userProfile}>
             {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
             <span className="ml-2 hidden sm:inline">Add</span>
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground pt-1">If the user isn't on Plando, we'll send them an invitation.</p>
       </form>
     </div>
   );

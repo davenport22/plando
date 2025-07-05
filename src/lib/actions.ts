@@ -4,6 +4,8 @@
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
 import { generateActivityDescription, type GenerateActivityDescriptionInput, type GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
+import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-flow';
+import { sendEmail } from '@/lib/emailService';
 import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS, type Activity } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -90,44 +92,38 @@ export async function enhanceActivityDescriptionAction(
 }
 
 // Type for data coming from the NewTripForm
-type NewTripData = {
-    name: string;
-    destination: string;
-    startDate: string;
-    endDate: string;
-};
+const NewTripDataSchema = z.object({
+    name: z.string(),
+    destination: z.string(),
+    startDate: z.string(), // YYYY-MM-DD format
+    endDate: z.string(),   // YYYY-MM-DD format
+});
 
 
-export async function createTrip(data: NewTripData, ownerId: string): Promise<{ error: string } | void> {
+export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerId: string): Promise<{ error: string } | void> {
     if (!isFirebaseInitialized) {
         const { firestore } = await import('@/lib/firebase');
         // The import itself will throw the detailed error if not initialized.
         // This is a safeguard, but the error should be caught before this.
     }
-
     let docId: string;
     try {
-        if (!data.name || !data.destination || !data.startDate || !data.endDate) {
-            return { error: 'Missing required fields.' };
-        }
+        const validatedData = NewTripDataSchema.parse(data);
         
         // Generate a unique image for the trip destination
         let imageUrl = `https://placehold.co/600x400.png`; // Fallback image
         try {
-            const generatedImageUrl = await generateDestinationImage({ destination: data.destination });
+            const generatedImageUrl = await generateDestinationImage({ destination: validatedData.destination });
             if (generatedImageUrl) {
                 imageUrl = generatedImageUrl;
             }
         } catch (imageError) {
-            console.warn(`AI image generation failed for destination "${data.destination}". Using fallback.`, imageError);
+            console.warn(`AI image generation failed for destination "${validatedData.destination}". Using fallback.`, imageError);
             // We don't block trip creation if image generation fails, just use the fallback.
         }
 
         const newTripData = {
-            name: data.name,
-            destination: data.destination,
-            startDate: data.startDate,
-            endDate: data.endDate,
+            ...validatedData,
             ownerId: ownerId, 
             participantIds: [ownerId],
             imageUrl: imageUrl,
@@ -234,35 +230,62 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
     }
 }
 
-export async function addParticipantToTrip(tripId: string, email: string): Promise<{ success: boolean; error?: string }> {
+export async function addParticipantToTrip(tripId: string, email: string, inviterName: string): Promise<{ success: boolean; error?: string; message?: string }> {
     try {
         if (!tripId || !email) {
             return { success: false, error: "Trip ID and participant email are required." };
         }
 
         const userToAdd = await findUserByEmail(email);
-        if (!userToAdd) {
-            return { success: false, error: "No user found with that email address." };
+        
+        if (userToAdd) {
+            const tripRef = firestore.collection('trips').doc(tripId);
+            const tripDoc = await tripRef.get();
+    
+            if (!tripDoc.exists) {
+                return { success: false, error: "Trip not found." };
+            }
+    
+            const tripData = tripDoc.data() as Trip;
+            if (tripData.participantIds.includes(userToAdd.id)) {
+                return { success: false, error: "This user is already a participant in the trip." };
+            }
+    
+            await tripRef.update({
+                participantIds: FieldValue.arrayUnion(userToAdd.id)
+            });
+    
+            revalidatePath(`/trips/${tripId}`);
+            return { success: true, message: `${userToAdd.name} has been added to the trip.` };
+        } else {
+             // User not found, send invitation
+            try {
+                const tripDoc = await firestore.collection('trips').doc(tripId).get();
+                if (!tripDoc.exists) {
+                    return { success: false, error: "Trip not found." };
+                }
+                const tripName = tripDoc.data()!.name;
+
+                const emailContent = await generateInvitationEmail({
+                    recipientEmail: email,
+                    tripName: tripName,
+                    inviterName: inviterName
+                });
+                
+                // This is a mock service. It logs to the console instead of sending.
+                await sendEmail({
+                    to: email,
+                    subject: emailContent.subject,
+                    html: emailContent.body
+                });
+                
+                return { success: true, message: `User not found. An invitation email has been sent to ${email}.` };
+
+            } catch (inviteError: any) {
+                console.error("Failed to send invitation:", inviteError);
+                return { success: false, error: "The user was not found, and the invitation could not be sent." };
+            }
         }
-
-        const tripRef = firestore.collection('trips').doc(tripId);
-        const tripDoc = await tripRef.get();
-
-        if (!tripDoc.exists) {
-            return { success: false, error: "Trip not found." };
-        }
-
-        const tripData = tripDoc.data() as Trip;
-        if (tripData.participantIds.includes(userToAdd.id)) {
-            return { success: false, error: "This user is already a participant in the trip." };
-        }
-
-        await tripRef.update({
-            participantIds: FieldValue.arrayUnion(userToAdd.id)
-        });
-
-        revalidatePath(`/trips/${tripId}`);
-        return { success: true };
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -344,7 +367,6 @@ export async function getOrCreateUserProfile(user: {
   } catch (error: any) {
     console.error(`Error getting or creating profile for user ${user.uid}:`, error);
     
-    // Specific check for Firestore "NOT_FOUND" error (code 5)
     if (error.code === 5 || (error.message && error.message.includes("NOT_FOUND"))) {
         const helpfulError = `The server connected to Firebase, but could not find the Firestore database. This means the database either does not exist or is in the wrong region.\n\nPLEASE CHECK THE FOLLOWING:\n1. In Firebase Console, go to Firestore Database.\n2. Make sure you see your data (a 'users' collection might be there).\n3. At the top, it should say 'Cloud Firestore location: europe-west1 (Belgium)'. If it shows a different location, the database must be deleted and recreated in 'europe-west1'.\n\nOriginal error: ${error.message}`;
         throw new Error(helpfulError);
