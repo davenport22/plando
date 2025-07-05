@@ -89,7 +89,9 @@ export async function enhanceActivityDescriptionAction(
 }
 
 // Type for data coming from the NewTripForm
-type NewTripData = Omit<Trip, 'id' | 'ownerId' | 'participantIds'> & {
+type NewTripData = {
+    name: string;
+    destination: string;
     startDate: string;
     endDate: string;
 };
@@ -127,9 +129,6 @@ export async function createTrip(data: NewTripData, ownerId: string): Promise<{ 
             ownerId: ownerId, 
             participantIds: [ownerId],
             imageUrl: imageUrl,
-            ...(data.latitude !== undefined && !isNaN(data.latitude) && { latitude: data.latitude }),
-            ...(data.longitude !== undefined && !isNaN(data.longitude) && { longitude: data.longitude }),
-            ...(data.placeId && { placeId: data.placeId }),
         };
 
         const docRef = await firestore.collection('trips').add(newTrip);
