@@ -6,14 +6,14 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
-export const GenerateInvitationEmailInputSchema = z.object({
+const GenerateInvitationEmailInputSchema = z.object({
   recipientEmail: z.string().email().describe("The email address of the person being invited."),
   tripName: z.string().describe("The name of the trip they are being invited to."),
   inviterName: z.string().describe("The name of the person who is sending the invitation."),
 });
 export type GenerateInvitationEmailInput = z.infer<typeof GenerateInvitationEmailInputSchema>;
 
-export const GenerateInvitationEmailOutputSchema = z.object({
+const GenerateInvitationEmailOutputSchema = z.object({
   subject: z.string().describe("The subject line for the invitation email."),
   body: z.string().describe("The HTML body of the invitation email. It should be friendly and welcoming, including a clear call-to-action to register for Plando. The registration link should be the root path '/'."),
 });
