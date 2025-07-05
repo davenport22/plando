@@ -261,9 +261,69 @@ export const MOCK_SUGGESTED_ACTIVITIES_TOKYO: Activity[] = [
   }
 ];
 
+export const MOCK_SUGGESTED_ACTIVITIES_VIENNA: Activity[] = [
+  {
+    id: 'activity-vienna-1',
+    name: 'Schönbrunn Palace & Gardens',
+    location: 'Schönbrunn Palace, Vienna',
+    duration: 3.5,
+    imageUrls: [
+      'https://images.unsplash.com/photo-1587616596304-987fde18990d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
+    ],
+    description: 'Explore the magnificent former imperial summer residence. The vast gardens and the Gloriette offer stunning views and beautiful walks.',
+    dataAiHint: "schonbrunn palace"
+  },
+  {
+    id: 'activity-vienna-2',
+    name: 'St. Stephen\'s Cathedral Visit',
+    location: 'Stephansplatz, Vienna',
+    duration: 1.5,
+    imageUrls: [
+      'https://images.unsplash.com/photo-1608958449814-e896490174a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
+    ],
+    description: 'Discover Vienna\'s most important religious building, the Stephansdom. Climb the south tower for breathtaking views of the city center.',
+    dataAiHint: "st stephens cathedral"
+  },
+  {
+    id: 'activity-vienna-3',
+    name: 'Hofburg Palace Complex',
+    location: 'Hofburg, Vienna',
+    duration: 3,
+    imageUrls: [
+      'https://images.unsplash.com/photo-1629367462687-3e4b787b6192?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
+    ],
+    description: 'Walk through the former principal imperial palace of the Habsburg dynasty, which now houses museums, the Spanish Riding School, and the president\'s office.',
+    dataAiHint: "hofburg palace"
+  },
+  {
+    id: 'activity-vienna-4',
+    name: 'Belvedere Palace Museum',
+    location: 'Belvedere Palace, Vienna',
+    duration: 2.5,
+    imageUrls: [
+      'https://images.unsplash.com/photo-1580054604995-7478f2f58cee?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
+    ],
+    description: 'Visit the stunning baroque Belvedere Palace, which houses an impressive collection of Austrian art, including Gustav Klimt\'s masterpiece "The Kiss".',
+    dataAiHint: "belvedere palace"
+  },
+  {
+    id: 'activity-vienna-5',
+    name: 'Ride the Giant Ferris Wheel',
+    location: 'Prater Amusement Park, Vienna',
+    duration: 2,
+    imageUrls: [
+      'https://images.unsplash.com/photo-1597843799635-3c138a15a49f5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'
+    ],
+    description: 'Enjoy the nostalgic Prater amusement park and take a ride on the Wiener Riesenrad for iconic panoramic views of Vienna.',
+    dataAiHint: "prater ferris wheel"
+  }
+];
+
+
 export const MOCK_DESTINATION_ACTIVITIES: Record<string, Activity[]> = {
   "Paris, France": MOCK_SUGGESTED_ACTIVITIES_PARIS,
   "Tokyo, Japan": MOCK_SUGGESTED_ACTIVITIES_TOKYO,
+  "Vienna, Austria": MOCK_SUGGESTED_ACTIVITIES_VIENNA,
 };
 
 // --- Plando Meet/Friends Specific Mock Data ---
@@ -361,7 +421,7 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     name: 'Explore the Hofburg Palace Complex',
     location: 'Hofburg, Vienna',
     duration: 3,
-    imageUrls: ['https://images.unsplash.com/photo-1629367462687-3e4b787b6192?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    imageUrls: ['https://images.unsplash.com/photo-1629367462608-2c2f7b2e8f1d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Discover the vast former imperial palace of the Habsburg dynasty. The complex includes the Imperial Apartments, the Sisi Museum, and the Imperial Treasury.',
     suggestedDurationHours: 3,
     bestTimeToVisit: "Weekday mornings to avoid large crowds",
@@ -426,7 +486,7 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     name: 'Ride the Giant Ferris Wheel at the Prater',
     location: 'Prater Amusement Park, Vienna',
     duration: 3,
-    imageUrls: ['https://images.unsplash.com/photo-1597843799635-3c138a0f4438?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    imageUrls: ['https://images.unsplash.com/photo-1597843799635-3c138a15a49f5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Enjoy the nostalgic atmosphere of one of the world\'s oldest amusement parks and take a ride on the iconic Wiener Riesenrad for stunning city views.',
     suggestedDurationHours: 3,
     bestTimeToVisit: "Afternoons and evenings, especially in summer",
