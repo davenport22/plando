@@ -7,14 +7,13 @@ import type { Trip, Activity } from '@/types';
 import { getTrip, getTripActivities } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Loader2, ThumbsUp, MapPin, Clock, Info } from 'lucide-react';
+import { ArrowLeft, Loader2, ThumbsUp, ThumbsDown, MapPin, Clock, Info, Vote } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// A new component for displaying a single liked activity card
-function LikedActivityCard({ activity, onCardClick }: { activity: Activity; onCardClick: (activity: Activity) => void }) {
+// A new component for displaying a single voted activity card
+function VotedActivityCard({ activity, onCardClick }: { activity: Activity; onCardClick: (activity: Activity) => void }) {
   const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(" ") || "activity";
   const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 
     ? activity.imageUrls[0] 
@@ -27,7 +26,7 @@ function LikedActivityCard({ activity, onCardClick }: { activity: Activity; onCa
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onCardClick(activity)}}
       role="button"
       tabIndex={0}
-      aria-label={`View details for liked activity: ${activity.name}`}
+      aria-label={`View details for voted activity: ${activity.name}`}
     >
       <CardHeader className="p-0 relative">
         <Image
@@ -38,6 +37,10 @@ function LikedActivityCard({ activity, onCardClick }: { activity: Activity; onCa
           className="object-cover w-full h-40"
           data-ai-hint={imageHint}
         />
+        <div className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 shadow-md backdrop-blur-sm">
+          {activity.isLiked === true && <ThumbsUp className="h-5 w-5 text-green-500" title="Liked" />}
+          {activity.isLiked === false && <ThumbsDown className="h-5 w-5 text-red-500" title="Disliked" />}
+        </div>
       </CardHeader>
       <CardContent className="p-4 flex-grow">
         <CardTitle className="text-lg font-headline mb-1 group-hover:text-primary transition-colors">{activity.name}</CardTitle>
@@ -61,13 +64,14 @@ function LikedActivityCard({ activity, onCardClick }: { activity: Activity; onCa
 }
 
 
-export default function LikedActivitiesPage() {
+export default function VotedActivitiesPage() {
   const router = useRouter();
   const params = useParams();
   const tripId = params.tripId as string;
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [likedActivities, setLikedActivities] = useState<Activity[]>([]);
+  const [dislikedActivities, setDislikedActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
@@ -84,7 +88,9 @@ export default function LikedActivitiesPage() {
         setTrip(fetchedTrip);
         const allActivities = await getTripActivities(tripId);
         const liked = allActivities.filter(act => act.isLiked === true);
+        const disliked = allActivities.filter(act => act.isLiked === false);
         setLikedActivities(liked);
+        setDislikedActivities(disliked);
       } else {
         // Trip not found, redirect
         router.push('/trips');
@@ -104,10 +110,12 @@ export default function LikedActivitiesPage() {
     return (
       <div className="container mx-auto py-10 px-4 text-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-        <p className="mt-4 text-lg text-muted-foreground">Loading liked activities...</p>
+        <p className="mt-4 text-lg text-muted-foreground">Loading voted activities...</p>
       </div>
     );
   }
+
+  const hasVotes = likedActivities.length > 0 || dislikedActivities.length > 0;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -122,30 +130,54 @@ export default function LikedActivitiesPage() {
         </div>
         <div className="flex-1 text-center">
            <h1 className="text-3xl font-headline text-primary">
-            Liked Activities
+            Activity Votes
            </h1>
            <p className="text-muted-foreground">For your trip to {trip.destination}</p>
         </div>
         <div className="flex-1" />
       </div>
 
-      {likedActivities.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {likedActivities.map((activity) => (
-            <LikedActivityCard key={activity.id} activity={activity} onCardClick={handleOpenActivityDetail} />
-          ))}
+      {hasVotes ? (
+        <div className="space-y-12">
+            {likedActivities.length > 0 && (
+                <section>
+                    <div className="flex items-center gap-3 mb-4">
+                        <ThumbsUp className="h-7 w-7 text-green-500" />
+                        <h2 className="text-2xl font-headline text-foreground">Liked Activities ({likedActivities.length})</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {likedActivities.map((activity) => (
+                            <VotedActivityCard key={activity.id} activity={activity} onCardClick={handleOpenActivityDetail} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {dislikedActivities.length > 0 && (
+                 <section>
+                    <div className="flex items-center gap-3 mb-4">
+                        <ThumbsDown className="h-7 w-7 text-red-500" />
+                        <h2 className="text-2xl font-headline text-foreground">Disliked Activities ({dislikedActivities.length})</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {dislikedActivities.map((activity) => (
+                            <VotedActivityCard key={activity.id} activity={activity} onCardClick={handleOpenActivityDetail} />
+                        ))}
+                    </div>
+                </section>
+            )}
         </div>
       ) : (
         <Card className="text-center py-10 shadow-lg">
           <CardHeader>
             <div className="mx-auto bg-muted p-3 rounded-full w-fit mb-3">
-                <ThumbsUp className="h-12 w-12 text-muted-foreground" />
+                <Vote className="h-12 w-12 text-muted-foreground" />
             </div>
-            <CardTitle className="text-2xl">No Liked Activities Yet</CardTitle>
+            <CardTitle className="text-2xl">No Activities Voted On Yet</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-lg">
-              Go back to the trip page and vote on some activities to see them here.
+              Go back to the trip page and vote on some activities to see your group's preferences here.
             </p>
             <Link href={`/trips/${tripId}`} passHref>
               <Button className="mt-6" size="lg">

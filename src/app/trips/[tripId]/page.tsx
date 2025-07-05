@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { suggestItineraryAction, getTrip, updateTrip, getTripActivities, addTripActivity, updateTripActivity } from '@/lib/actions';
 import { calculateTripDuration } from '@/lib/utils';
-import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit, ThumbsUp } from 'lucide-react';
+import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit, ThumbsUp, Vote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from "next/image";
 import Link from 'next/link';
@@ -296,6 +296,7 @@ export default function TripDetailPage() {
   const currentActivityToVote = unvotedActivities.length > 0 ? unvotedActivities[0] : null;
   
   const likedActivitiesCount = userActivities.filter(a => a.isLiked).length;
+  const votedActivitiesCount = userActivities.filter(act => act.isLiked !== undefined).length;
   const noActivitiesLikedForInitialGen = !generatedItinerary && likedActivitiesCount === 0;
   const hasUnvotedActivitiesForInitialGen = userActivities.some(act => act.isLiked === undefined);
   const shouldPromptForInitialVote = noActivitiesLikedForInitialGen && hasUnvotedActivitiesForInitialGen && userActivities.length > 0;
@@ -380,11 +381,11 @@ export default function TripDetailPage() {
                     variant="outline"
                     className="w-full text-lg py-3"
                     size="lg"
-                    disabled={likedActivitiesCount === 0}
+                    disabled={votedActivitiesCount === 0}
                   >
                     <Link href={`/trips/${tripId}/liked`}>
-                      <ThumbsUp className="mr-2 h-6 w-6" />
-                      View Liked ({likedActivitiesCount})
+                      <Vote className="mr-2 h-6 w-6" />
+                      View Votes ({votedActivitiesCount})
                     </Link>
                   </Button>
                 </div>
