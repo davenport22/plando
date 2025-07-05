@@ -2,12 +2,12 @@
 import type { Activity, ItineraryDay } from '@/types'; 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin, ThumbsUp, ThumbsDown, GripVertical, Info } from "lucide-react"; // Added Info
+import { Clock, MapPin, ThumbsUp, ThumbsDown, GripVertical, Info } from "lucide-react";
 import { format, parseISO } from 'date-fns';
 
 interface ItineraryDayCardProps {
   dayData: ItineraryDay;
-  onActivityClick: (activity: Activity) => void; // New prop
+  onActivityClick: (activity: Activity) => void;
 }
 
 const categoryVariantMap: Record<string, "default" | "secondary" | "outline" | "destructive" | null | undefined> = {
@@ -43,7 +43,7 @@ export function ItineraryDayCard({ dayData, onActivityClick }: ItineraryDayCardP
               <li 
                 key={activity.id || index} 
                 className="p-4 border rounded-md bg-card hover:shadow-md transition-shadow flex items-start group cursor-pointer"
-                onClick={() => onActivityClick(activity)} // Make activity clickable
+                onClick={() => onActivityClick(activity)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivityClick(activity)}}
@@ -80,18 +80,22 @@ export function ItineraryDayCard({ dayData, onActivityClick }: ItineraryDayCardP
                       <span>{activity.location}</span>
                     </div>
                      {activity.description && <p className="pt-1 text-xs italic line-clamp-2">{activity.description}</p>}
-                    {(activity.likes !== undefined || activity.dislikes !== undefined) && (
-                      <div className="flex items-center pt-1 gap-4">
-                        <div className="flex items-center text-green-600">
-                          <ThumbsUp className="h-4 w-4 mr-1" />
-                          <span>{activity.likes ?? 0}</span>
-                        </div>
-                        <div className="flex items-center text-red-600">
-                          <ThumbsDown className="h-4 w-4 mr-1" />
-                          <span>{activity.dislikes ?? 0}</span>
-                        </div>
+                    {(activity.likes !== undefined && activity.likes > 0) || (activity.dislikes !== undefined && activity.dislikes > 0) ? (
+                      <div className="flex items-center pt-2 gap-4">
+                        {activity.likes !== undefined && activity.likes > 0 && (
+                          <div className="flex items-center text-green-600">
+                            <ThumbsUp className="h-4 w-4 mr-1" />
+                            <span>{activity.likes}</span>
+                          </div>
+                        )}
+                        {activity.dislikes !== undefined && activity.dislikes > 0 && (
+                          <div className="flex items-center text-red-600">
+                            <ThumbsDown className="h-4 w-4 mr-1" />
+                            <span>{activity.dislikes}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </li>
