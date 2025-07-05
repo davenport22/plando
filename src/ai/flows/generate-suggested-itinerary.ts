@@ -68,26 +68,28 @@ const prompt = ai.definePrompt({
   name: 'generateSuggestedItineraryPrompt',
   input: {schema: GenerateSuggestedItineraryInputSchema},
   output: {schema: GenerateSuggestedItineraryOutputSchema},
-  prompt: `You are an AI travel assistant that generates a suggested itinerary based on a list of activities and their details, taking into account their duration, location and liked status.
+  prompt: `You are an AI travel assistant. Your task is to generate a suggested itinerary based on a list of activities, their duration, location, and the user's vote (liked status).
 
-  The itinerary should balance the activity load per day, and consider the start and end dates of the trip.
-  Activities should be categorized as Must Do, Recommended, or Optional based on popularity (liked status).
+The itinerary should balance the activity load per day and respect the trip's start and end dates.
 
-  For each activity you include in the generated itinerary:
-  - If its 'Liked' status in the input is true, set 'likes: 1' and 'dislikes: 0' in the output.
-  - If its 'Liked' status in the input is false, set 'likes: 0' and 'dislikes: 1' in the output.
-  - If 'Liked' status is not clearly true or false (e.g. undefined), set 'likes: 0' and 'dislikes: 0'.
-  - Also include a brief description for each activity if one can be inferred or is commonly known.
+**Crucially, use the following rules for categorization:**
+- If an activity has 'isLiked: true', you can categorize it as 'Must Do' or 'Recommended'. Prioritize these liked activities when building the schedule.
+- If an activity has 'isLiked: false', it MUST be categorized as 'Optional'. Do not categorize disliked activities as 'Must Do' or 'Recommended'.
 
-  Here are the activities:
-  {{#each activities}}
-  - Name: {{name}}, Duration: {{duration}} hours, Location: {{location}}, Liked: {{isLiked}}
-  {{/each}}
+For each activity you include in the generated itinerary:
+- If its 'isLiked' status in the input is true, set 'likes: 1' and 'dislikes: 0' in the output.
+- If its 'isLiked' status in the input is false, set 'likes: 0' and 'dislikes: 1' in the output.
+- Include a brief description for each activity if one can be inferred or is commonly known.
 
-  Trip Start Date: {{startDate}}
-  Trip End Date: {{endDate}}
+Here are the activities:
+{{#each activities}}
+- Name: {{name}}, Duration: {{duration}} hours, Location: {{location}}, Liked: {{isLiked}}
+{{/each}}
 
-  Generate a suggested itinerary in JSON format:
+Trip Start Date: {{startDate}}
+Trip End Date: {{endDate}}
+
+Generate a suggested itinerary in JSON format.
   `,
 });
 

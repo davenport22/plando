@@ -99,7 +99,6 @@ export default function VotedActivitiesPage() {
   const { toast } = useToast();
 
   const [trip, setTrip] = useState<Trip | null>(null);
-  const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [likedActivities, setLikedActivities] = useState<Activity[]>([]);
   const [dislikedActivities, setDislikedActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,6 +108,7 @@ export default function VotedActivitiesPage() {
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [activityToAdd, setActivityToAdd] = useState<Activity | null>(null);
+  const [itineraryActivityIds, setItineraryActivityIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!tripId) return;
@@ -123,11 +123,15 @@ export default function VotedActivitiesPage() {
 
       if (fetchedTrip) {
         setTrip(fetchedTrip);
-        setItinerary(fetchedItinerary);
+        
         const liked = allActivities.filter(act => act.isLiked === true);
         const disliked = allActivities.filter(act => act.isLiked === false);
         setLikedActivities(liked);
         setDislikedActivities(disliked);
+
+        const initialItineraryIds = new Set(fetchedItinerary?.days.flatMap(d => d.activities.map(a => a.id)) ?? []);
+        setItineraryActivityIds(initialItineraryIds);
+
       } else {
         router.push('/trips');
       }
@@ -150,10 +154,6 @@ export default function VotedActivitiesPage() {
   const handleAddActivityToDay = async (activity: Activity, date: string) => {
     setIsAddDialogOpen(false);
     
-    // Optimistic UI update
-    setDislikedActivities(prev => prev.filter(a => a.id !== activity.id));
-    setLikedActivities(prev => [{ ...activity, isLiked: true }, ...prev]);
-
     const result = await addActivityToItineraryDay(tripId, activity, date);
     
     if (result.success) {
@@ -161,17 +161,13 @@ export default function VotedActivitiesPage() {
         title: "Activity Added!",
         description: `"${activity.name}" has been added to your itinerary for ${format(parseISO(date), "MMM d")}.`
       });
-      // Optionally re-validate path to ensure server state is fresh on next load
-      // revalidatePath(`/trips/${tripId}`);
+      setItineraryActivityIds(prev => new Set(prev).add(activity.id));
     } else {
       toast({
         title: "Error",
         description: result.error || "Could not add activity to the plan.",
         variant: "destructive"
       });
-      // Revert optimistic update
-      setLikedActivities(prev => prev.filter(a => a.id !== activity.id));
-      setDislikedActivities(prev => [activity, ...prev]);
     }
   };
 
@@ -185,7 +181,13 @@ export default function VotedActivitiesPage() {
   }
 
   const hasVotes = likedActivities.length > 0 || dislikedActivities.length > 0;
-  const itineraryDays = itinerary?.days.map(d => d.date) ?? [];
+  const itineraryDays = trip?.startDate && trip?.endDate 
+    ? Array.from({ length: new Date(trip.endDate).getDate() - new Date(trip.startDate).getDate() + 1 }, (_, i) => {
+        const date = new Date(trip.startDate);
+        date.setDate(date.getDate() + i);
+        return date.toISOString().split('T')[0];
+      })
+    : [];
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -217,7 +219,12 @@ export default function VotedActivitiesPage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {likedActivities.map((activity) => (
-                            <VotedActivityCard key={activity.id} activity={activity} onCardClick={handleOpenActivityDetail} />
+                            <VotedActivityCard 
+                                key={activity.id} 
+                                activity={activity} 
+                                onCardClick={handleOpenActivityDetail} 
+                                onAddToPlanClick={!itineraryActivityIds.has(activity.id) ? handleOpenAddToPlan : undefined}
+                            />
                         ))}
                     </div>
                 </section>
@@ -235,7 +242,7 @@ export default function VotedActivitiesPage() {
                                 key={activity.id} 
                                 activity={activity} 
                                 onCardClick={handleOpenActivityDetail}
-                                onAddToPlanClick={handleOpenAddToPlan}
+                                onAddToPlanClick={!itineraryActivityIds.has(activity.id) ? handleOpenAddToPlan : undefined}
                             />
                         ))}
                     </div>
@@ -274,7 +281,7 @@ export default function VotedActivitiesPage() {
           <DialogHeader>
             <DialogTitle>Add "{activityToAdd?.name}" to your plan?</DialogTitle>
             <DialogDescription>
-              Select which day you'd like to add this activity to. This will also move it to your "Liked" list.
+              Select which day you'd like to add this activity to. This will NOT change your original vote.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">

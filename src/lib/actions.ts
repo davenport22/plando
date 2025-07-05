@@ -409,7 +409,9 @@ export async function getTripActivities(tripId: string): Promise<Activity[]> {
 export async function addTripActivity(tripId: string, activityData: Omit<Activity, 'id'>): Promise<{ success: boolean; activityId?: string; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
     try {
-        const docRef = await firestore.collection('trips').doc(tripId).collection('activities').add(activityData);
+        // Ensure the ID is not part of the data being added
+        const { id, ...data } = activityData as any;
+        const docRef = await firestore.collection('trips').doc(tripId).collection('activities').add(data);
         revalidatePath(`/trips/${tripId}`);
         return { success: true, activityId: docRef.id };
     } catch (error) {
@@ -476,11 +478,11 @@ export async function addActivityToItineraryDay(tripId: string, activity: Activi
         if (dayIndex === -1) {
             return { success: false, error: "The selected day does not exist in the itinerary." };
         }
-
-        newItinerary.days[dayIndex].activities.push({ ...activity, isLiked: true });
+        
+        // Add the activity but preserve its original voting status
+        newItinerary.days[dayIndex].activities.push(activity);
         
         await saveItinerary(tripId, newItinerary);
-        await updateTripActivity(tripId, activity.id, { isLiked: true });
 
         revalidatePath(`/trips/${tripId}`);
         revalidatePath(`/trips/${tripId}/liked`);
