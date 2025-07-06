@@ -3,13 +3,14 @@
 /**
  * @fileOverview A Genkit flow for generating a destination image.
  *
- * - generateDestinationImage - A function that generates an image for a travel destination.
+ * - generateDestinationImage - A function that generates and compresses an image for a travel destination.
  * - GenerateDestinationImageInput - The input type for the generateDestinationImage function.
  * - GenerateDestinationImageOutput - The return type for the generateDestinationImage function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import sharp from 'sharp';
 
 const GenerateDestinationImageInputSchema = z.object({
   destination: z.string().describe('The travel destination (e.g., city, country).'),
@@ -49,6 +50,20 @@ const generateDestinationImageFlow = ai.defineFlow(
       throw new Error('Image generation failed to return a media object.');
     }
 
-    return media.url;
+    // Deconstruct the data URI
+    const parts = media.url.split(',');
+    const base64Data = parts[1];
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
+    // Resize and compress the image using sharp
+    const compressedImageBuffer = await sharp(imageBuffer)
+      .resize({ width: 800 }) // Resize to a max width of 800px, maintaining aspect ratio
+      .jpeg({ quality: 80 }) // Convert to JPEG with 80% quality
+      .toBuffer();
+
+    const compressedBase64 = compressedImageBuffer.toString('base64');
+    const compressedDataUri = `data:image/jpeg;base64,${compressedBase64}`;
+
+    return compressedDataUri;
   }
 );
