@@ -24,9 +24,9 @@ if (!admin.apps.length) {
         admin.initializeApp({
             credential: admin.credential.cert({
                 ...serviceAccount,
-                // The private key from the .env file has newline characters escaped as `\n`.
-                // We need to replace them back to actual newlines for the key to be valid.
-                privateKey: serviceAccount.privateKey.replace(/\\n/g, '\n'),
+                // The private key should be a multi-line string.
+                // It is read directly from the environment variable.
+                privateKey: serviceAccount.privateKey,
             }),
         });
         isFirebaseInitialized = true;

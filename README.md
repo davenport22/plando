@@ -27,12 +27,16 @@ Every Firebase project is also a Google Cloud project. They share the same under
   - `client_email`: Your Firebase Client Email.
   - `private_key`: Your Firebase Private Key.
 - Open the `.env` file at the root of this project.
-- Add the credentials you collected, making sure to wrap the private key in double quotes:
+- Add the credentials you collected. **It is crucial to wrap the entire private key in double quotes (`"`)**, including the `-----BEGIN...` and `-----END...` lines, as shown below.
 
 ```env
 FIREBASE_PROJECT_ID="your-project-id"
 FIREBASE_CLIENT_EMAIL="your-service-account-email@your-project-id.iam.gserviceaccount.com"
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_KEY_CONTENT...\n-----END PRIVATE KEY-----\n"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
+YOUR_KEY_CONTENT_WITH_ALL_ITS_NEWLINES
+...
+-----END PRIVATE KEY-----
+"
 ```
 
 After you save the `.env` file, the development server will restart and should connect to your Firebase project successfully.
