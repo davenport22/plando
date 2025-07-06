@@ -57,8 +57,8 @@ const generateDestinationImageFlow = ai.defineFlow(
 
     // Resize and compress the image using sharp
     const compressedImageBuffer = await sharp(imageBuffer)
-      .resize({ width: 800 }) // Resize to a max width of 800px, maintaining aspect ratio
-      .jpeg({ quality: 80 }) // Convert to JPEG with 80% quality
+      .resize({ width: 600 }) // Resize to a max width of 600px, maintaining aspect ratio
+      .jpeg({ quality: 75 }) // Convert to JPEG with 75% quality
       .toBuffer();
 
     const compressedBase64 = compressedImageBuffer.toString('base64');
