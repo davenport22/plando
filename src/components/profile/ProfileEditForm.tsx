@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/actions";
 import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
+import { useAuth } from "@/context/AuthContext";
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -39,6 +40,7 @@ interface ProfileEditFormProps {
 export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { refreshUserProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialData.interests || []);
 
@@ -92,15 +94,14 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
     }
     
     const result = await updateUserProfile(formData);
-    setIsLoading(false);
-
+    
     if (result.success) {
       toast({
         title: "Profile Updated",
         description: "Your profile information has been successfully updated.",
       });
+      await refreshUserProfile();
       router.push('/profile');
-      router.refresh(); 
     } else {
       toast({
         title: "Update Failed",
@@ -108,6 +109,7 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
         variant: "destructive",
       });
     }
+    setIsLoading(false);
   }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {

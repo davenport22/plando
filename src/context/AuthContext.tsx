@@ -12,7 +12,7 @@ import {
   type User 
 } from 'firebase/auth';
 import { auth, isClientConfigured } from '@/lib/firebase/client';
-import { getOrCreateUserProfile } from '@/lib/actions';
+import { getUserProfile, getOrCreateUserProfile } from '@/lib/actions';
 import type { UserProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseClientConfigError } from '@/components/auth/FirebaseClientConfigError';
@@ -44,6 +44,7 @@ interface AuthContextType {
   registerWithEmail: (email: string, password: string, name: string) => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -151,7 +152,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value = { user, userProfile, isNewUser, loading, profileError, signInWithGoogle, registerWithEmail, loginWithEmail, logout };
+  const refreshUserProfile = async () => {
+    if (!user) {
+      return;
+    }
+    try {
+      const updatedProfile = await getUserProfile(user.uid);
+      if (updatedProfile) {
+        setUserProfile(updatedProfile);
+      }
+    } catch (error) {
+      console.error("Failed to refresh user profile:", error);
+    }
+  };
+
+  const value = { user, userProfile, isNewUser, loading, profileError, signInWithGoogle, registerWithEmail, loginWithEmail, logout, refreshUserProfile };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
