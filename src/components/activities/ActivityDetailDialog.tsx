@@ -73,7 +73,7 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
     setCurrentImageIndex((prevIndex) => (prevIndex - 1 + (imageUrls?.length || 1)) % (imageUrls?.length || 1));
   };
   
-  const imageHint = name ? name.toLowerCase().split(" ").slice(0,2).join(" ") : "activity detail";
+  const imageHint = activity.dataAiHint || (name ? name.toLowerCase().split(" ").slice(0,2).join(" ") : "activity detail");
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {

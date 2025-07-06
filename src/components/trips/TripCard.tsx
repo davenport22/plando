@@ -12,12 +12,7 @@ interface TripCardProps {
 }
 
 export function TripCard({ trip }: TripCardProps) {
-  let imageHint = "travel landscape";
-  if (trip.destination.toLowerCase().includes("paris")) {
-    imageHint = "paris cityscape";
-  } else if (trip.destination.toLowerCase().includes("tokyo")) {
-    imageHint = "tokyo city";
-  }
+  const imageHint = trip.destination.toLowerCase().split(',')[0].split(' ').slice(0, 2).join(' ') || "travel landscape";
 
   const duration = calculateTripDuration(trip.startDate, trip.endDate);
 

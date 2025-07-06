@@ -96,7 +96,7 @@ export function ActivityVotingCard({ activity, onVote, onCardClick }: ActivityVo
   };
 
   // Ensure dataAiHint is passed to Image component
-  const imageHint = (activity as any).dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(" ") || "activity travel";
+  const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(" ") || "activity travel";
 
   const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 
     ? activity.imageUrls[0] 
