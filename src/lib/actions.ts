@@ -109,30 +109,28 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
     try {
         const validatedData = NewTripDataSchema.parse(data);
         
-        let imageUrl = `https://placehold.co/600x400.png`;
-        try {
-            const generatedImageUrl = await generateDestinationImage({ destination: validatedData.destination });
-            if (generatedImageUrl) {
-                imageUrl = generatedImageUrl;
-            }
-        } catch (imageError) {
-            console.warn(`AI image generation failed for destination "${validatedData.destination}". Using fallback.`, imageError);
-        }
-
+        // This will now throw an error if image generation fails, which is caught below.
+        const generatedImageUrl = await generateDestinationImage({ destination: validatedData.destination });
+        
         const newTripData = {
             ...validatedData,
             ownerId: ownerId, 
             participantIds: [ownerId],
-            imageUrl: imageUrl,
+            // If generation succeeds but returns empty, we still fall back.
+            imageUrl: generatedImageUrl || `https://placehold.co/600x400.png`,
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
         docId = docRef.id;
 
     } catch (e) {
-        console.error('Error creating trip in Firestore:', e);
-        if (e instanceof Error) return { error: e.message };
-        return { error: 'An unknown error occurred while creating the trip.' };
+        console.error('Error creating trip:', e);
+        // Use the AI error handler for AI-related errors, otherwise provide a generic message.
+        if (e instanceof Error && (e.message.includes("API") || e.message.includes("permission"))) {
+             return handleAIError(e, "Could not create trip due to an AI service error.");
+        }
+        const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+        return { error: `Failed to create trip: ${errorMessage}` };
     }
 
     revalidatePath('/trips');
@@ -227,14 +225,10 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const isPlaceholderImage = currentTripData.imageUrl?.includes('placehold.co');
 
         if (destinationChanged || isPlaceholderImage) {
-            try {
-                const destinationForImage = data.destination || currentTripData.destination;
-                const generatedImageUrl = await generateDestinationImage({ destination: destinationForImage });
-                if (generatedImageUrl) {
-                    updatedData.imageUrl = generatedImageUrl;
-                }
-            } catch (imageError) {
-                console.warn(`AI image generation failed during trip update for "${data.destination || currentTripData.destination}". Keeping old image if available.`, imageError);
+            const destinationForImage = data.destination || currentTripData.destination;
+            const generatedImageUrl = await generateDestinationImage({ destination: destinationForImage });
+            if (generatedImageUrl) {
+                updatedData.imageUrl = generatedImageUrl;
             }
         }
 
@@ -246,8 +240,11 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         return { success: true };
     } catch (error) {
         console.error(`Error updating trip for ${tripId}:`, error);
+        if (error instanceof Error && (error.message.includes("API") || error.message.includes("permission"))) {
+            return { success: false, ...handleAIError(error as any, "Could not update trip due to an AI service error.") };
+        }
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
+        return { success: false, error: `Failed to update trip: ${errorMessage}` };
     }
 }
 
