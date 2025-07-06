@@ -76,28 +76,37 @@ export function NewTripForm() {
 
     setIsLoading(true);
     
-    const tripData = {
-      name: data.name,
-      destination: data.destination,
-      startDate: format(data.startDate, "yyyy-MM-dd"),
-      endDate: format(data.endDate, "yyyy-MM-dd"),
-    };
+    try {
+        const tripData = {
+          name: data.name,
+          destination: data.destination,
+          startDate: format(data.startDate, "yyyy-MM-dd"),
+          endDate: format(data.endDate, "yyyy-MM-dd"),
+        };
 
-    const result = await createTrip(tripData, user.uid);
+        const result = await createTrip(tripData, user.uid);
 
-    if (result.success && result.tripId) {
-      toast({
-        title: "Trip Created!",
-        description: `Your trip "${data.name}" has been saved.`,
-      });
-      router.push(`/trips/${result.tripId}`);
-    } else {
-      toast({
-        title: "Error Creating Trip",
-        description: result.error,
-        variant: "destructive",
-      });
-      setIsLoading(false);
+        if (result.success && result.tripId) {
+          toast({
+            title: "Trip Created!",
+            description: `Your trip "${data.name}" has been saved.`,
+          });
+          router.push(`/trips/${result.tripId}`);
+        } else {
+          toast({
+            title: "Error Creating Trip",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
+    } catch (error) {
+        toast({
+            title: "An Unexpected Error Occurred",
+            description: "Could not create trip. Please try again.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsLoading(false);
     }
   }
 

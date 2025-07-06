@@ -11,7 +11,6 @@ import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { getStorage } from 'firebase-admin/storage';
 import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
 
@@ -104,9 +103,9 @@ const NewTripDataSchema = z.object({
 
 export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerId: string): Promise<{ success: boolean; tripId?: string; error?: string }> {
     if (!isFirebaseInitialized) {
-        const { firestore } = await import('@/lib/firebase');
+        return { success: false, error: 'Firebase is not initialized. Please check server credentials in .env file.' };
     }
-    let docId: string;
+
     try {
         const validatedData = NewTripDataSchema.parse(data);
         
@@ -120,7 +119,8 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
-        docId = docRef.id;
+        revalidatePath('/trips');
+        return { success: true, tripId: docRef.id };
 
     } catch (e) {
         console.error('Error creating trip:', e);
@@ -130,9 +130,6 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
         const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
         return { success: false, error: `Failed to create trip: ${errorMessage}` };
     }
-
-    revalidatePath('/trips');
-    return { success: true, tripId: docId };
 }
 
 export async function getTrip(tripId: string): Promise<Trip | null> {
@@ -220,9 +217,9 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const imageUrlMissing = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
+        const imageUrlMissingOrPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
 
-        if (destinationChanged || imageUrlMissing) {
+        if (destinationChanged || imageUrlMissingOrPlaceholder) {
             const destinationForImage = data.destination || currentTripData.destination;
             try {
                 const generatedImageUrl = await generateDestinationImage({ destination: destinationForImage });
@@ -421,20 +418,18 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
             
             await file.makePublic();
             dataToUpdate.avatarUrl = file.publicUrl();
-        } else {
-             dataToUpdate.avatarUrl = formData.get('avatarUrl') as string;
         }
 
         await firestore.collection('users').doc(userId).update(dataToUpdate);
+        revalidatePath('/profile');
+        revalidatePath(`/profile/edit`);
+        return { success: true };
         
     } catch (error) {
         console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }
-
-    revalidatePath('/profile');
-    return { success: true };
 }
 
 export async function findUserByEmail(email: string): Promise<UserProfile | null> {

@@ -79,37 +79,43 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
 
   async function handleSubmit(data: ProfileEditFormValues) {
     setIsLoading(true);
-    
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('bio', data.bio || "");
-    formData.append('location', data.location || "");
-    formData.append('interests', JSON.stringify(selectedInterests));
-    formData.append('userId', initialData.id);
+    try {
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('bio', data.bio || "");
+      formData.append('location', data.location || "");
+      formData.append('interests', JSON.stringify(selectedInterests));
+      formData.append('userId', initialData.id);
 
-    if (avatarFile) {
-      formData.append('avatarFile', avatarFile);
-    } else {
-      formData.append('avatarUrl', initialData.avatarUrl || "");
-    }
-    
-    const result = await updateUserProfile(formData);
+      if (avatarFile) {
+        formData.append('avatarFile', avatarFile);
+      }
+      
+      const result = await updateUserProfile(formData);
 
-    if (result.success) {
-        await refreshUserProfile();
+      if (result.success) {
+          await refreshUserProfile();
+          toast({
+              title: "Profile Updated",
+              description: "Your changes have been saved successfully.",
+          });
+          router.push('/profile');
+      } else {
         toast({
-            title: "Profile Updated",
-            description: "Your changes have been saved successfully.",
+          title: "Update Failed",
+          description: result.error,
+          variant: "destructive",
         });
-        router.push('/profile');
-    } else {
-      toast({
-        title: "Update Failed",
-        description: result.error,
-        variant: "destructive",
-      });
+      }
+    } catch (error) {
+        toast({
+            title: "An Unexpected Error Occurred",
+            description: "Could not save profile. Please try again.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
