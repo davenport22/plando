@@ -28,12 +28,6 @@ const nextConfig: NextConfig = {
   experimental: {
     // Other experimental features can go here if needed
   },
-  // allowedDevOrigins should be a top-level key
-  allowedDevOrigins: [
-    'https://6000-firebase-studio-1750279304267.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev',
-    'https://9000-firebase-studio-1750279304267.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev',
-    'http://localhost:9002',
-  ],
 };
 
 export default nextConfig;
