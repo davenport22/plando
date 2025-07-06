@@ -24,7 +24,11 @@ const registerFormSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  tripId?: string | null;
+}
+
+export function RegisterForm({ tripId }: RegisterFormProps) {
   const { registerWithEmail } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -41,10 +45,16 @@ export function RegisterForm() {
 
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
+    if (tripId) {
+      localStorage.setItem('pendingTripId', tripId);
+    }
     try {
       await registerWithEmail(data.email, data.password, data.name);
       // On success, the AuthContext's onAuthStateChanged listener will handle redirection.
     } catch (error: any) {
+      if (tripId) {
+        localStorage.removeItem('pendingTripId');
+      }
       toast({
         title: "Registration Failed",
         description: error.message || "An unexpected error occurred.",

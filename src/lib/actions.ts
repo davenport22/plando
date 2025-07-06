@@ -258,6 +258,7 @@ export async function addParticipantToTrip(tripId: string, email: string, invite
                 recipientEmail: email,
                 tripName: tripName,
                 inviterName: inviterName,
+                tripId: tripId,
             }).then(emailContent => {
                 sendEmail({ to: email, subject: emailContent.subject, html: emailContent.body });
             }).catch(genError => {
@@ -304,7 +305,7 @@ export async function getOrCreateUserProfile(user: {
   email: string | null;
   name: string | null;
   photoURL: string | null;
-}): Promise<{ profile: UserProfile; isNewUser: boolean }> {
+}, pendingTripId?: string | null): Promise<{ profile: UserProfile; isNewUser: boolean }> {
   try {
     if (!isFirebaseInitialized) {
       throw new Error('Server not configured. Please ensure Firebase credentials are in your .env file.');
@@ -327,6 +328,21 @@ export async function getOrCreateUserProfile(user: {
         interests: [],
       };
       await userRef.set(newUserProfile);
+
+      // Add user to the trip they were invited to
+      if (pendingTripId) {
+        try {
+            const tripRef = firestore.collection('trips').doc(pendingTripId);
+            await tripRef.update({
+                participantIds: FieldValue.arrayUnion(user.uid)
+            });
+            revalidatePath(`/trips/${pendingTripId}`);
+        } catch (tripError) {
+            console.error(`Failed to add new user ${user.uid} to trip ${pendingTripId} after registration.`, tripError);
+            // Non-fatal error, user profile is created, but they might need to be added manually.
+        }
+      }
+
       return { profile: newUserProfile, isNewUser: true };
     }
   } catch (error: any) {
