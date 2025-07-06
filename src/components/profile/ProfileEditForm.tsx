@@ -15,6 +15,7 @@ import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/actions";
 import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
+import { useAuth } from "@/context/AuthContext";
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -37,6 +38,7 @@ interface ProfileEditFormProps {
 
 export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
   const { toast } = useToast();
+  const { refreshUserProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialData.interests || []);
 
@@ -91,7 +93,7 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
     
     const result = await updateUserProfile(formData);
 
-    // The redirect will happen on the server, so we only need to handle the error case here.
+    // This part only runs if the server action returns an error object instead of redirecting.
     if (result?.error) {
       toast({
         title: "Update Failed",
@@ -99,14 +101,8 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
         variant: "destructive",
       });
       setIsLoading(false);
-    } else {
-      // On success, show a toast. The redirect will handle the rest.
-      toast({
-        title: "Profile Updated",
-        description: "Your information has been successfully saved. Redirecting...",
-      });
-      // No need to set isLoading to false, as the page will navigate away.
     }
+    // If successful, the server action redirects, and this point is never reached.
   }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
