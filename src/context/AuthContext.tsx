@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(firebaseUser); 
           setUserProfile(null);
           setIsNewUser(null);
-          setProfileError(`Could not sync your profile. This is likely a server configuration issue. Details: ${errorMessage}`);
+          setProfileError(errorMessage);
         }
       } else {
         // User is signed out, clear all state.

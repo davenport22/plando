@@ -305,14 +305,14 @@ export async function getOrCreateUserProfile(user: {
   name: string | null;
   photoURL: string | null;
 }): Promise<{ profile: UserProfile; isNewUser: boolean }> {
-  if (!isFirebaseInitialized) {
-     throw new Error('Server not configured. Please ensure Firebase credentials are in your .env file.');
-  }
-  
-  const userRef = firestore.collection('users').doc(user.uid);
-  
   try {
+    if (!isFirebaseInitialized) {
+      throw new Error('Server not configured. Please ensure Firebase credentials are in your .env file.');
+    }
+  
+    const userRef = firestore.collection('users').doc(user.uid);
     const doc = await userRef.get();
+
     if (doc.exists) {
       return { profile: doc.data() as UserProfile, isNewUser: false };
     } else {
