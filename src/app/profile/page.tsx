@@ -77,13 +77,11 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="p-6 space-y-6">
           <div className="flex justify-end mb-4">
-            <Link href="/profile/edit" passHref>
-              <Button variant="outline" asChild>
-                <a>
-                  <Edit className="mr-2 h-4 w-4" /> Edit Profile
-                </a>
-              </Button>
-            </Link>
+            <Button asChild variant="outline">
+              <Link href="/profile/edit">
+                <Edit className="mr-2 h-4 w-4" /> Edit Profile
+              </Link>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
