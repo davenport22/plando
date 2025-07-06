@@ -98,23 +98,10 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
   async function handleFormSubmit(data: EditTripFormValues) {
     setIsLoading(true);
     
-    // Simulate updating geo data if destination changed, or retain existing
-    const destinationChanged = data.destination !== currentTrip.destination;
-    const updatedLatitude = destinationChanged && data.destination ? 34.0522 : (data.latitude ?? currentTrip.latitude); // Example: LA Latitude
-    const updatedLongitude = destinationChanged && data.destination ? -118.2437 : (data.longitude ?? currentTrip.longitude); // Example: LA Longitude
-    const updatedPlaceId = destinationChanged && data.destination ? "mock-place-id-456" : (data.placeId ?? currentTrip.placeId); // Example Place ID
-    
-    const updatedData = {
-        ...data,
-        latitude: updatedLatitude,
-        longitude: updatedLongitude,
-        placeId: updatedPlaceId,
-    };
-
     await onSubmit({ 
-        ...updatedData,
-        startDate: format(updatedData.startDate, 'yyyy-MM-dd'),
-        endDate: format(updatedData.endDate, 'yyyy-MM-dd'),
+        ...data,
+        startDate: format(data.startDate, 'yyyy-MM-dd'),
+        endDate: format(data.endDate, 'yyyy-MM-dd'),
     });
     setIsLoading(false);
   }

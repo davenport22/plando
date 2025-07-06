@@ -7,7 +7,7 @@ export interface User {
 
 export interface UserProfile extends User {
   bio: string;
-  location: string; // The user's home city, e.g., "Vienna, Austria". Used for local activity suggestions.
+  location: string; // The user's home city, e.g., "Vienna, Austria". This is used to suggest local activities.
   memberSince: string;
   interests: string[];
   avatarUrl?: string;
