@@ -1,3 +1,4 @@
+
 'use server';
 
 import nodemailer from 'nodemailer';
@@ -34,8 +35,11 @@ if (isEmailConfigured) {
  */
 export async function sendEmail(params: EmailParams): Promise<{ success: boolean }> {
     if (!isEmailConfigured) {
-        console.warn("--- EMAIL SERVICE NOT CONFIGURED ---");
-        console.warn("Email credentials are not set in the .env file. Printing email to console instead.");
+        console.warn("--- EMAIL SERVICE (SMTP) NOT CONFIGURED ---");
+        console.warn("To send real emails, add your SMTP credentials to the .env file.");
+        console.warn("You can get these from a provider like SendGrid or Resend (they have free tiers).");
+        console.warn("For development, you can use a Gmail account with an 'App Password'.");
+        console.warn("Falling back to logging email content to the console instead of sending.");
         console.log("To: ", params.to);
         console.log("Subject: ", params.subject);
         console.log("Body (HTML): ", params.html);
@@ -47,7 +51,7 @@ export async function sendEmail(params: EmailParams): Promise<{ success: boolean
 
     try {
         await transporter.sendMail({
-            from: EMAIL_FROM,
+            from: `"${EMAIL_FROM}" <${EMAIL_USER}>`, // Recommended format: "Sender Name" <email@address.com>
             to: params.to,
             subject: params.subject,
             html: params.html,
