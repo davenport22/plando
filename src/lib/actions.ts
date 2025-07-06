@@ -213,7 +213,32 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         if (!tripId) {
             return { success: false, error: "Trip ID is required." };
         }
-        await firestore.collection('trips').doc(tripId).update(data);
+        
+        const tripRef = firestore.collection('trips').doc(tripId);
+        const currentTripDoc = await tripRef.get();
+        if (!currentTripDoc.exists) {
+            return { success: false, error: "Trip not found." };
+        }
+        const currentTripData = currentTripDoc.data() as Trip;
+
+        const updatedData = { ...data };
+
+        const destinationChanged = data.destination && data.destination !== currentTripData.destination;
+        const isPlaceholderImage = currentTripData.imageUrl?.includes('placehold.co');
+
+        if (destinationChanged || isPlaceholderImage) {
+            try {
+                const destinationForImage = data.destination || currentTripData.destination;
+                const generatedImageUrl = await generateDestinationImage({ destination: destinationForImage });
+                if (generatedImageUrl) {
+                    updatedData.imageUrl = generatedImageUrl;
+                }
+            } catch (imageError) {
+                console.warn(`AI image generation failed during trip update for "${data.destination || currentTripData.destination}". Keeping old image if available.`, imageError);
+            }
+        }
+
+        await tripRef.update(updatedData);
 
         revalidatePath(`/trips/${tripId}`);
         revalidatePath('/trips');
