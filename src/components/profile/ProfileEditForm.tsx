@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/actions";
 import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -39,6 +40,7 @@ interface ProfileEditFormProps {
 export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
   const { toast } = useToast();
   const { refreshUserProfile } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialData.interests || []);
 
@@ -92,18 +94,22 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
     }
     
     const result = await updateUserProfile(formData);
-
-    // This part only runs if the server action returns an error object.
-    // A successful action will redirect, and this code will not be reached.
-    if (result?.error) {
+    
+    if (result.success) {
+      await refreshUserProfile();
+      toast({
+        title: "Profile Updated!",
+        description: "Your changes have been saved successfully.",
+      });
+      router.push('/profile');
+    } else {
       toast({
         title: "Update Failed",
         description: result.error,
         variant: "destructive",
       });
-      setIsLoading(false); // Only set loading to false on error.
     }
-    // On success, the server redirects, so we don't need to touch isLoading here.
+    setIsLoading(false);
   }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {

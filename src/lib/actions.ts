@@ -227,9 +227,16 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
 
         if (destinationChanged || needsNewImage) {
             const destinationForImage = data.destination || currentTripData.destination;
-            const generatedImageUrl = await generateDestinationImage({ destination: destinationForImage });
-            if (generatedImageUrl) {
-                updatedData.imageUrl = generatedImageUrl;
+            try {
+                const generatedImageUrl = await generateDestinationImage({ destination: destinationForImage });
+                if (generatedImageUrl) {
+                    updatedData.imageUrl = generatedImageUrl;
+                }
+            } catch (aiError) {
+                // If AI fails, we still proceed with other updates but return a specific kind of error/warning.
+                // For now, we'll just log it and proceed without updating the image.
+                console.warn("AI Image generation failed during trip update, but other data will be saved.", aiError);
+                return { success: false, ...handleAIError(aiError, "Could not update trip image due to an AI service error.") };
             }
         }
 
@@ -389,11 +396,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
 }
 
-export async function updateUserProfile(formData: FormData): Promise<{ error: string } | void> {
-    if (!isFirebaseInitialized) return { error: 'Backend is not configured.' };
+export async function updateUserProfile(formData: FormData): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend is not configured.' };
 
     const userId = formData.get('userId') as string;
-    if (!userId) return { error: 'User ID is missing.' };
+    if (!userId) return { success: false, error: 'User ID is missing.' };
 
     try {
         const dataToUpdate: Partial<UserProfile> = {
@@ -429,13 +436,12 @@ export async function updateUserProfile(formData: FormData): Promise<{ error: st
         revalidatePath('/profile');
         revalidatePath(`/users/${userId}`);
         
+        return { success: true };
     } catch (error) {
         console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { error: errorMessage };
+        return { success: false, error: errorMessage };
     }
-    
-    redirect('/profile');
 }
 
 export async function findUserByEmail(email: string): Promise<UserProfile | null> {
