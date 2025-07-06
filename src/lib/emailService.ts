@@ -1,4 +1,3 @@
-
 'use server';
 
 import nodemailer from 'nodemailer';
@@ -37,15 +36,27 @@ export async function sendEmail(params: EmailParams): Promise<{ success: boolean
     if (!isEmailConfigured) {
         console.warn("--- EMAIL SERVICE (SMTP) NOT CONFIGURED ---");
         console.warn("To send real emails, add your SMTP credentials to the .env file.");
-        console.warn("You can get these from a provider like SendGrid or Resend (they have free tiers).");
-        console.warn("For development, you can use a Gmail account with an 'App Password'.");
         console.warn("Falling back to logging email content to the console instead of sending.");
+        console.warn("\n--- Example .env Configurations ---");
+        console.warn("For SendGrid (Recommended):");
+        console.warn('EMAIL_HOST="smtp.sendgrid.net"');
+        console.warn('EMAIL_PORT=587');
+        console.warn('EMAIL_USER="apikey"');
+        console.warn('EMAIL_PASS="YOUR_SENDGRID_API_KEY"');
+        console.warn('EMAIL_FROM="Your App Name <you@yourdomain.com>"');
+        console.warn("\nFor Gmail (Development/Testing Only - requires App Password):");
+        console.warn('EMAIL_HOST="smtp.gmail.com"');
+        console.warn('EMAIL_PORT=587');
+        console.warn('EMAIL_USER="your-email@gmail.com"');
+        console.warn('EMAIL_PASS="your-16-character-app-password"');
+        console.warn('EMAIL_FROM="Your Name <your-email@gmail.com>"');
+        console.warn("----------------------------------\n");
+        
+        console.log("Mock Email Sent:");
         console.log("To: ", params.to);
         console.log("Subject: ", params.subject);
         console.log("Body (HTML): ", params.html);
         console.warn("--- END MOCK EMAIL ---");
-        // We return success here because for dev purposes, this is not a failure.
-        // The invitation flow should still appear successful to the user.
         return { success: true };
     }
 
