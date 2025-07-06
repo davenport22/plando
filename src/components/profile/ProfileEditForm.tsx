@@ -96,11 +96,11 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
     const result = await updateUserProfile(formData);
     
     if (result.success) {
-      await refreshUserProfile();
       toast({
         title: "Profile Updated!",
-        description: "Your changes have been saved successfully.",
+        description: "Your changes have been saved successfully. Redirecting...",
       });
+      // Navigate away. The destination page will show the updated profile.
       router.push('/profile');
     } else {
       toast({
@@ -108,8 +108,9 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
         description: result.error,
         variant: "destructive",
       });
+      // Only set loading to false on failure, so the user can try again.
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
