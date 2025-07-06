@@ -1,4 +1,3 @@
-
 // IMPORTANT: Add these client-side Firebase config values to your .env file.
 // You can find them in your Firebase project settings -> General -> Your apps -> Web app.
 // Make sure to prefix them with NEXT_PUBLIC_ so they are available in the browser.
@@ -30,10 +29,6 @@ const isClientConfigured = !!(
   firebaseConfig.authDomain &&
   firebaseConfig.projectId
 );
-
-if (typeof window !== 'undefined' && !isClientConfigured) {
-  console.error("Firebase client configuration is missing or incomplete. Please check your .env file for NEXT_PUBLIC_FIREBASE_... variables.");
-}
 
 // Initialize Firebase for client-side only.
 let app: FirebaseApp;
