@@ -12,11 +12,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { UserProfile } from "@/types";
 import { Loader2, Save, Upload } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/actions";
 import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
-import { useAuth } from "@/context/AuthContext";
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -38,9 +36,7 @@ interface ProfileEditFormProps {
 }
 
 export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
-  const router = useRouter();
   const { toast } = useToast();
-  const { refreshUserProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialData.interests || []);
 
@@ -94,22 +90,23 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
     }
     
     const result = await updateUserProfile(formData);
-    
-    if (result.success) {
-      toast({
-        title: "Profile Updated",
-        description: "Your profile information has been successfully updated.",
-      });
-      await refreshUserProfile();
-      router.push('/profile');
-    } else {
+
+    // The redirect will happen on the server, so we only need to handle the error case here.
+    if (result?.error) {
       toast({
         title: "Update Failed",
-        description: result.error || "An unknown error occurred.",
+        description: result.error,
         variant: "destructive",
       });
+      setIsLoading(false);
+    } else {
+      // On success, show a toast. The redirect will handle the rest.
+      toast({
+        title: "Profile Updated",
+        description: "Your information has been successfully saved. Redirecting...",
+      });
+      // No need to set isLoading to false, as the page will navigate away.
     }
-    setIsLoading(false);
   }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {

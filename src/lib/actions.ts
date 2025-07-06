@@ -389,11 +389,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
 }
 
-export async function updateUserProfile(formData: FormData): Promise<{ success: boolean; error?: string }> {
-    if (!isFirebaseInitialized) return { success: false, error: 'Backend is not configured.' };
+export async function updateUserProfile(formData: FormData): Promise<{ error: string } | void> {
+    if (!isFirebaseInitialized) return { error: 'Backend is not configured.' };
 
     const userId = formData.get('userId') as string;
-    if (!userId) return { success: false, error: 'User ID is missing.' };
+    if (!userId) return { error: 'User ID is missing.' };
 
     try {
         const dataToUpdate: Partial<UserProfile> = {
@@ -405,7 +405,7 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
 
         const avatarFile = formData.get('avatarFile') as File | null;
         
-        if (avatarFile) {
+        if (avatarFile && avatarFile.size > 0) {
             const bucket = getStorage().bucket();
             const buffer = Buffer.from(await avatarFile.arrayBuffer());
             const fileName = `avatars/${userId}/${Date.now()}-${avatarFile.name.replace(/\s+/g, '_')}`;
@@ -429,12 +429,13 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
         revalidatePath('/profile');
         revalidatePath(`/users/${userId}`);
         
-        return { success: true };
     } catch (error) {
         console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
+        return { error: errorMessage };
     }
+    
+    redirect('/profile');
 }
 
 export async function findUserByEmail(email: string): Promise<UserProfile | null> {
