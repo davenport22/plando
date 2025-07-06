@@ -93,18 +93,23 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
       formData.append('avatarUrl', initialData.avatarUrl || "");
     }
     
-    // The server action will either redirect on success or return an error object.
     const result = await updateUserProfile(formData);
 
-    // This code will only run if the server action returns an error.
-    if (result?.error) {
+    if (result.success) {
+        await refreshUserProfile();
+        toast({
+            title: "Profile Updated",
+            description: "Your changes have been saved successfully.",
+        });
+        router.push('/profile');
+    } else {
       toast({
         title: "Update Failed",
         description: result.error,
         variant: "destructive",
       });
-      setIsLoading(false); // Stop loading only on error, as success causes a page redirect.
     }
+    setIsLoading(false);
   }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -85,20 +85,19 @@ export function NewTripForm() {
 
     const result = await createTrip(tripData, user.uid);
 
-    if (result?.error) {
+    if (result.success && result.tripId) {
+      toast({
+        title: "Trip Created!",
+        description: `Your trip "${data.name}" has been saved.`,
+      });
+      router.push(`/trips/${result.tripId}`);
+    } else {
       toast({
         title: "Error Creating Trip",
         description: result.error,
         variant: "destructive",
       });
       setIsLoading(false);
-    } else {
-      toast({
-        title: "Trip Created!",
-        description: `Your trip "${data.name}" is being saved. Redirecting...`,
-      });
-      // The redirect is handled by the server action, so we don't need to do anything here.
-      // The page will navigate away, so no need to set isLoading to false.
     }
   }
 

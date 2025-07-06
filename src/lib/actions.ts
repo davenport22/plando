@@ -102,7 +102,7 @@ const NewTripDataSchema = z.object({
 });
 
 
-export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerId: string): Promise<{ error: string } | void> {
+export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerId: string): Promise<{ success: boolean; tripId?: string; error?: string }> {
     if (!isFirebaseInitialized) {
         const { firestore } = await import('@/lib/firebase');
     }
@@ -125,14 +125,14 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
     } catch (e) {
         console.error('Error creating trip:', e);
         if (e instanceof Error && (e.message.includes("API") || e.message.includes("permission"))) {
-             return handleAIError(e, "Could not create trip due to an AI service error.");
+             return { success: false, ...handleAIError(e, "Could not create trip due to an AI service error.") };
         }
         const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-        return { error: `Failed to create trip: ${errorMessage}` };
+        return { success: false, error: `Failed to create trip: ${errorMessage}` };
     }
 
     revalidatePath('/trips');
-    redirect(`/trips/${docId}`);
+    return { success: true, tripId: docId };
 }
 
 export async function getTrip(tripId: string): Promise<Trip | null> {
@@ -391,11 +391,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
 }
 
-export async function updateUserProfile(formData: FormData): Promise<{ error?: string }> {
-    if (!isFirebaseInitialized) return { error: 'Backend is not configured.' };
+export async function updateUserProfile(formData: FormData): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend is not configured.' };
 
     const userId = formData.get('userId') as string;
-    if (!userId) return { error: 'User ID is missing.' };
+    if (!userId) return { success: false, error: 'User ID is missing.' };
 
     try {
         const dataToUpdate: Partial<UserProfile> = {
@@ -430,11 +430,11 @@ export async function updateUserProfile(formData: FormData): Promise<{ error?: s
     } catch (error) {
         console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { error: errorMessage };
+        return { success: false, error: errorMessage };
     }
 
     revalidatePath('/profile');
-    redirect('/profile'); 
+    return { success: true };
 }
 
 export async function findUserByEmail(email: string): Promise<UserProfile | null> {
