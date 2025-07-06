@@ -93,16 +93,17 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
     
     const result = await updateUserProfile(formData);
 
-    // This part only runs if the server action returns an error object instead of redirecting.
+    // This part only runs if the server action returns an error object.
+    // A successful action will redirect, and this code will not be reached.
     if (result?.error) {
       toast({
         title: "Update Failed",
         description: result.error,
         variant: "destructive",
       });
-      setIsLoading(false);
+      setIsLoading(false); // Only set loading to false on error.
     }
-    // If successful, the server action redirects, and this point is never reached.
+    // On success, the server redirects, so we don't need to touch isLoading here.
   }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
