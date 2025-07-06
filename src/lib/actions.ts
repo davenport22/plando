@@ -110,14 +110,12 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
     try {
         const validatedData = NewTripDataSchema.parse(data);
         
-        // This will now throw an error if image generation fails, which is caught below.
         const generatedImageUrl = await generateDestinationImage({ destination: validatedData.destination });
         
         const newTripData = {
             ...validatedData,
             ownerId: ownerId, 
             participantIds: [ownerId],
-            // If generation succeeds but returns empty, we still fall back.
             imageUrl: generatedImageUrl || `https://placehold.co/600x400.png`,
         };
 
@@ -126,7 +124,6 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
 
     } catch (e) {
         console.error('Error creating trip:', e);
-        // Use the AI error handler for AI-related errors, otherwise provide a generic message.
         if (e instanceof Error && (e.message.includes("API") || e.message.includes("permission"))) {
              return handleAIError(e, "Could not create trip due to an AI service error.");
         }
@@ -223,9 +220,9 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const needsNewImage = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
+        const imageUrlMissing = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
 
-        if (destinationChanged || needsNewImage) {
+        if (destinationChanged || imageUrlMissing) {
             const destinationForImage = data.destination || currentTripData.destination;
             try {
                 const generatedImageUrl = await generateDestinationImage({ destination: destinationForImage });
@@ -233,8 +230,6 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
                     updatedData.imageUrl = generatedImageUrl;
                 }
             } catch (aiError) {
-                // If AI fails, we still proceed with other updates but return a specific kind of error/warning.
-                // For now, we'll just log it and proceed without updating the image.
                 console.warn("AI Image generation failed during trip update, but other data will be saved.", aiError);
                 return { success: false, ...handleAIError(aiError, "Could not update trip image due to an AI service error.") };
             }
@@ -396,11 +391,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
 }
 
-export async function updateUserProfile(formData: FormData): Promise<{ success: boolean; error?: string }> {
-    if (!isFirebaseInitialized) return { success: false, error: 'Backend is not configured.' };
+export async function updateUserProfile(formData: FormData): Promise<{ error?: string }> {
+    if (!isFirebaseInitialized) return { error: 'Backend is not configured.' };
 
     const userId = formData.get('userId') as string;
-    if (!userId) return { success: false, error: 'User ID is missing.' };
+    if (!userId) return { error: 'User ID is missing.' };
 
     try {
         const dataToUpdate: Partial<UserProfile> = {
@@ -424,7 +419,6 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
                 },
             });
             
-            // For production, signed URLs are recommended over making files public.
             await file.makePublic();
             dataToUpdate.avatarUrl = file.publicUrl();
         } else {
@@ -433,15 +427,14 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
 
         await firestore.collection('users').doc(userId).update(dataToUpdate);
         
-        revalidatePath('/profile');
-        revalidatePath(`/users/${userId}`);
-        
-        return { success: true };
     } catch (error) {
         console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
+        return { error: errorMessage };
     }
+
+    revalidatePath('/profile');
+    redirect('/profile'); 
 }
 
 export async function findUserByEmail(email: string): Promise<UserProfile | null> {
