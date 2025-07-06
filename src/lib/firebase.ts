@@ -28,6 +28,7 @@ if (!admin.apps.length) {
                 // It is read directly from the environment variable.
                 privateKey: serviceAccount.privateKey,
             }),
+            storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         });
         isFirebaseInitialized = true;
     } else {

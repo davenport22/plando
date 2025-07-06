@@ -8,6 +8,7 @@ import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-fl
 import { sendEmail } from '@/lib/emailService';
 import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS, type Activity, type Itinerary } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
+import { getStorage } from 'firebase-admin/storage';
 import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -388,14 +389,49 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
 }
 
-export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> {
+export async function updateUserProfile(formData: FormData): Promise<{ success: boolean; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend is not configured.' };
+
+    const userId = formData.get('userId') as string;
+    if (!userId) return { success: false, error: 'User ID is missing.' };
+
     try {
-        await firestore.collection('users').doc(userId).update(data);
+        const dataToUpdate: Partial<UserProfile> = {
+            name: formData.get('name') as string,
+            bio: formData.get('bio') as string,
+            location: formData.get('location') as string,
+            interests: JSON.parse(formData.get('interests') as string || '[]'),
+        };
+
+        const avatarFile = formData.get('avatarFile') as File | null;
+        
+        if (avatarFile) {
+            const bucket = getStorage().bucket();
+            const buffer = Buffer.from(await avatarFile.arrayBuffer());
+            const fileName = `avatars/${userId}/${Date.now()}-${avatarFile.name.replace(/\s+/g, '_')}`;
+            const file = bucket.file(fileName);
+
+            await file.save(buffer, {
+                metadata: {
+                    contentType: avatarFile.type,
+                },
+            });
+            
+            // For production, signed URLs are recommended over making files public.
+            await file.makePublic();
+            dataToUpdate.avatarUrl = file.publicUrl();
+        } else {
+             dataToUpdate.avatarUrl = formData.get('avatarUrl') as string;
+        }
+
+        await firestore.collection('users').doc(userId).update(dataToUpdate);
+        
         revalidatePath('/profile');
         revalidatePath(`/users/${userId}`);
+        
         return { success: true };
     } catch (error) {
+        console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }

@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { UserProfile } from "@/types";
-import { Loader2, Save } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Loader2, Save, Upload } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/actions";
@@ -26,7 +27,6 @@ const profileEditSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").max(50, "Name is too long."),
   bio: z.string().max(500, "Bio is too long.").optional().default(""),
   location: z.string().max(100, "Location is too long.").optional().default(""),
-  avatarUrl: z.string().url("Please enter a valid URL.").or(z.literal("")).optional().default(""),
   interests: z.array(z.string()).optional().default([]), 
 });
 
@@ -42,13 +42,16 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialData.interests || []);
 
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(initialData.avatarUrl || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const form = useForm<ProfileEditFormValues>({
     resolver: zodResolver(profileEditSchema),
     defaultValues: {
       name: initialData.name || "",
       bio: initialData.bio || "",
       location: initialData.location || "",
-      avatarUrl: initialData.avatarUrl || "",
       interests: initialData.interests || [],
     },
   });
@@ -58,10 +61,10 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
       name: initialData.name || "",
       bio: initialData.bio || "",
       location: initialData.location || "",
-      avatarUrl: initialData.avatarUrl || "",
       interests: initialData.interests || [],
     });
     setSelectedInterests(initialData.interests || []);
+    setAvatarPreview(initialData.avatarUrl || null);
   }, [initialData, form]);
 
   const handleInterestToggle = (interest: string) => {
@@ -75,15 +78,20 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
   async function handleSubmit(data: ProfileEditFormValues) {
     setIsLoading(true);
     
-    const updateData: Partial<UserProfile> = {
-      name: data.name,
-      bio: data.bio,
-      location: data.location,
-      avatarUrl: data.avatarUrl,
-      interests: selectedInterests,
-    };
+    const formData = new FormData();
+    formData.append('name', data.name);
+    formData.append('bio', data.bio || "");
+    formData.append('location', data.location || "");
+    formData.append('interests', JSON.stringify(selectedInterests));
+    formData.append('userId', initialData.id);
+
+    if (avatarFile) {
+      formData.append('avatarFile', avatarFile);
+    } else {
+      formData.append('avatarUrl', initialData.avatarUrl || "");
+    }
     
-    const result = await updateUserProfile(initialData.id, updateData);
+    const result = await updateUserProfile(formData);
     setIsLoading(false);
 
     if (result.success) {
@@ -92,7 +100,7 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
         description: "Your profile information has been successfully updated.",
       });
       router.push('/profile');
-      router.refresh(); // Ask Next.js to refresh the new page data
+      router.refresh(); 
     } else {
       toast({
         title: "Update Failed",
@@ -102,9 +110,40 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
     }
   }
 
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setAvatarPreview(previewUrl);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+        
+        <FormItem>
+          <FormLabel>Profile Picture</FormLabel>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={avatarPreview || `https://avatar.vercel.sh/${initialData.email}.png`} />
+              <AvatarFallback>{initialData.name?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" /> Change Photo
+            </Button>
+            <Input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/png, image/jpeg, image/gif"
+              onChange={handleAvatarChange}
+            />
+          </div>
+          <FormDescription>Upload a new profile picture. Best results with a square image.</FormDescription>
+        </FormItem>
+
         <FormField
           control={form.control}
           name="name"
@@ -157,21 +196,6 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
               <FormDescription>
                 Your home city. This helps us suggest local activities in other Plando modules.
               </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="avatarUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Avatar URL</FormLabel>
-              <FormControl>
-                <Input placeholder="https://example.com/your-avatar.png" {...field} />
-              </FormControl>
-              <FormDescription>Link to your profile picture.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
