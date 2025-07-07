@@ -13,6 +13,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
+import { redirect } from 'next/navigation';
 
 const handleAIError = (error: unknown, defaultMessage: string): { error: string } => {
     console.error(defaultMessage, error);
@@ -421,15 +422,22 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
         }
 
         await firestore.collection('users').doc(userId).update(dataToUpdate);
-        revalidatePath('/profile');
-        revalidatePath(`/profile/edit`);
-        return { success: true };
         
     } catch (error) {
         console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+
+        // Specific error handling for missing bucket
+        if (errorMessage.includes("The specified bucket does not exist")) {
+            return { success: false, error: "Firebase Storage setup is incomplete. Please enable Storage in your Firebase Console and add the NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET variable to your .env file. See the README for details." };
+        }
+
         return { success: false, error: errorMessage };
     }
+    
+    // On success, revalidate the path and redirect.
+    revalidatePath('/profile/edit');
+    redirect('/profile');
 }
 
 export async function findUserByEmail(email: string): Promise<UserProfile | null> {

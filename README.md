@@ -21,13 +21,21 @@ Every Firebase project is also a Google Cloud project. They share the same under
 - Click the **Generate new private key** button.
 - A JSON file containing your credentials will be downloaded. Keep this file secure.
 
-### 3. Update your `.env` file
+### 3. Enable and Configure Firebase Storage
 
-- Open the downloaded JSON file. You will find:
+For features like user profile picture uploads, you must enable and configure Firebase Storage.
+
+- In the Firebase Console, go to the **Storage** section in the left-hand menu.
+- Click **Get started** and follow the on-screen prompts to set up your storage bucket. You can use the default security rules for development.
+- Once created, your bucket will have a URL like `gs://your-project-id.appspot.com`. The part `your-project-id.appspot.com` is your **Storage Bucket** name.
+
+### 4. Update your `.env` file
+
+- Open the downloaded JSON file from step 2. You will find:
   - `client_email`: Your Firebase Client Email.
   - `private_key`: Your Firebase Private Key.
 - Open the `.env` file at the root of this project.
-- Add the credentials you collected. **It is crucial to wrap the entire private key in double quotes (`"`)**, including the `-----BEGIN...` and `-----END...` lines, as shown below.
+- Add the credentials you collected. **It is crucial to wrap the entire private key in double quotes (`"`)**, including the `-----BEGIN...` and `-----END...` lines, as shown below. Also add your Storage Bucket name from step 3.
 
 ```env
 FIREBASE_PROJECT_ID="your-project-id"
@@ -37,6 +45,9 @@ YOUR_KEY_CONTENT_WITH_ALL_ITS_NEWLINES
 ...
 -----END PRIVATE KEY-----
 "
+
+# Add this line for file uploads
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
 ```
 
 After you save the `.env` file, the development server will restart and should connect to your Firebase project successfully.
