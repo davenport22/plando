@@ -27,7 +27,9 @@ For features like user profile picture uploads, you must enable and configure Fi
 
 - In the Firebase Console, go to the **Storage** section in the left-hand menu.
 - Click **Get started** and follow the on-screen prompts to set up your storage bucket.
-- **IMPORTANT:** When prompted, select the same location for your Storage bucket that you chose for your Firestore database. A mismatch in regions can cause errors. If you're unsure, your App Hosting backend is set to `europe-west1`, which is a good choice for both services.
+- **CRITICAL:** When prompted for a location, you **MUST** select the same location as your Firestore database. A mismatch in regions will cause errors.
+  - To find your Firestore location, go to the **Firestore Database** section in the Firebase console. The location is shown at the top of the data viewer (e.g., `eur3 (europe-west)` or `nam5 (us-central)`).
+  - Your App Hosting backend is in `europe-west1`, which is a good choice for both services if you are starting fresh.
 - You can use the default security rules for development.
 - Once created, your bucket will have a URL like `gs://your-project-id.appspot.com`. The part `your-project-id.appspot.com` is your **Storage Bucket** name.
 
@@ -53,3 +55,14 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
 ```
 
 After you save the `.env` file, the development server will restart and should connect to your Firebase project successfully.
+
+## Troubleshooting
+
+### "Bucket does not exist" Error
+
+If you see an error message saying `Firebase Storage error: The bucket "your-bucket-name" does not exist`, it means your **Firestore Database** and your **Firebase Storage bucket** are in different regions.
+
+To fix this:
+1. **Check Firestore Location**: In the Firebase Console, go to **Firestore Database**. Your database location is shown at the top of the data viewer (e.g., `nam5 (us-central)` or `eur3 (europe-west)`). Note this down.
+2. **Re-create Storage Bucket**: Go to **Storage**. You may need to delete the existing bucket first. Click **Get Started** and when prompted for a location, choose the **exact same region** as your Firestore database.
+3. **Update `.env`**: Make sure the `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` in your `.env` file matches the name of the bucket you just configured.
