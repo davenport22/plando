@@ -31,7 +31,7 @@ export default function PlandoCouplesPage() {
   const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
   
-  const [likedActivitiesCount, setLikedActivitiesCount] = useState(0);
+  const [userLikedActivityIds, setUserLikedActivityIds] = useState<string[]>([]);
 
   // Partner selection state
   const [partnerEmailInput, setPartnerEmailInput] = useState("");
@@ -77,9 +77,9 @@ export default function PlandoCouplesPage() {
   // Load initial data on mount
   useEffect(() => {
     if (userProfile) {
-      // Fetch liked count from DB
+      // Fetch user's liked IDs from DB
       getLikedCouplesActivityIds(userProfile.id).then(ids => {
-        setLikedActivitiesCount(ids.length);
+        setUserLikedActivityIds(ids);
       });
     }
   }, [userProfile]);
@@ -110,7 +110,7 @@ export default function PlandoCouplesPage() {
     }
 
     if (liked) {
-      setLikedActivitiesCount(prev => prev + 1);
+      setUserLikedActivityIds(prev => [...prev, activityId]);
       // Check for match animation
       if (connectedPartner && partnerLikedActivityIds.includes(votedActivity.id)) {
         setMatchedAnimationActivityName(votedActivity.name);
@@ -176,6 +176,10 @@ export default function PlandoCouplesPage() {
   const currentActivity = !isLoading && !showEndOfList && activities.length > 0 
     ? activities[currentActivityIndex] 
     : null;
+
+  const matchesCount = connectedPartner 
+    ? userLikedActivityIds.filter(id => partnerLikedActivityIds.includes(id)).length
+    : 0;
 
   if ((isLoading && activities.length === 0) || authLoading) { 
     return (
@@ -253,9 +257,9 @@ export default function PlandoCouplesPage() {
                     Reset Deck
                   </Button>
                   <Link href="/plando-couples/matches" passHref>
-                    <Button variant="default" disabled={likedActivitiesCount === 0}>
+                    <Button variant="default" disabled={matchesCount === 0}>
                       <ListChecks className="mr-2 h-4 w-4" />
-                      View Matched Ideas ({likedActivitiesCount})
+                      View Matched Ideas ({matchesCount})
                     </Button>
                   </Link>
                 </div>
@@ -268,9 +272,9 @@ export default function PlandoCouplesPage() {
       {currentActivity && (
          <div className="mt-6">
             <Link href="/plando-couples/matches" passHref>
-              <Button variant="secondary" disabled={likedActivitiesCount === 0}>
+              <Button variant="secondary" disabled={matchesCount === 0}>
                 <ListChecks className="mr-2 h-4 w-4" />
-                View Matched Ideas ({likedActivitiesCount})
+                View Matched Ideas ({matchesCount})
               </Button>
             </Link>
         </div>
