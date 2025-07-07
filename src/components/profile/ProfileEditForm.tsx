@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { UserProfile } from "@/types";
-import { Loader2, Save, Upload } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Loader2, Save } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/actions";
 import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
@@ -26,6 +26,7 @@ const AVAILABLE_INTERESTS = [
 
 const profileEditSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").max(50, "Name is too long."),
+  avatarUrl: z.string().url("Please enter a valid URL for the avatar.").or(z.literal("")).optional(),
   bio: z.string().max(500, "Bio is too long.").optional().default(""),
   location: z.string().max(100, "Location is too long.").optional().default(""),
   interests: z.string(), // We send interests as a JSON string
@@ -44,14 +45,11 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialData.interests || []);
 
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(initialData.avatarUrl || null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const form = useForm<ProfileEditFormValues>({
     resolver: zodResolver(profileEditSchema),
     defaultValues: {
       name: initialData.name || "",
+      avatarUrl: initialData.avatarUrl || "",
       bio: initialData.bio || "",
       location: initialData.location || "",
       interests: JSON.stringify(initialData.interests || []),
@@ -67,12 +65,12 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
   useEffect(() => {
     form.reset({
       name: initialData.name || "",
+      avatarUrl: initialData.avatarUrl || "",
       bio: initialData.bio || "",
       location: initialData.location || "",
       interests: JSON.stringify(initialData.interests || []),
     });
     setSelectedInterests(initialData.interests || []);
-    setAvatarPreview(initialData.avatarUrl || null);
   }, [initialData, form]);
 
   const handleInterestToggle = (interest: string) => {
@@ -86,34 +84,32 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
   async function handleSubmit(data: ProfileEditFormValues) {
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('name', data.name);
-      formData.append('bio', data.bio || "");
-      formData.append('location', data.location || "");
-      formData.append('interests', data.interests); // Already a JSON string
-      formData.append('userId', initialData.id);
+        const interests = JSON.parse(data.interests);
+        const payload: Partial<UserProfile> = {
+            name: data.name,
+            bio: data.bio,
+            location: data.location,
+            avatarUrl: data.avatarUrl,
+            interests,
+        };
 
-      if (avatarFile) {
-        formData.append('avatarFile', avatarFile);
-      }
-      
-      const result = await updateUserProfile(formData);
+        const result = await updateUserProfile(initialData.id, payload);
 
-      if (result.success && result.updatedProfile) {
-          await refreshUserProfile(result.updatedProfile); // Pass the new profile to avoid race condition
-          toast({
-              title: "Profile Updated",
-              description: "Your changes have been saved successfully.",
-          });
-          router.push('/profile');
-      } else {
-        toast({
-          title: "Update Failed",
-          description: result.error,
-          variant: "destructive",
-        });
-        setIsLoading(false); // Only set loading to false on error
-      }
+        if (result.success && result.updatedProfile) {
+            await refreshUserProfile(result.updatedProfile);
+            toast({
+                title: "Profile Updated",
+                description: "Your changes have been saved successfully.",
+            });
+            router.push('/profile');
+        } else {
+            toast({
+                title: "Update Failed",
+                description: result.error,
+                variant: "destructive",
+            });
+            setIsLoading(false);
+        }
     } catch (error) {
         toast({
             title: "An Unexpected Error Occurred",
@@ -122,41 +118,34 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
         });
         setIsLoading(false);
     }
-  }
-
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const previewUrl = URL.createObjectURL(file);
-      setAvatarPreview(previewUrl);
-    }
-  };
+}
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
         
-        <FormItem>
-          <FormLabel>Profile Picture</FormLabel>
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={avatarPreview || `https://avatar.vercel.sh/${initialData.email}.png`} />
-              <AvatarFallback>{initialData.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarImage src={form.watch('avatarUrl') || `https://avatar.vercel.sh/${initialData.email}.png`} alt={form.watch('name')} />
+                <AvatarFallback>{initialData.name?.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
-            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="mr-2 h-4 w-4" /> Change Photo
-            </Button>
-            <Input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/png, image/jpeg, image/gif"
-              onChange={handleAvatarChange}
+            <FormField
+                control={form.control}
+                name="avatarUrl"
+                render={({ field }) => (
+                <FormItem className="flex-grow">
+                    <FormLabel>Avatar Image URL</FormLabel>
+                    <FormControl>
+                        <Input placeholder="https://example.com/your-photo.png" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormDescription>
+                        Paste a URL to your profile image.
+                    </FormDescription>
+                    <FormMessage />
+                </FormItem>
+                )}
             />
-          </div>
-          <FormDescription>Upload a new profile picture. Best results with a square image.</FormDescription>
-        </FormItem>
+        </div>
 
         <FormField
           control={form.control}

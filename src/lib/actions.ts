@@ -13,7 +13,6 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
-import { redirect } from 'next/navigation';
 
 const handleAIError = (error: unknown, defaultMessage: string): { error: string } => {
     console.error(defaultMessage, error);
@@ -110,7 +109,12 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
     try {
         const validatedData = NewTripDataSchema.parse(data);
         
-        const generatedImageUrl = await generateDestinationImage({ destination: validatedData.destination });
+        let generatedImageUrl: string | null = null;
+        try {
+            generatedImageUrl = await generateDestinationImage({ destination: validatedData.destination });
+        } catch(aiError) {
+             console.warn("AI Image generation failed during trip creation, but proceeding with placeholder.", aiError);
+        }
         
         const newTripData = {
             ...validatedData,
@@ -232,7 +236,6 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
                 }
             } catch (aiError) {
                 console.warn("AI Image generation failed during trip update, but other data will be saved.", aiError);
-                return { success: false, ...handleAIError(aiError, "Could not update trip image due to an AI service error.") };
             }
         }
 
@@ -392,74 +395,29 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
 }
 
-export async function updateUserProfile(formData: FormData): Promise<{ success: boolean; error?: string; updatedProfile?: UserProfile }> {
+export async function updateUserProfile(userId: string, dataToUpdate: Partial<UserProfile>): Promise<{ success: boolean; error?: string; updatedProfile?: UserProfile }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend is not configured.' };
-
-    const userId = formData.get('userId') as string;
     if (!userId) return { success: false, error: 'User ID is missing.' };
 
     try {
-        const interestsString = formData.get('interests') as string;
-        let interests: string[] = [];
-        try {
-          interests = JSON.parse(interestsString || '[]');
-        } catch (e) {
-          return { success: false, error: 'Invalid format for interests data.' };
-        }
+        // Remove any undefined fields to avoid overwriting with nulls
+        const cleanData = Object.fromEntries(Object.entries(dataToUpdate).filter(([_, v]) => v !== undefined));
 
-        const dataToUpdate: Partial<UserProfile> = {
-            name: formData.get('name') as string,
-            bio: formData.get('bio') as string,
-            location: formData.get('location') as string,
-            interests,
-        };
-
-        const avatarFile = formData.get('avatarFile') as File | null;
-        
-        if (avatarFile && avatarFile.size > 0) {
-            const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-            if (!bucketName) {
-                return { success: false, error: "Server configuration error: The NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET environment variable is not set. Please add it to your .env file." };
-            }
-
-            const bucket = getStorage().bucket(bucketName);
-            const buffer = Buffer.from(await avatarFile.arrayBuffer());
-            const fileName = `avatars/${userId}/${Date.now()}-${avatarFile.name.replace(/\s+/g, '_')}`;
-            const file = bucket.file(fileName);
-
-            await file.save(buffer, {
-                metadata: {
-                    contentType: avatarFile.type,
-                },
-            });
-            
-            await file.makePublic();
-            dataToUpdate.avatarUrl = file.publicUrl();
-        }
-
-        if (Object.keys(dataToUpdate).length > 0) {
-            await firestore.collection('users').doc(userId).update(dataToUpdate);
+        if (Object.keys(cleanData).length > 0) {
+            await firestore.collection('users').doc(userId).update(cleanData);
         }
         
         const updatedProfileDoc = await firestore.collection('users').doc(userId).get();
         const updatedProfile = updatedProfileDoc.data() as UserProfile;
         
+        revalidatePath('/profile');
+        revalidatePath(`/profile/edit`);
+
         return { success: true, updatedProfile };
 
     } catch (error) {
         console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-
-        if (errorMessage.includes("The specified bucket does not exist")) {
-            return { success: false, error: `Firebase Storage error: The bucket "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" does not exist. This is often caused by a region mismatch between your Firestore database and Storage bucket. Please ensure both are in the same location (e.g., europe-west1).` };
-        }
-        if (errorMessage.includes("permission denied")) {
-            return { success: false, error: `Firebase Storage error: Permission denied. Please check that your service account ('${process.env.FIREBASE_CLIENT_EMAIL}') has the 'Storage Object Admin' role in Google Cloud IAM.` };
-        }
-        if (errorMessage.includes("JSON")) {
-            return { success: false, error: "There was an issue processing the form data. Please try again." };
-        }
-
         return { success: false, error: errorMessage };
     }
 }
