@@ -8,7 +8,7 @@ import {
     MOCK_COUPLES_ACTIVITIES_BY_CITY 
 } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getLikedCouplesActivityIds } from '@/lib/actions';
+import { getLikedCouplesActivityIds, getCustomCouplesActivities } from '@/lib/actions';
 
 type ActivityModuleType = 'friends' | 'meet' | 'couples';
 
@@ -56,7 +56,13 @@ export function useLocalActivities(
             setVotedActivityIds(previouslyVotedIds);
         }
 
-        const activitiesToShow = (activitySource[determinedLocationKey] || activitySource["Default"])
+        const customActivities = moduleType === 'couples' ? await getCustomCouplesActivities() : [];
+        const allSourceActivities = [...(activitySource[determinedLocationKey] || activitySource["Default"]), ...customActivities];
+        
+        // Deduplicate in case an ID exists in both mock and custom
+        const uniqueActivities = Array.from(new Map(allSourceActivities.map(item => [item.id, item])).values());
+
+        const activitiesToShow = uniqueActivities
                                   .filter(act => !previouslyVotedIds.has(act.id))
                                   .map(act => ({ ...act, isLiked: undefined }));
 

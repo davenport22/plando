@@ -533,6 +533,47 @@ export async function getLikedCouplesActivityIds(userId: string): Promise<string
     }
 }
 
+export async function addCustomCoupleActivity(
+  userId: string,
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime' | 'dataAiHint'>
+): Promise<{ success: boolean; error?: string; activity?: Activity }> {
+  if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+  if (!userId) return { success: false, error: 'User ID is required.' };
+
+  try {
+    const newActivityRef = firestore.collection('couplesActivities').doc();
+    const newActivity: Activity = {
+      ...activityData,
+      id: newActivityRef.id,
+      imageUrls: [`https://placehold.co/400x250.png?text=${encodeURIComponent(activityData.name)}`],
+      createdBy: userId,
+    };
+
+    await newActivityRef.set(newActivity);
+
+    // Automatically "like" the activity for the creator
+    await saveCoupleVote(userId, newActivity.id, true);
+
+    revalidatePath('/plando-couples');
+
+    return { success: true, activity: newActivity };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    return { success: false, error: `Failed to add custom date idea: ${errorMessage}` };
+  }
+}
+
+export async function getCustomCouplesActivities(): Promise<Activity[]> {
+    if (!isFirebaseInitialized) return [];
+    try {
+        const snapshot = await firestore.collection('couplesActivities').get();
+        return snapshot.docs.map(doc => doc.data() as Activity);
+    } catch (error) {
+        console.error('Error fetching custom couples activities:', error);
+        return [];
+    }
+}
+
 export async function markCoupleActivityAsCompleted(
   userId: string,
   partnerId: string,

@@ -23,7 +23,7 @@ const customActivitySchema = z.object({
 type CustomActivityFormValues = z.infer<typeof customActivitySchema>;
 
 interface CustomActivityFormProps {
-  onAddActivity: (activity: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes'>) => Promise<void>;
+  onAddActivity: (activity: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime' | 'dataAiHint'>) => Promise<void>;
 }
 
 export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
@@ -49,7 +49,6 @@ export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-        {/* Removed h3 title as DialogTitle will be used */}
         <FormField
           control={form.control}
           name="name"
@@ -107,7 +106,7 @@ export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
         <DialogClose asChild>
           <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-            Add Activity to Voting
+            Add Date Idea
           </Button>
         </DialogClose>
       </form>

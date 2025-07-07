@@ -48,6 +48,7 @@ export interface Activity {
   estimatedPriceRange?: string;
   address?: string;
   dataAiHint?: string; 
+  createdBy?: string;
 }
 
 // For AI Flow input

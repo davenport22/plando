@@ -7,16 +7,17 @@ import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Heart, RotateCcw, MapPin, ListChecks, Sparkles, Users } from 'lucide-react';
+import { Loader2, Heart, RotateCcw, MapPin, ListChecks, Sparkles, Users, PlusCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle as MatchDialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle as MatchDialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { plandoModules } from "@/config/plandoModules";
 import Link from 'next/link';
 import { PartnerConnection } from '@/components/couples/PartnerConnection';
 import { useLocalActivities } from '@/hooks/useLocalActivities';
-import { saveCoupleVote, getLikedCouplesActivityIds, connectPartner, disconnectPartner, getUserProfile } from '@/lib/actions';
+import { saveCoupleVote, getLikedCouplesActivityIds, connectPartner, disconnectPartner, getUserProfile, addCustomCoupleActivity } from '@/lib/actions';
 import { useAuth } from '@/context/AuthContext';
+import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
 
 
 export default function PlandoCouplesPage() {
@@ -42,6 +43,8 @@ export default function PlandoCouplesPage() {
   // Match animation state
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   const [matchedAnimationActivityName, setMatchedAnimationActivityName] = useState<string>("");
+
+  const [isCustomActivityOpen, setIsCustomActivityOpen] = useState(false);
 
   // Load partner data and then pass it to the activity hook
   useEffect(() => {
@@ -172,6 +175,21 @@ export default function PlandoCouplesPage() {
       }
     }
   };
+
+  const handleAddCustomActivity = async (data: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime'>) => {
+      if (!userProfile) return;
+      const result = await addCustomCoupleActivity(userProfile.id, data);
+      if (result.success && result.activity) {
+          toast({
+              title: "Custom Date Idea Added!",
+              description: `"${result.activity.name}" has been added and liked. Your partner will see it soon!`,
+          });
+          setIsCustomActivityOpen(false);
+          fetchNewActivities(); // This function from the hook will refetch all activities
+      } else {
+          toast({ title: "Error", description: result.error || "Failed to add custom activity.", variant: "destructive" });
+      }
+  };
   
   const currentActivity = !isLoading && !showEndOfList && activities.length > 0 
     ? activities[currentActivityIndex] 
@@ -219,6 +237,31 @@ export default function PlandoCouplesPage() {
           
           <Separator className="my-6" />
 
+          <div className="flex justify-center gap-2 mb-4">
+            <Link href="/plando-couples/matches" passHref>
+                <Button variant="secondary" disabled={matchesCount === 0}>
+                    <ListChecks className="mr-2 h-4 w-4" />
+                    View Matches ({matchesCount})
+                </Button>
+            </Link>
+            <Dialog open={isCustomActivityOpen} onOpenChange={setIsCustomActivityOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Custom
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add a Custom Date Idea</DialogTitle>
+                        <DialogDescription>
+                            Have a specific idea? Add it here. Your partner will be able to swipe on it too. It will be automatically 'liked' for you.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <CustomActivityForm onAddActivity={handleAddCustomActivity} />
+                </DialogContent>
+            </Dialog>
+        </div>
+
            {locationStatusMessage && (
             <div className="mb-3 text-xs text-muted-foreground p-2 border border-dashed rounded-md flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary/70"/> 
@@ -256,12 +299,6 @@ export default function PlandoCouplesPage() {
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
                     Reset Deck
                   </Button>
-                  <Link href="/plando-couples/matches" passHref>
-                    <Button variant="default" disabled={matchesCount === 0}>
-                      <ListChecks className="mr-2 h-4 w-4" />
-                      View Matched Ideas ({matchesCount})
-                    </Button>
-                  </Link>
                 </div>
               </div>
             )}
@@ -269,17 +306,6 @@ export default function PlandoCouplesPage() {
         </CardContent>
       </Card>
       
-      {currentActivity && (
-         <div className="mt-6">
-            <Link href="/plando-couples/matches" passHref>
-              <Button variant="secondary" disabled={matchesCount === 0}>
-                <ListChecks className="mr-2 h-4 w-4" />
-                View Matched Ideas ({matchesCount})
-              </Button>
-            </Link>
-        </div>
-      )}
-
       <ActivityDetailDialog 
         activity={selectedActivityForDialog}
         isOpen={isActivityDetailDialogOpen}
