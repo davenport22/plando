@@ -440,14 +440,30 @@ export async function connectPartner(currentUserId: string, partnerEmail: string
     if (!currentUserId || !partnerEmail) return { success: false, error: 'User ID and partner email are required.' };
 
     try {
-        const partnerProfile = await findUserByEmail(partnerEmail);
+        const [currentUserProfile, partnerProfile] = await Promise.all([
+            getUserProfile(currentUserId),
+            findUserByEmail(partnerEmail)
+        ]);
+        
+        if (!currentUserProfile) {
+            return { success: false, error: "Your user profile could not be found." };
+        }
 
+        if (currentUserProfile.partnerId) {
+            const currentPartner = await getUserProfile(currentUserProfile.partnerId);
+            return { success: false, error: `You are already connected with ${currentPartner?.name || 'a partner'}. Please disconnect first.` };
+        }
+        
         if (!partnerProfile) {
             return { success: false, error: "Could not find a user with that email address." };
         }
 
         if (partnerProfile.id === currentUserId) {
             return { success: false, error: "You cannot connect with yourself." };
+        }
+
+        if (partnerProfile.partnerId) {
+            return { success: false, error: `This user is already connected with another partner.` };
         }
         
         const userRef = firestore.collection('users').doc(currentUserId);
