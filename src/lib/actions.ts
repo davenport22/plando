@@ -574,6 +574,82 @@ export async function getCustomCouplesActivities(): Promise<Activity[]> {
     }
 }
 
+export async function addCustomFriendActivity(
+  userId: string,
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime' | 'dataAiHint'>
+): Promise<{ success: boolean; error?: string; activity?: Activity }> {
+  if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+  if (!userId) return { success: false, error: 'User ID is required.' };
+
+  try {
+    const newActivityRef = firestore.collection('friendsActivities').doc();
+    const newActivity: Activity = {
+      ...activityData,
+      id: newActivityRef.id,
+      imageUrls: [`https://placehold.co/400x250.png?text=${encodeURIComponent(activityData.name)}`],
+      createdBy: userId,
+    };
+
+    await newActivityRef.set(newActivity);
+    
+    revalidatePath('/plando-friends');
+
+    return { success: true, activity: newActivity };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    return { success: false, error: `Failed to add custom friend activity: ${errorMessage}` };
+  }
+}
+
+export async function getCustomFriendActivities(): Promise<Activity[]> {
+    if (!isFirebaseInitialized) return [];
+    try {
+        const snapshot = await firestore.collection('friendsActivities').get();
+        return snapshot.docs.map(doc => doc.data() as Activity);
+    } catch (error) {
+        console.error('Error fetching custom friend activities:', error);
+        return [];
+    }
+}
+
+export async function addCustomMeetActivity(
+  userId: string,
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime' | 'dataAiHint'>
+): Promise<{ success: boolean; error?: string; activity?: Activity }> {
+  if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+  if (!userId) return { success: false, error: 'User ID is required.' };
+
+  try {
+    const newActivityRef = firestore.collection('meetActivities').doc();
+    const newActivity: Activity = {
+      ...activityData,
+      id: newActivityRef.id,
+      imageUrls: [`https://placehold.co/400x250.png?text=${encodeURIComponent(activityData.name)}`],
+      createdBy: userId,
+    };
+
+    await newActivityRef.set(newActivity);
+    
+    revalidatePath('/plando-meet');
+
+    return { success: true, activity: newActivity };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    return { success: false, error: `Failed to add custom meet activity: ${errorMessage}` };
+  }
+}
+
+export async function getCustomMeetActivities(): Promise<Activity[]> {
+    if (!isFirebaseInitialized) return [];
+    try {
+        const snapshot = await firestore.collection('meetActivities').get();
+        return snapshot.docs.map(doc => doc.data() as Activity);
+    } catch (error) {
+        console.error('Error fetching custom meet activities:', error);
+        return [];
+    }
+}
+
 export async function markCoupleActivityAsCompleted(
   userId: string,
   partnerId: string,

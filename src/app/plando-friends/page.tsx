@@ -7,11 +7,14 @@ import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Users, RotateCcw, MapPin } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Users, RotateCcw, MapPin, PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { plandoModules } from "@/config/plandoModules";
 import { useLocalActivities } from '@/hooks/useLocalActivities';
 import { useAuth } from '@/context/AuthContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
+import { addCustomFriendActivity } from '@/lib/actions';
 
 export default function PlandoFriendsPage() {
   const { toast } = useToast();
@@ -33,6 +36,8 @@ export default function PlandoFriendsPage() {
   
   const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
+
+  const [isCustomActivityOpen, setIsCustomActivityOpen] = useState(false);
 
   useEffect(() => {
     setCurrentActivityIndex(0);
@@ -70,6 +75,21 @@ export default function PlandoFriendsPage() {
     toast({ title: "Resetting Friend Activity Deck...", description: `Reloading activities for ${currentLocationKey}.`});
     fetchNewActivities();
   };
+
+  const handleAddCustomActivity = async (data: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime'>) => {
+      if (!userProfile) return;
+      const result = await addCustomFriendActivity(userProfile.id, data);
+      if (result.success && result.activity) {
+          toast({
+              title: "Custom Activity Added!",
+              description: `"${result.activity.name}" has been added to your swiping deck.`,
+          });
+          setIsCustomActivityOpen(false);
+          fetchNewActivities();
+      } else {
+          toast({ title: "Error", description: result.error || "Failed to add custom activity.", variant: "destructive" });
+      }
+  };
   
   const currentActivity = !isLoading && !showEndOfList && activities.length > 0 
     ? activities[currentActivityIndex] 
@@ -92,9 +112,27 @@ export default function PlandoFriendsPage() {
             <Icon className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-3xl font-headline text-primary">{friendsModule?.name || "Plando Friends"}</CardTitle>
-          <p className="text-md text-muted-foreground">Discover and swipe on activities to do with friends!</p>
+          <CardDescription className="text-md text-muted-foreground">Discover and swipe on activities to do with friends!</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center min-h-[480px] p-4 sm:p-6">
+           <div className="mb-4">
+            <Dialog open={isCustomActivityOpen} onOpenChange={setIsCustomActivityOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Custom Activity
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add a Custom Friend Activity</DialogTitle>
+                        <DialogDescription>
+                            Have a specific idea for an activity with friends? Add it here.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <CustomActivityForm onAddActivity={handleAddCustomActivity} />
+                </DialogContent>
+            </Dialog>
+           </div>
            {locationStatusMessage && (
             <div className="mb-3 text-xs text-muted-foreground p-2 border border-dashed rounded-md flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary/70"/> 

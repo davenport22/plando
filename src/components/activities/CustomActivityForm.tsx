@@ -106,7 +106,7 @@ export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
         <DialogClose asChild>
           <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-            Add Date Idea
+            Add Activity
           </Button>
         </DialogClose>
       </form>
