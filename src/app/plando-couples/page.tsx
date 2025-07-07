@@ -265,17 +265,6 @@ export default function PlandoCouplesPage() {
         </CardContent>
       </Card>
       
-      {!isLoading && !currentActivity && activities.length > 0 && (
-        <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center">
-            <Link href="/plando-couples/matches" passHref>
-              <Button variant="default" size="lg" disabled={likedActivitiesCount === 0}>
-                <ListChecks className="mr-2 h-5 w-5" />
-                View Your Matched Date Ideas ({likedActivitiesCount})
-              </Button>
-            </Link>
-        </div>
-      )}
-      
       {currentActivity && (
          <div className="mt-6">
             <Link href="/plando-couples/matches" passHref>
