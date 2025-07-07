@@ -78,4 +78,3 @@ export function MatchedActivityCard({ activity, onCardClick }: MatchedActivityCa
     </Card>
   );
 }
-

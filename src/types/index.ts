@@ -435,7 +435,7 @@ const MOCK_VIENNA_ACTIVITIES: Activity[] = [
     name: 'Attend a Performance at the Vienna State Opera',
     location: 'Vienna State Opera',
     duration: 3,
-    imageUrls: ['https://images.unsplash.com/photo-1571166319809-54d588942b00?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
+    imageUrls: ['https://images.unsplash.com/photo-1571166319809-54d586b8c495?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80'],
     description: 'Experience a world-class opera or ballet performance in one of the most famous opera houses in the world. Book tickets well in advance or try for affordable last-minute standing room tickets.',
     suggestedDurationHours: 3,
     bestTimeToVisit: "Evenings (check schedule)",
