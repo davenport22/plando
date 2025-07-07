@@ -396,17 +396,30 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
     if (!userId) return { success: false, error: 'User ID is missing.' };
 
     try {
+        const interestsString = formData.get('interests') as string;
+        let interests: string[] = [];
+        try {
+          interests = JSON.parse(interestsString || '[]');
+        } catch (e) {
+          return { success: false, error: 'Invalid format for interests data.' };
+        }
+
         const dataToUpdate: Partial<UserProfile> = {
             name: formData.get('name') as string,
             bio: formData.get('bio') as string,
             location: formData.get('location') as string,
-            interests: JSON.parse(formData.get('interests') as string || '[]'),
+            interests,
         };
 
         const avatarFile = formData.get('avatarFile') as File | null;
         
         if (avatarFile && avatarFile.size > 0) {
-            const bucket = getStorage().bucket();
+            const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+            if (!bucketName) {
+                return { success: false, error: "Server configuration error: The NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET environment variable is not set. Please add it to your .env file." };
+            }
+
+            const bucket = getStorage().bucket(bucketName);
             const buffer = Buffer.from(await avatarFile.arrayBuffer());
             const fileName = `avatars/${userId}/${Date.now()}-${avatarFile.name.replace(/\s+/g, '_')}`;
             const file = bucket.file(fileName);
@@ -421,24 +434,30 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
             dataToUpdate.avatarUrl = file.publicUrl();
         }
 
-        await firestore.collection('users').doc(userId).update(dataToUpdate);
+        if (Object.keys(dataToUpdate).length > 0) {
+            await firestore.collection('users').doc(userId).update(dataToUpdate);
+        }
         
+        return { success: true };
+
     } catch (error) {
         console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
 
-        // Specific error handling for missing bucket
         if (errorMessage.includes("The specified bucket does not exist")) {
-            return { success: false, error: "Firebase Storage setup is incomplete. Please enable Storage in your Firebase Console and add the NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET variable to your .env file. See the README for details." };
+            return { success: false, error: `Firebase Storage error: The bucket "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" does not exist. Please ensure Storage is enabled in your Firebase console and the bucket name in your .env file is correct.` };
+        }
+        if (errorMessage.includes("permission denied")) {
+            return { success: false, error: `Firebase Storage error: Permission denied. Please check the IAM permissions for your service account ('${process.env.FIREBASE_CLIENT_EMAIL}') in Google Cloud Console.` };
+        }
+        if (errorMessage.includes("JSON")) {
+            return { success: false, error: "There was an issue processing the form data. Please try again." };
         }
 
         return { success: false, error: errorMessage };
     }
-    
-    // On success, revalidate the path and redirect.
-    revalidatePath('/profile/edit');
-    redirect('/profile');
 }
+
 
 export async function findUserByEmail(email: string): Promise<UserProfile | null> {
     try {

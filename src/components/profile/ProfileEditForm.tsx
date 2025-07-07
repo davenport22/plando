@@ -28,7 +28,7 @@ const profileEditSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").max(50, "Name is too long."),
   bio: z.string().max(500, "Bio is too long.").optional().default(""),
   location: z.string().max(100, "Location is too long.").optional().default(""),
-  interests: z.array(z.string()).optional().default([]), 
+  interests: z.string(), // We send interests as a JSON string
 });
 
 type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
@@ -54,16 +54,22 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
       name: initialData.name || "",
       bio: initialData.bio || "",
       location: initialData.location || "",
-      interests: initialData.interests || [],
+      interests: JSON.stringify(initialData.interests || []),
     },
   });
+  
+  // When selectedInterests changes, update the hidden form field
+  useEffect(() => {
+    form.setValue('interests', JSON.stringify(selectedInterests));
+  }, [selectedInterests, form]);
+
 
   useEffect(() => {
     form.reset({
       name: initialData.name || "",
       bio: initialData.bio || "",
       location: initialData.location || "",
-      interests: initialData.interests || [],
+      interests: JSON.stringify(initialData.interests || []),
     });
     setSelectedInterests(initialData.interests || []);
     setAvatarPreview(initialData.avatarUrl || null);
@@ -84,7 +90,7 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
       formData.append('name', data.name);
       formData.append('bio', data.bio || "");
       formData.append('location', data.location || "");
-      formData.append('interests', JSON.stringify(selectedInterests));
+      formData.append('interests', data.interests); // Already a JSON string
       formData.append('userId', initialData.id);
 
       if (avatarFile) {
@@ -231,7 +237,7 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
               render={({ field }) => (
                 <FormItem className="hidden">
                   <FormControl>
-                    <Input type="hidden" {...field} value={selectedInterests.join(',')} />
+                    <Input type="hidden" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
