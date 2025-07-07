@@ -11,9 +11,11 @@ import { Loader2, Sparkles, Users, RotateCcw, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { plandoModules } from "@/config/plandoModules";
 import { useLocalActivities } from '@/hooks/useLocalActivities';
+import { useAuth } from '@/context/AuthContext';
 
 export default function PlandoMeetPage() {
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const meetModule = plandoModules.find(m => m.id === 'meet');
   const Icon = meetModule?.Icon || Sparkles;
 
@@ -24,7 +26,7 @@ export default function PlandoMeetPage() {
     locationStatusMessage, 
     currentLocationKey, 
     fetchActivities: fetchNewActivities 
-  } = useLocalActivities('meet');
+  } = useLocalActivities('meet', userProfile);
 
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [showEndOfList, setShowEndOfList] = useState(false);

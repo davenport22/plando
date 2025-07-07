@@ -2,9 +2,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Activity } from '@/types';
+import type { Activity, UserProfile } from '@/types';
 import { 
-    MOCK_USER_PROFILE, 
     MOCK_ACTIVITIES_BY_CITY, 
     MOCK_COUPLES_ACTIVITIES_BY_CITY 
 } from '@/types';
@@ -13,7 +12,7 @@ import { getLikedCouplesActivityIds } from '@/lib/actions';
 
 type ActivityModuleType = 'friends' | 'meet' | 'couples';
 
-export function useLocalActivities(moduleType: ActivityModuleType) {
+export function useLocalActivities(moduleType: ActivityModuleType, userProfile: UserProfile | null) {
     const { toast } = useToast();
 
     const [activities, setActivities] = useState<Activity[]>([]);
@@ -25,8 +24,10 @@ export function useLocalActivities(moduleType: ActivityModuleType) {
     const fetchActivities = useCallback(async () => {
         setIsLoading(true);
         
-        const determinedLocationKey = MOCK_USER_PROFILE.location || "Default";
-        const statusMsg = `Using profile location for activities: ${determinedLocationKey}.`;
+        const determinedLocationKey = userProfile?.location || "Default";
+        const statusMsg = userProfile?.location 
+            ? `Using profile location for activities: ${determinedLocationKey}.`
+            : "No profile location set. Using default activities.";
 
         setCurrentLocationKey(determinedLocationKey);
         setLocationStatusMessage(statusMsg);
@@ -36,8 +37,8 @@ export function useLocalActivities(moduleType: ActivityModuleType) {
             : MOCK_ACTIVITIES_BY_CITY;
         
         let previouslyVotedIds = new Set<string>();
-        if (moduleType === 'couples') {
-            const ids = await getLikedCouplesActivityIds(MOCK_USER_PROFILE.id);
+        if (moduleType === 'couples' && userProfile) {
+            const ids = await getLikedCouplesActivityIds(userProfile.id);
             previouslyVotedIds = new Set(ids);
             setVotedActivityIds(previouslyVotedIds);
         }
@@ -58,7 +59,7 @@ export function useLocalActivities(moduleType: ActivityModuleType) {
 
         return activitiesToShow;
 
-    }, [moduleType, toast]);
+    }, [moduleType, toast, userProfile]);
     
     useEffect(() => {
         fetchActivities();

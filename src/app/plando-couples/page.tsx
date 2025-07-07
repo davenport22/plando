@@ -1,9 +1,8 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import type { Activity, UserProfile } from '@/types';
-import { MOCK_USER_PROFILE } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
@@ -16,12 +15,13 @@ import { plandoModules } from "@/config/plandoModules";
 import Link from 'next/link';
 import { PartnerConnection } from '@/components/couples/PartnerConnection';
 import { useLocalActivities } from '@/hooks/useLocalActivities';
-import { saveCoupleVote, getLikedCouplesActivityIds, findUserByEmail } from '@/lib/actions';
+import { saveCoupleVote, getLikedCouplesActivityIds, connectPartner, disconnectPartner, getUserProfile } from '@/lib/actions';
+import { useAuth } from '@/context/AuthContext';
 
-const LOCAL_STORAGE_CONNECTED_PARTNER_KEY = `plandoCouplesConnectedPartner_${MOCK_USER_PROFILE.id}`;
 
 export default function PlandoCouplesPage() {
   const { toast } = useToast();
+  const { userProfile, loading: authLoading, refreshUserProfile } = useAuth();
   const couplesModule = plandoModules.find(m => m.id === 'couples');
   const Icon = couplesModule?.Icon || Heart;
 
@@ -33,7 +33,7 @@ export default function PlandoCouplesPage() {
     fetchActivities: fetchNewActivities,
     setVotedActivityIds,
     votedActivityIds
-  } = useLocalActivities('couples');
+  } = useLocalActivities('couples', userProfile);
 
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [showEndOfList, setShowEndOfList] = useState(false);
@@ -61,33 +61,36 @@ export default function PlandoCouplesPage() {
 
   // Load initial data on mount
   useEffect(() => {
-    // Fetch liked count from DB
-    getLikedCouplesActivityIds(MOCK_USER_PROFILE.id).then(ids => {
-      setLikedActivitiesCount(ids.length);
-    });
+    if (userProfile) {
+      // Fetch liked count from DB
+      getLikedCouplesActivityIds(userProfile.id).then(ids => {
+        setLikedActivitiesCount(ids.length);
+      });
 
-    // Load connected partner from localStorage
-    const storedPartner = localStorage.getItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
-    if (storedPartner) {
-        try {
-            const partner: UserProfile = JSON.parse(storedPartner);
+      // Load partner from userProfile
+      if (userProfile.partnerId) {
+        getUserProfile(userProfile.partnerId).then(partner => {
+          if (partner) {
             setConnectedPartner(partner);
-            // Fetch partner's likes
             getLikedCouplesActivityIds(partner.id).then(setPartnerLikedActivityIds);
-        } catch (e) {
-            console.error("Error parsing connected partner from localStorage", e);
-            localStorage.removeItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
-        }
+          }
+        });
+      } else {
+        setConnectedPartner(null);
+        setPartnerLikedActivityIds([]);
+      }
     }
-  }, []);
+  }, [userProfile]);
 
   const handleVote = async (activityId: string, liked: boolean) => {
+    if (!userProfile) return;
+
     const votedActivity = activities.find(act => act.id === activityId);
     if (!votedActivity) return;
 
     setVotedActivityIds(prev => new Set(prev).add(activityId));
 
-    const { success, error } = await saveCoupleVote(MOCK_USER_PROFILE.id, activityId, liked);
+    const { success, error } = await saveCoupleVote(userProfile.id, activityId, liked);
 
     if (success) {
       toast({
@@ -134,37 +137,33 @@ export default function PlandoCouplesPage() {
   };
 
   const handleConnectPartner = async () => {
-    if (!partnerEmailInput.trim()) {
+    if (!partnerEmailInput.trim() || !userProfile) {
       toast({ title: "Error", description: "Please enter your partner's email.", variant: "destructive" });
       return;
     }
     setIsConnectingPartner(true);
     
-    const foundPartner = await findUserByEmail(partnerEmailInput.trim().toLowerCase());
+    const result = await connectPartner(userProfile.id, partnerEmailInput.trim().toLowerCase());
 
-    if (foundPartner) {
-      if (foundPartner.id === MOCK_USER_PROFILE.id) {
-        toast({ title: "Oops!", description: "You can't connect with yourself as a partner.", variant: "destructive" });
-      } else {
-        setConnectedPartner(foundPartner);
-        localStorage.setItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY, JSON.stringify(foundPartner));
-        toast({ title: "Partner Connected!", description: `You are now connected with ${foundPartner.name}.` });
-        // Fetch partner's likes on connect
-        getLikedCouplesActivityIds(foundPartner.id).then(setPartnerLikedActivityIds);
-        setPartnerEmailInput("");
-      }
+    if (result.success && result.partner) {
+      await refreshUserProfile(); // Refresh auth context which will trigger useEffect to update state
+      toast({ title: "Partner Connected!", description: `You are now connected with ${result.partner.name}.` });
+      setPartnerEmailInput("");
     } else {
-      toast({ title: "Partner Not Found", description: "Could not find a user with that email. Please check and try again.", variant: "destructive" });
+      toast({ title: "Connection Failed", description: result.error || "Please check the email and try again.", variant: "destructive" });
     }
     setIsConnectingPartner(false);
   };
 
-  const handleDisconnectPartner = () => {
-    if (connectedPartner) {
-      toast({ title: "Partner Disconnected", description: `You are no longer connected with ${connectedPartner.name}.` });
-      setConnectedPartner(null);
-      setPartnerLikedActivityIds([]);
-      localStorage.removeItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
+  const handleDisconnectPartner = async () => {
+    if (connectedPartner && userProfile) {
+      const result = await disconnectPartner(userProfile.id);
+      if(result.success) {
+        toast({ title: "Partner Disconnected", description: `You are no longer connected with ${connectedPartner.name}.` });
+        await refreshUserProfile(); // Refresh auth context which will trigger useEffect
+      } else {
+        toast({ title: "Error", description: result.error || "Could not disconnect partner.", variant: "destructive" });
+      }
     }
   };
   
@@ -172,11 +171,11 @@ export default function PlandoCouplesPage() {
     ? activities[currentActivityIndex] 
     : null;
 
-  if (isLoading && activities.length === 0) { 
+  if ((isLoading && activities.length === 0) || authLoading) { 
     return (
       <div className="container mx-auto py-12 px-4 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">{locationStatusMessage || "Loading local date ideas..."}</p>
+        <p className="mt-4 text-lg text-muted-foreground">{authLoading ? "Loading your profile..." : locationStatusMessage || "Loading local date ideas..."}</p>
       </div>
     );
   }

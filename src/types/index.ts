@@ -11,6 +11,7 @@ export interface UserProfile extends User {
   memberSince: string;
   interests: string[];
   avatarUrl?: string;
+  partnerId?: string;
 }
 
 export interface Trip {

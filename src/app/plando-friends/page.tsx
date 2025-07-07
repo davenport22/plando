@@ -11,9 +11,11 @@ import { Loader2, Users, RotateCcw, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { plandoModules } from "@/config/plandoModules";
 import { useLocalActivities } from '@/hooks/useLocalActivities';
+import { useAuth } from '@/context/AuthContext';
 
 export default function PlandoFriendsPage() {
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const friendsModule = plandoModules.find(m => m.id === 'friends');
   const Icon = friendsModule?.Icon || Users;
 
@@ -24,7 +26,7 @@ export default function PlandoFriendsPage() {
     locationStatusMessage, 
     currentLocationKey, 
     fetchActivities: fetchNewActivities 
-  } = useLocalActivities('friends');
+  } = useLocalActivities('friends', userProfile);
   
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [showEndOfList, setShowEndOfList] = useState(false);

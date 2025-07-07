@@ -3,19 +3,20 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Activity, MatchedActivity, UserProfile } from '@/types'; 
-import { MOCK_USER_PROFILE, MOCK_COUPLES_ACTIVITIES_BY_CITY } from '@/types';
+import { MOCK_COUPLES_ACTIVITIES_BY_CITY } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Info, ListChecks, UserCheck, Sparkles, Users, Loader2 } from 'lucide-react';
+import { ArrowLeft, UserCheck, Sparkles, Users, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MatchedActivityCard } from '@/components/activities/MatchedActivityCard';
 import { useToast } from '@/hooks/use-toast';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
-import { getLikedCouplesActivityIds, saveCoupleVote } from '@/lib/actions';
+import { getLikedCouplesActivityIds, saveCoupleVote, getUserProfile } from '@/lib/actions';
+import { useAuth } from '@/context/AuthContext';
 
-const LOCAL_STORAGE_CONNECTED_PARTNER_KEY = `plandoCouplesConnectedPartner_${MOCK_USER_PROFILE.id}`;
 
 export default function PlandoCouplesMatchesPage() {
+  const { userProfile } = useAuth();
   const [matchedActivities, setMatchedActivities] = useState<MatchedActivity[]>([]);
   const [userLikedActivitiesCount, setUserLikedActivitiesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,22 +27,25 @@ export default function PlandoCouplesMatchesPage() {
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Load connected partner from localStorage on initial render
-    const storedPartner = localStorage.getItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY);
-    if (storedPartner) {
-        try {
-            setConnectedPartner(JSON.parse(storedPartner));
-        } catch (e) {
-            console.error("Error parsing connected partner from localStorage", e);
-            localStorage.removeItem(LOCAL_STORAGE_CONNECTED_PARTNER_KEY); 
-        }
+    if (userProfile?.partnerId) {
+        getUserProfile(userProfile.partnerId).then(partner => {
+            if (partner) {
+                setConnectedPartner(partner);
+            }
+        });
     }
-  }, []);
+  }, [userProfile]);
 
   const fetchMatches = useCallback(async () => {
     setIsLoading(true);
 
-    const userLikedIds = await getLikedCouplesActivityIds(MOCK_USER_PROFILE.id);
+    if (!userProfile) {
+        setMatchedActivities([]);
+        setIsLoading(false);
+        return;
+    }
+
+    const userLikedIds = await getLikedCouplesActivityIds(userProfile.id);
     setUserLikedActivitiesCount(userLikedIds.length);
 
     if (!connectedPartner) {
@@ -54,8 +58,7 @@ export default function PlandoCouplesMatchesPage() {
 
     const mutualIds = userLikedIds.filter(id => partnerLikedIds.includes(id));
 
-    // Get the full activity objects from the mock data source
-    const allPossibleActivities = MOCK_COUPLES_ACTIVITIES_BY_CITY[MOCK_USER_PROFILE.location] || MOCK_COUPLES_ACTIVITIES_BY_CITY["Default"];
+    const allPossibleActivities = MOCK_COUPLES_ACTIVITIES_BY_CITY[userProfile.location || "Default"] || MOCK_COUPLES_ACTIVITIES_BY_CITY["Default"];
     
     const mutualActivities = mutualIds.map(id => {
         const activity = allPossibleActivities.find(act => act.id === id);
@@ -71,17 +74,19 @@ export default function PlandoCouplesMatchesPage() {
     
     setMatchedActivities(mutualActivities);
     setIsLoading(false);
-  }, [connectedPartner]);
+  }, [connectedPartner, userProfile]);
 
 
   useEffect(() => {
-    fetchMatches();
-  }, [fetchMatches]);
+    if (userProfile !== undefined) {
+      fetchMatches();
+    }
+  }, [fetchMatches, userProfile]);
 
   const handleClearLikes = async () => {
-    // This now clears the likes from the backend by re-saving them as "disliked".
-    // A more robust implementation might have a "delete" action.
-    const userLikedIds = await getLikedCouplesActivityIds(MOCK_USER_PROFILE.id);
+    if (!userProfile) return;
+
+    const userLikedIds = await getLikedCouplesActivityIds(userProfile.id);
     
     if (userLikedIds.length === 0) {
         toast({ title: "No Likes to Clear", description: "You haven't liked any date ideas yet." });
@@ -90,7 +95,7 @@ export default function PlandoCouplesMatchesPage() {
 
     toast({ title: "Clearing Likes...", description: "Please wait while we update your preferences." });
     
-    const clearPromises = userLikedIds.map(id => saveCoupleVote(MOCK_USER_PROFILE.id, id, false));
+    const clearPromises = userLikedIds.map(id => saveCoupleVote(userProfile.id, id, false));
     await Promise.all(clearPromises);
     
     setMatchedActivities([]);

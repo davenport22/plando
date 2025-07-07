@@ -400,7 +400,6 @@ export async function updateUserProfile(userId: string, dataToUpdate: Partial<Us
     if (!userId) return { success: false, error: 'User ID is missing.' };
 
     try {
-        // Remove any undefined fields to avoid overwriting with nulls
         const cleanData = Object.fromEntries(Object.entries(dataToUpdate).filter(([_, v]) => v !== undefined));
 
         if (Object.keys(cleanData).length > 0) {
@@ -433,6 +432,70 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
         if (error.code === 5 || (error.message && error.message.includes("NOT_FOUND"))) return null;
         console.error(`An unexpected error occurred in findUserByEmail for "${email}":`, error);
         throw error;
+    }
+}
+
+export async function connectPartner(currentUserId: string, partnerEmail: string): Promise<{ success: boolean; error?: string; partner?: UserProfile }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+    if (!currentUserId || !partnerEmail) return { success: false, error: 'User ID and partner email are required.' };
+
+    try {
+        const partnerProfile = await findUserByEmail(partnerEmail);
+
+        if (!partnerProfile) {
+            return { success: false, error: "Could not find a user with that email address." };
+        }
+
+        if (partnerProfile.id === currentUserId) {
+            return { success: false, error: "You cannot connect with yourself." };
+        }
+        
+        const userRef = firestore.collection('users').doc(currentUserId);
+        const partnerRef = firestore.collection('users').doc(partnerProfile.id);
+
+        await userRef.update({ partnerId: partnerProfile.id });
+        await partnerRef.update({ partnerId: currentUserId });
+
+        revalidatePath('/plando-couples');
+        
+        return { success: true, partner: partnerProfile };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to connect partner: ${errorMessage}` };
+    }
+}
+
+
+export async function disconnectPartner(currentUserId: string): Promise<{ success: boolean; error?: string }> {
+     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+     if (!currentUserId) return { success: false, error: 'User ID is required.' };
+    
+    try {
+        const currentUserDoc = await firestore.collection('users').doc(currentUserId).get();
+        if (!currentUserDoc.exists) {
+            return { success: false, error: 'Current user not found.' };
+        }
+
+        const currentUserProfile = currentUserDoc.data() as UserProfile;
+        const partnerId = currentUserProfile.partnerId;
+
+        await firestore.collection('users').doc(currentUserId).update({
+            partnerId: FieldValue.delete()
+        });
+
+        if (partnerId) {
+            await firestore.collection('users').doc(partnerId).update({
+                partnerId: FieldValue.delete()
+            });
+        }
+        
+        revalidatePath('/plando-couples');
+        return { success: true };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to disconnect partner: ${errorMessage}` };
     }
 }
 
