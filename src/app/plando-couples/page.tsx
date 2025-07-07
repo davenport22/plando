@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Heart, RotateCcw, MapPin, ListChecks, Sparkles, Users, PlusCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle as MatchDialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { plandoModules } from "@/config/plandoModules";
 import Link from 'next/link';
 import { PartnerConnection } from '@/components/couples/PartnerConnection';
@@ -319,7 +319,7 @@ export default function PlandoCouplesPage() {
               <Heart className="h-12 w-12 text-primary animate-ping" style={{ animationDuration: '1.5s' }} />
               <Sparkles className="absolute h-16 w-16 text-accent/70 opacity-75 animate-spin" style={{ animationDuration: '3s' }}/>
             </div>
-            <MatchDialogTitle className="text-3xl font-headline text-primary">It's a Match!</MatchDialogTitle>
+            <DialogTitle className="text-3xl font-headline text-primary">It's a Match!</DialogTitle>
             <CardDescription className="text-lg">
               You and {connectedPartner?.name || 'your partner'} both liked <br />
               <span className="font-semibold text-foreground">{matchedAnimationActivityName}</span>!
