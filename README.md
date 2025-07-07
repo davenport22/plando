@@ -26,7 +26,9 @@ Every Firebase project is also a Google Cloud project. They share the same under
 For features like user profile picture uploads, you must enable and configure Firebase Storage.
 
 - In the Firebase Console, go to the **Storage** section in the left-hand menu.
-- Click **Get started** and follow the on-screen prompts to set up your storage bucket. You can use the default security rules for development.
+- Click **Get started** and follow the on-screen prompts to set up your storage bucket.
+- **IMPORTANT:** When prompted, select the same location for your Storage bucket that you chose for your Firestore database. A mismatch in regions can cause errors. If you're unsure, your App Hosting backend is set to `europe-west1`, which is a good choice for both services.
+- You can use the default security rules for development.
 - Once created, your bucket will have a URL like `gs://your-project-id.appspot.com`. The part `your-project-id.appspot.com` is your **Storage Bucket** name.
 
 ### 4. Update your `.env` file

@@ -196,7 +196,10 @@ export async function getTripsForUser(userId: string): Promise<{ success: boolea
         return { success: true, trips };
     } catch (error) {
         console.error("Failed to fetch trips from Firestore:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching trips.";
+        let errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching trips.";
+        if (error instanceof Error && (error.message.includes("NOT_FOUND") || error.message.includes("Could not find Collection"))) {
+            errorMessage = `Could not connect to the database. Please ensure your Firestore database is created and that its region matches your Storage bucket's region (e.g., 'europe-west1'). Details: ${errorMessage}`;
+        }
         return { success: false, error: errorMessage };
     }
 }
@@ -438,6 +441,8 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
             await firestore.collection('users').doc(userId).update(dataToUpdate);
         }
         
+        revalidatePath('/profile');
+        revalidatePath(`/users/${userId}`);
         return { success: true };
 
     } catch (error) {
@@ -445,7 +450,7 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
 
         if (errorMessage.includes("The specified bucket does not exist")) {
-            return { success: false, error: `Firebase Storage error: The bucket "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" does not exist. Please ensure Storage is enabled in your Firebase console and the bucket name in your .env file is correct.` };
+            return { success: false, error: `Firebase Storage error: The bucket "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" does not exist. Please ensure Storage is enabled in the correct region in your Firebase console and the bucket name in your .env file is correct.` };
         }
         if (errorMessage.includes("permission denied")) {
             return { success: false, error: `Firebase Storage error: Permission denied. Please check the IAM permissions for your service account ('${process.env.FIREBASE_CLIENT_EMAIL}') in Google Cloud Console.` };
