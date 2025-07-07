@@ -11,8 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { MatchedActivityCard } from '@/components/activities/MatchedActivityCard';
 import { useToast } from '@/hooks/use-toast';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
-import { getLikedCouplesActivityIds, saveCoupleVote, getUserProfile } from '@/lib/actions';
+import { getLikedCouplesActivityIds, saveCoupleVote, getUserProfile, markCoupleActivityAsCompleted } from '@/lib/actions';
 import { useAuth } from '@/context/AuthContext';
+import { MarkAsDoneDialog } from '@/components/couples/MarkAsDoneDialog';
 
 
 export default function PlandoCouplesMatchesPage() {
@@ -25,6 +26,9 @@ export default function PlandoCouplesMatchesPage() {
 
   const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
+  
+  const [activityToMark, setActivityToMark] = useState<Activity | null>(null);
+  const [isMarkAsDoneOpen, setIsMarkAsDoneOpen] = useState(false);
 
   useEffect(() => {
     if (userProfile?.partnerId) {
@@ -115,6 +119,27 @@ export default function PlandoCouplesMatchesPage() {
     setSelectedActivityForDialog(fullActivity);
     setIsActivityDetailDialogOpen(true);
   };
+  
+  const handleOpenMarkAsDone = (activity: MatchedActivity) => {
+    setActivityToMark(activity);
+    setIsMarkAsDoneOpen(true);
+  };
+  
+  const handleConfirmMarkAsDone = async (activityId: string, wouldDoAgain: boolean) => {
+    if (!userProfile || !connectedPartner) {
+        toast({ title: "Error", description: "Cannot perform action without user or partner information.", variant: "destructive" });
+        return;
+    }
+    
+    const result = await markCoupleActivityAsCompleted(userProfile.id, connectedPartner.id, activityId, wouldDoAgain);
+
+    if (result.success) {
+        toast({ title: "Activity Updated!", description: "The activity has been marked as done." });
+        setMatchedActivities(prev => prev.filter(act => act.id !== activityId));
+    } else {
+        toast({ title: "Error", description: result.error || "Could not update the activity.", variant: "destructive" });
+    }
+  };
 
 
   if (isLoading) {
@@ -200,6 +225,7 @@ export default function PlandoCouplesMatchesPage() {
                 key={activity.id} 
                 activity={activity} 
                 onCardClick={() => handleOpenActivityDetail(activity)}
+                onMarkAsDone={handleOpenMarkAsDone}
             />
           ))}
         </div>
@@ -208,6 +234,12 @@ export default function PlandoCouplesMatchesPage() {
         activity={selectedActivityForDialog}
         isOpen={isActivityDetailDialogOpen}
         onOpenChange={setIsActivityDetailDialogOpen}
+      />
+      <MarkAsDoneDialog
+        activity={activityToMark}
+        isOpen={isMarkAsDoneOpen}
+        onOpenChange={setIsMarkAsDoneOpen}
+        onConfirm={handleConfirmMarkAsDone}
       />
     </div>
   );

@@ -2,17 +2,19 @@
 "use client";
 
 import type { MatchedActivity } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, MapPinIcon, CalendarCheck2, Sparkles, Info } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Clock, MapPinIcon, CalendarCheck2, Sparkles, CheckCircle } from "lucide-react";
 import Image from "next/image";
 import { format, parseISO } from 'date-fns';
+import { Button } from '../ui/button';
 
 interface MatchedActivityCardProps {
-  activity: MatchedActivity; // partnerAlsoLiked will always be true if this card is rendered on the matches page
+  activity: MatchedActivity;
   onCardClick: (activity: MatchedActivity) => void;
+  onMarkAsDone: (activity: MatchedActivity) => void;
 }
 
-export function MatchedActivityCard({ activity, onCardClick }: MatchedActivityCardProps) {
+export function MatchedActivityCard({ activity, onCardClick, onMarkAsDone }: MatchedActivityCardProps) {
   const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 
     ? activity.imageUrls[0] 
     : "https://placehold.co/400x250.png";
@@ -26,7 +28,6 @@ export function MatchedActivityCard({ activity, onCardClick }: MatchedActivityCa
     // Keep default if parsing fails
   }
 
-  // Since this card is only for *matched* activities, we can always show a "match" indicator.
   const MatchIcon = Sparkles;
   const matchIconColor = "text-primary-foreground";
   const matchIconBg = "bg-primary/80";
@@ -34,47 +35,58 @@ export function MatchedActivityCard({ activity, onCardClick }: MatchedActivityCa
 
   return (
     <Card 
-      className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg flex flex-col h-full cursor-pointer group"
-      onClick={() => onCardClick(activity)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onCardClick(activity)}}
-      role="button"
-      tabIndex={0}
-      aria-label={`View details for matched activity: ${activity.name}`}
+      className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg flex flex-col h-full group"
     >
-      <CardHeader className="p-0 relative">
-        <Image
-          src={displayImageUrl}
-          alt={activity.name}
-          width={400}
-          height={200}
-          className="object-cover w-full h-40"
-          data-ai-hint={imageHint}
-        />
-        <div className={`absolute top-2 right-2 ${matchIconBg} ${matchIconColor} p-2 rounded-md backdrop-blur-sm`}>
-            <MatchIcon className="h-5 w-5" title="It's a match!" />
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 flex-grow">
-        <CardTitle className="text-lg font-headline mb-1 group-hover:text-primary transition-colors">{activity.name}</CardTitle>
-        {activity.description && <CardDescription className="text-xs mb-2 text-muted-foreground line-clamp-2">{activity.description.split('.')[0] + '.'}</CardDescription>}
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <div className="flex items-center">
-            <MapPinIcon className="mr-2 h-3 w-3 text-accent" />
-            <span>{activity.location}</span>
+      <div 
+        className="relative cursor-pointer flex-grow" 
+        onClick={() => onCardClick(activity)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onCardClick(activity)}}
+        role="button"
+        tabIndex={0}
+        aria-label={`View details for matched activity: ${activity.name}`}
+      >
+        <CardHeader className="p-0 relative">
+          <Image
+            src={displayImageUrl}
+            alt={activity.name}
+            width={400}
+            height={200}
+            className="object-cover w-full h-40"
+            data-ai-hint={imageHint}
+          />
+          <div className={`absolute top-2 right-2 ${matchIconBg} ${matchIconColor} p-2 rounded-md backdrop-blur-sm`}>
+              <MatchIcon className="h-5 w-5" title="It's a match!" />
           </div>
-          <div className="flex items-center">
-            <Clock className="mr-2 h-3 w-3 text-accent" />
-            <span>{activity.duration} hours</span>
+        </CardHeader>
+        <CardContent className="p-4 flex-grow">
+          <CardTitle className="text-lg font-headline mb-1 group-hover:text-primary transition-colors">{activity.name}</CardTitle>
+          {activity.description && <CardDescription className="text-xs mb-2 text-muted-foreground line-clamp-2">{activity.description.split('.')[0] + '.'}</CardDescription>}
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <div className="flex items-center">
+              <MapPinIcon className="mr-2 h-3 w-3 text-accent" />
+              <span>{activity.location}</span>
+            </div>
+            <div className="flex items-center">
+              <Clock className="mr-2 h-3 w-3 text-accent" />
+              <span>{activity.duration} hours</span>
+            </div>
+            <div className="flex items-center">
+              <CalendarCheck2 className="mr-2 h-3 w-3 text-accent" />
+              <span>You liked: {formattedMatchedDate}</span>
+            </div>
           </div>
-          <div className="flex items-center">
-            <CalendarCheck2 className="mr-2 h-3 w-3 text-accent" />
-            <span>You liked: {formattedMatchedDate}</span>
-          </div>
-        </div>
-      </CardContent>
-      <div className="p-3 border-t bg-muted/30 text-center text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-        <Info className="inline h-3 w-3 mr-1" /> Click to see details
+        </CardContent>
       </div>
+      <CardFooter className="p-3 border-t bg-muted/30">
+        <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full"
+            onClick={() => onMarkAsDone(activity)}
+        >
+            <CheckCircle className="mr-2 h-4 w-4 text-green-500" /> We did this!
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

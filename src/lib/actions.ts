@@ -517,6 +517,47 @@ export async function getLikedCouplesActivityIds(userId: string): Promise<string
     }
 }
 
+export async function markCoupleActivityAsCompleted(
+  userId: string,
+  partnerId: string,
+  activityId: string,
+  wouldDoAgain: boolean
+): Promise<{ success: boolean; error?: string }> {
+  if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+  if (!userId || !partnerId || !activityId) {
+    return { success: false, error: 'Missing required IDs to complete this action.' };
+  }
+
+  try {
+    const batch = firestore.batch();
+    
+    // If the couple wants to see this activity again in the future,
+    // we delete their 'like' votes. This makes the activity eligible
+    // to reappear in their swiping deck.
+    if (wouldDoAgain) {
+      const userVoteRef = firestore.collection('users').doc(userId).collection('couplesVotes').doc(activityId);
+      const partnerVoteRef = firestore.collection('users').doc(partnerId).collection('couplesVotes').doc(activityId);
+      batch.delete(userVoteRef);
+      batch.delete(partnerVoteRef);
+    }
+    
+    // If wouldDoAgain is false, we do nothing on the backend.
+    // The client will remove it from the matched list, but the 'like' votes
+    // remain in the database, preventing it from being shown in the swiping deck again.
+
+    await batch.commit();
+
+    // Revalidate the matches page path
+    revalidatePath('/plando-couples/matches');
+
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    console.error(`Failed to mark activity ${activityId} as done for couple ${userId}/${partnerId}:`, error);
+    return { success: false, error: `Failed to update activity status: ${errorMessage}` };
+  }
+}
+
 // --- Trip Activities Actions ---
 
 export async function getTripActivities(tripId: string): Promise<Activity[]> {
