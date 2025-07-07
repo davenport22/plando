@@ -99,8 +99,8 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
       
       const result = await updateUserProfile(formData);
 
-      if (result.success) {
-          await refreshUserProfile();
+      if (result.success && result.updatedProfile) {
+          await refreshUserProfile(result.updatedProfile); // Pass the new profile to avoid race condition
           toast({
               title: "Profile Updated",
               description: "Your changes have been saved successfully.",
@@ -112,6 +112,7 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
           description: result.error,
           variant: "destructive",
         });
+        setIsLoading(false); // Only set loading to false on error
       }
     } catch (error) {
         toast({
@@ -119,7 +120,6 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
             description: "Could not save profile. Please try again.",
             variant: "destructive",
         });
-    } finally {
         setIsLoading(false);
     }
   }

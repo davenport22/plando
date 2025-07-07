@@ -44,7 +44,7 @@ interface AuthContextType {
   registerWithEmail: (email: string, password: string, name: string) => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshUserProfile: () => Promise<void>;
+  refreshUserProfile: (prefetchedProfile?: UserProfile) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -152,7 +152,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const refreshUserProfile = async () => {
+  const refreshUserProfile = async (prefetchedProfile?: UserProfile) => {
+    if (prefetchedProfile) {
+        setUserProfile(prefetchedProfile);
+        return;
+    }
     if (!user) {
       return;
     }

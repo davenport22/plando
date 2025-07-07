@@ -392,7 +392,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
 }
 
-export async function updateUserProfile(formData: FormData): Promise<{ success: boolean; error?: string }> {
+export async function updateUserProfile(formData: FormData): Promise<{ success: boolean; error?: string; updatedProfile?: UserProfile }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend is not configured.' };
 
     const userId = formData.get('userId') as string;
@@ -441,19 +441,20 @@ export async function updateUserProfile(formData: FormData): Promise<{ success: 
             await firestore.collection('users').doc(userId).update(dataToUpdate);
         }
         
-        revalidatePath('/profile');
-        revalidatePath(`/users/${userId}`);
-        return { success: true };
+        const updatedProfileDoc = await firestore.collection('users').doc(userId).get();
+        const updatedProfile = updatedProfileDoc.data() as UserProfile;
+        
+        return { success: true, updatedProfile };
 
     } catch (error) {
         console.error(`Error updating profile for ${userId}:`, error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
 
         if (errorMessage.includes("The specified bucket does not exist")) {
-            return { success: false, error: `Firebase Storage error: The bucket "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" does not exist. Please ensure Storage is enabled in the correct region in your Firebase console and the bucket name in your .env file is correct.` };
+            return { success: false, error: `Firebase Storage error: The bucket "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" does not exist. This is often caused by a region mismatch between your Firestore database and Storage bucket. Please ensure both are in the same location (e.g., europe-west1).` };
         }
         if (errorMessage.includes("permission denied")) {
-            return { success: false, error: `Firebase Storage error: Permission denied. Please check the IAM permissions for your service account ('${process.env.FIREBASE_CLIENT_EMAIL}') in Google Cloud Console.` };
+            return { success: false, error: `Firebase Storage error: Permission denied. Please check that your service account ('${process.env.FIREBASE_CLIENT_EMAIL}') has the 'Storage Object Admin' role in Google Cloud IAM.` };
         }
         if (errorMessage.includes("JSON")) {
             return { success: false, error: "There was an issue processing the form data. Please try again." };
