@@ -24,17 +24,7 @@ export default function PlandoCouplesPage() {
   const { userProfile, loading: authLoading, refreshUserProfile } = useAuth();
   const couplesModule = plandoModules.find(m => m.id === 'couples');
   const Icon = couplesModule?.Icon || Heart;
-
-  const { 
-    activities, 
-    isLoading, 
-    locationStatusMessage, 
-    currentLocationKey, 
-    fetchActivities: fetchNewActivities,
-    setVotedActivityIds,
-    votedActivityIds
-  } = useLocalActivities('couples', userProfile);
-
+  
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [showEndOfList, setShowEndOfList] = useState(false);
 
@@ -52,6 +42,31 @@ export default function PlandoCouplesPage() {
   // Match animation state
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   const [matchedAnimationActivityName, setMatchedAnimationActivityName] = useState<string>("");
+
+  // Load partner data and then pass it to the activity hook
+  useEffect(() => {
+    if (userProfile?.partnerId) {
+        getUserProfile(userProfile.partnerId).then(partner => {
+            if (partner) {
+                setConnectedPartner(partner);
+                getLikedCouplesActivityIds(partner.id).then(setPartnerLikedActivityIds);
+            }
+        });
+    } else {
+        setConnectedPartner(null);
+        setPartnerLikedActivityIds([]);
+    }
+  }, [userProfile]);
+
+  const { 
+    activities, 
+    isLoading, 
+    locationStatusMessage, 
+    currentLocationKey, 
+    fetchActivities: fetchNewActivities,
+    setVotedActivityIds,
+    votedActivityIds
+  } = useLocalActivities('couples', userProfile, connectedPartner);
   
   // This effect will run when activities are loaded or reloaded by the hook
   useEffect(() => {
@@ -66,19 +81,6 @@ export default function PlandoCouplesPage() {
       getLikedCouplesActivityIds(userProfile.id).then(ids => {
         setLikedActivitiesCount(ids.length);
       });
-
-      // Load partner from userProfile
-      if (userProfile.partnerId) {
-        getUserProfile(userProfile.partnerId).then(partner => {
-          if (partner) {
-            setConnectedPartner(partner);
-            getLikedCouplesActivityIds(partner.id).then(setPartnerLikedActivityIds);
-          }
-        });
-      } else {
-        setConnectedPartner(null);
-        setPartnerLikedActivityIds([]);
-      }
     }
   }, [userProfile]);
 
@@ -139,6 +141,10 @@ export default function PlandoCouplesPage() {
   const handleConnectPartner = async () => {
     if (!partnerEmailInput.trim() || !userProfile) {
       toast({ title: "Error", description: "Please enter your partner's email.", variant: "destructive" });
+      return;
+    }
+    if (partnerEmailInput.trim().toLowerCase() === userProfile.email.toLowerCase()) {
+      toast({ title: "Oops!", description: "You can't connect with yourself. Please enter your partner's email.", variant: "destructive" });
       return;
     }
     setIsConnectingPartner(true);

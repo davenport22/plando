@@ -57,8 +57,12 @@ export default function PlandoCouplesMatchesPage() {
     const partnerLikedIds = await getLikedCouplesActivityIds(connectedPartner.id);
 
     const mutualIds = userLikedIds.filter(id => partnerLikedIds.includes(id));
-
-    const allPossibleActivities = MOCK_COUPLES_ACTIVITIES_BY_CITY[userProfile.location || "Default"] || MOCK_COUPLES_ACTIVITIES_BY_CITY["Default"];
+    
+    // Determine the shared, deterministic location key for finding activities
+    const primaryUser = userProfile.id < connectedPartner.id ? userProfile : connectedPartner;
+    const secondaryUser = userProfile.id < connectedPartner.id ? connectedPartner : userProfile;
+    const locationKey = primaryUser.location || secondaryUser.location || "Default";
+    const allPossibleActivities = MOCK_COUPLES_ACTIVITIES_BY_CITY[locationKey] || MOCK_COUPLES_ACTIVITIES_BY_CITY["Default"];
     
     const mutualActivities = mutualIds.map(id => {
         const activity = allPossibleActivities.find(act => act.id === id);

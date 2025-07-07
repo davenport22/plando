@@ -12,7 +12,11 @@ import { getLikedCouplesActivityIds } from '@/lib/actions';
 
 type ActivityModuleType = 'friends' | 'meet' | 'couples';
 
-export function useLocalActivities(moduleType: ActivityModuleType, userProfile: UserProfile | null) {
+export function useLocalActivities(
+    moduleType: ActivityModuleType, 
+    userProfile: UserProfile | null,
+    partnerProfile?: UserProfile | null
+) {
     const { toast } = useToast();
 
     const [activities, setActivities] = useState<Activity[]>([]);
@@ -24,10 +28,19 @@ export function useLocalActivities(moduleType: ActivityModuleType, userProfile: 
     const fetchActivities = useCallback(async () => {
         setIsLoading(true);
         
-        const determinedLocationKey = userProfile?.location || "Default";
-        const statusMsg = userProfile?.location 
-            ? `Using profile location for activities: ${determinedLocationKey}.`
-            : "No profile location set. Using default activities.";
+        let determinedLocationKey = userProfile?.location || "Default";
+        let statusMsg: string;
+
+        if (moduleType === 'couples' && userProfile && partnerProfile) {
+            const primaryUser = userProfile.id < partnerProfile.id ? userProfile : partnerProfile;
+            const secondaryUser = userProfile.id < partnerProfile.id ? partnerProfile : userProfile;
+            determinedLocationKey = primaryUser.location || secondaryUser.location || "Default";
+            statusMsg = `Viewing shared date ideas for ${determinedLocationKey}.`;
+        } else {
+             statusMsg = userProfile?.location
+                ? `Using your profile location for activities: ${determinedLocationKey}.`
+                : "No profile location set. Using default activities.";
+        }
 
         setCurrentLocationKey(determinedLocationKey);
         setLocationStatusMessage(statusMsg);
@@ -59,11 +72,13 @@ export function useLocalActivities(moduleType: ActivityModuleType, userProfile: 
 
         return activitiesToShow;
 
-    }, [moduleType, toast, userProfile]);
+    }, [moduleType, toast, userProfile, partnerProfile]);
     
     useEffect(() => {
-        fetchActivities();
-    }, [fetchActivities]);
+        if (userProfile !== undefined) { // To prevent fetching when auth is still loading
+            fetchActivities();
+        }
+    }, [fetchActivities, userProfile]);
 
     return {
         activities,
