@@ -97,9 +97,6 @@ export default function TripDetailPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [tripDuration, setTripDuration] = useState<string>("");
 
-  const [activitiesAtLastGeneration, setActivitiesAtLastGeneration] = useState<Activity[] | null>(null);
-  const [hasActivityChangesSinceLastGen, setHasActivityChangesSinceLastGen] = useState<boolean>(true);
-
   const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
@@ -146,16 +143,6 @@ export default function TripDetailPage() {
     }
   }, [trip]);
 
-  useEffect(() => {
-    if (generatedItinerary && activitiesAtLastGeneration) {
-      const currentActivityStates = userActivities.map(a => ({ id: a.id, isLiked: a.isLiked === undefined ? null : a.isLiked })).sort((a, b) => a.id.localeCompare(b.id));
-      const prevActivityStates = activitiesAtLastGeneration.map(a => ({ id: a.id, isLiked: a.isLiked === undefined ? null : a.isLiked })).sort((a, b) => a.id.localeCompare(b.id));
-      setHasActivityChangesSinceLastGen(JSON.stringify(currentActivityStates) !== JSON.stringify(prevActivityStates));
-    } else {
-      setHasActivityChangesSinceLastGen(true); 
-    }
-  }, [userActivities, generatedItinerary, activitiesAtLastGeneration]);
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -201,37 +188,18 @@ export default function TripDetailPage() {
         return;
     }
 
-    // Optimistic UI update
     const originalActivities = [...userActivities];
-    const updatedActivities = userActivities.map(act => {
-        if (act.id === activityId) {
-            const newAct = { ...act };
-            const previousVote = newAct.isLiked;
-
-            if (previousVote === undefined) { // First vote
-                liked ? newAct.likes++ : newAct.dislikes++;
-            } else if (previousVote !== liked) { // Flipped vote
-                if (liked) {
-                    newAct.likes++;
-                    newAct.dislikes--;
-                } else {
-                    newAct.likes--;
-                    newAct.dislikes++;
-                }
-            }
-            newAct.isLiked = liked;
-            return newAct;
-        }
-        return act;
-    });
-    setUserActivities(updatedActivities);
+    // Remove the voted activity from the UI immediately for a faster feel.
+    setUserActivities(prev => prev.filter(act => act.id !== activityId));
     
     // Server action
     voteOnTripActivity(tripId, activityId, user.uid, liked).then(result => {
-        if (!result.success) {
-            toast({ title: "Vote Sync Failed", description: "Your vote might not have been saved.", variant: "destructive"});
+        if (!result.success || !result.updatedActivity) {
+            toast({ title: "Vote Sync Failed", description: result.error || "Your vote might not have been saved.", variant: "destructive"});
             setUserActivities(originalActivities); // Revert on failure
         }
+        // No need to update state with result, as we've removed the card already.
+        // The list of all votes is on the "View Votes" page which will have fresh data.
     });
   };
 
@@ -250,28 +218,16 @@ export default function TripDetailPage() {
 
   const handleGenerateItinerary = async () => {
     if (!trip) return;
-    if (generatedItinerary && !hasActivityChangesSinceLastGen) {
-       toast({ title: "No Itinerary Changes", description: "No new votes or activities found since the last itinerary generation." });
-       return;
-    }
     setIsLoadingItinerary(true);
 
-    const activitiesInput: ActivityInput[] = userActivities.filter(act => act.isLiked !== undefined).map(act => ({ name: act.name, duration: act.duration, location: act.location, isLiked: !!act.isLiked }));
-    if (activitiesInput.filter(act => act.isLiked).length === 0) {
-       toast({ title: "No Liked Activities", description: "Please like some activities before generating an itinerary." });
-       setIsLoadingItinerary(false);
-       return;
-    }
-
-    const result = await suggestItineraryAction(trip.id, activitiesInput, trip.startDate, trip.endDate);
+    const result = await suggestItineraryAction(trip.id);
     if ('error' in result) {
-      toast({ title: "Error Generating Itinerary", description: result.error, variant: "destructive" });
+      toast({ title: "Could Not Generate Itinerary", description: result.error, variant: "destructive" });
     } else {
       const mappedItinerary = mapAiOutputToItinerary(result, trip.id);
       if (mappedItinerary) {
         await saveItinerary(trip.id, mappedItinerary);
         setGeneratedItinerary(mappedItinerary);
-        setActivitiesAtLastGeneration(JSON.parse(JSON.stringify(userActivities))); 
         toast({ title: "Itinerary Generated!", description: "Your personalized trip itinerary is ready." });
         setCurrentView('itinerary');
       } else {
@@ -356,10 +312,10 @@ export default function TripDetailPage() {
                     {isLoadingItinerary ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Wand2 className="mr-2 h-6 w-6" />}
                     {generatedItinerary ? 'Update Itinerary' : 'Generate Itinerary'}
                   </Button>
-                  <Button asChild variant="outline" className="w-full text-lg py-3" size="lg" disabled={votedActivitiesCount === 0}>
+                  <Button asChild variant="outline" className="w-full text-lg py-3" size="lg">
                     <Link href={`/trips/${tripId}/liked`}>
                       <Vote className="mr-2 h-6 w-6" />
-                      View Votes ({votedActivitiesCount})
+                      View Group Votes
                     </Link>
                   </Button>
                 </div>

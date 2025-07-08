@@ -20,12 +20,14 @@ import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const newTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
   destination: z.string().min(2, "Destination must be at least 2 characters.").max(100, "Destination must be at most 100 characters."),
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
+  itineraryGenerationRule: z.enum(['majority', 'all']).default('majority'),
   participantEmails: z.array(z.string().email()).optional(),
 }).refine(data => data.endDate >= data.startDate, {
   message: "End date cannot be before start date.",
@@ -55,6 +57,7 @@ export function NewTripForm() {
     defaultValues: {
       name: "",
       destination: "",
+      itineraryGenerationRule: "majority",
       participantEmails: [],
     },
   });
@@ -108,6 +111,7 @@ export function NewTripForm() {
           destination: data.destination,
           startDate: format(data.startDate, "yyyy-MM-dd"),
           endDate: format(data.endDate, "yyyy-MM-dd"),
+          itineraryGenerationRule: data.itineraryGenerationRule,
           participantEmails: data.participantEmails,
         };
 
@@ -277,6 +281,46 @@ export function NewTripForm() {
             Trip duration: {durationDisplay}
           </p>
         )}
+
+        <Separator />
+        
+        <FormField
+          control={form.control}
+          name="itineraryGenerationRule"
+          render={({ field }) => (
+            <FormItem className="space-y-3">
+              <FormLabel>Itinerary Generation Rule</FormLabel>
+              <FormDescription>
+                How many 'likes' does an activity need to be included in a generated itinerary?
+              </FormDescription>
+              <FormControl>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  className="flex flex-col space-y-1"
+                >
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="majority" />
+                    </FormControl>
+                    <FormLabel className="font-normal">
+                      Majority Rules (50% or more)
+                    </FormLabel>
+                  </FormItem>
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="all" />
+                    </FormControl>
+                    <FormLabel className="font-normal">
+                      Unanimous (100% of participants)
+                    </FormLabel>
+                  </FormItem>
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Separator />
 

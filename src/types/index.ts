@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   name: string;
@@ -14,6 +15,8 @@ export interface UserProfile extends User {
   partnerId?: string;
 }
 
+export type ItineraryGenerationRule = 'majority' | 'all';
+
 export interface Trip {
   id: string;
   name: string;
@@ -24,6 +27,7 @@ export interface Trip {
   participantIds: string[];
   participants: UserProfile[]; // Will be populated for detailed views
   imageUrl?: string; // Main trip image
+  itineraryGenerationRule?: ItineraryGenerationRule;
   latitude?: number;
   longitude?: number;
   placeId?: string;

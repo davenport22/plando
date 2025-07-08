@@ -6,7 +6,7 @@ import { generateActivityDescription, type GenerateActivityDescriptionInput, typ
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
 import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-flow';
 import { sendEmail } from '@/lib/emailService';
-import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS, type Activity, type Itinerary } from '@/types';
+import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS, type Activity, type Itinerary, ItineraryGenerationRule } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { getStorage } from 'firebase-admin/storage';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -33,23 +33,41 @@ const handleAIError = (error: unknown, defaultMessage: string): { error: string 
 
 // This function will be called from client components to generate the itinerary.
 export async function suggestItineraryAction(
-  tripId: string,
-  activities: ActivityInput[],
-  startDate: string,
-  endDate: string
+  tripId: string
 ): Promise<GenerateSuggestedItineraryOutput | { error: string }> {
   try {
-    if (!activities || activities.length === 0) {
-      return { error: "No activities provided to generate an itinerary." };
-    }
-    if (!startDate || !endDate) {
-      return { error: "Start and end dates are required."}
+    const trip = await getTrip(tripId);
+    if (!trip) {
+      return { error: "Trip not found. Cannot generate itinerary." };
     }
 
+    if (!trip.startDate || !trip.endDate) {
+      return { error: "Trip start and end dates are required to generate an itinerary." };
+    }
+
+    const allActivities = await getTripActivities(tripId, trip.ownerId); // UserID is only for `isLiked` which we don't need here.
+
+    const rule = trip.itineraryGenerationRule || 'majority';
+    const numParticipants = trip.participantIds.length;
+    const requiredVotes = rule === 'all' ? numParticipants : Math.ceil(numParticipants / 2);
+    
+    const qualifiedActivities = allActivities.filter(act => act.likes >= requiredVotes);
+    
+    if (qualifiedActivities.length === 0) {
+      return { error: `No activities met the required threshold of ${requiredVotes} 'like' vote(s). Please vote on more activities.` };
+    }
+
+    const activitiesInput: ActivityInput[] = qualifiedActivities.map(act => ({
+      name: act.name,
+      duration: act.duration,
+      location: act.location,
+      isLiked: true, // All qualified activities are treated as 'liked' for generation purposes.
+    }));
+
     const input: GenerateSuggestedItineraryInput = {
-      activities,
-      startDate,
-      endDate,
+      activities: activitiesInput,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
     };
 
     const result = await generateSuggestedItinerary(input);
@@ -98,6 +116,7 @@ const NewTripDataSchema = z.object({
     destination: z.string(),
     startDate: z.string(), // YYYY-MM-DD format
     endDate: z.string(),   // YYYY-MM-DD format
+    itineraryGenerationRule: z.enum(['majority', 'all']),
     participantEmails: z.array(z.string().email()).optional(),
 });
 
@@ -203,6 +222,7 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
             participantIds: participantIds,
             participants: participants,
             imageUrl: data.imageUrl,
+            itineraryGenerationRule: data.itineraryGenerationRule || 'majority',
             latitude: data.latitude,
             longitude: data.longitude,
             placeId: data.placeId,
@@ -793,7 +813,7 @@ export async function voteOnTripActivity(
     activityId: string, 
     userId: string, 
     vote: boolean
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; updatedActivity?: Activity }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
     
     const activityRef = firestore.collection('trips').doc(tripId).collection('activities').doc(activityId);
@@ -838,9 +858,21 @@ export async function voteOnTripActivity(
             });
         });
 
+        const updatedDoc = await activityRef.get();
+        const updatedData = updatedDoc.data()!;
+        const finalVotes = updatedData.votes || {};
+        
+        const updatedActivity: Activity = {
+            ...(updatedData as Omit<Activity, 'id'>),
+            id: updatedDoc.id,
+            likes: updatedData.likes || 0,
+            dislikes: updatedData.dislikes || 0,
+            isLiked: finalVotes[userId],
+        };
+
         revalidatePath(`/trips/${tripId}`);
         revalidatePath(`/trips/${tripId}/liked`);
-        return { success: true };
+        return { success: true, updatedActivity };
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";

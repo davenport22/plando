@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DialogClose } from "@/components/ui/dialog";
@@ -18,12 +18,14 @@ import type { Trip } from "@/types";
 import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 import { Separator } from "@/components/ui/separator";
 import { ParticipantManager } from "./ParticipantManager";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const editTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
   destination: z.string().min(2, "Destination must be at least 2 characters.").max(100, "Destination must be at most 100 characters."),
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
+  itineraryGenerationRule: z.enum(['majority', 'all']).default('majority'),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   placeId: z.string().optional(),
@@ -50,6 +52,7 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
       destination: currentTrip.destination,
       startDate: currentTrip.startDate ? parseISO(currentTrip.startDate) : new Date(),
       endDate: currentTrip.endDate ? parseISO(currentTrip.endDate) : new Date(),
+      itineraryGenerationRule: currentTrip.itineraryGenerationRule || 'majority',
       latitude: currentTrip.latitude,
       longitude: currentTrip.longitude,
       placeId: currentTrip.placeId,
@@ -89,6 +92,7 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
       destination: currentTrip.destination,
       startDate: currentTrip.startDate ? parseISO(currentTrip.startDate) : new Date(),
       endDate: currentTrip.endDate ? parseISO(currentTrip.endDate) : new Date(),
+      itineraryGenerationRule: currentTrip.itineraryGenerationRule || 'majority',
       latitude: currentTrip.latitude,
       longitude: currentTrip.longitude,
       placeId: currentTrip.placeId,
@@ -225,6 +229,44 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
                     Trip duration: {durationDisplay}
                 </p>
                 )}
+
+                <FormField
+                    control={form.control}
+                    name="itineraryGenerationRule"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                        <FormLabel>Itinerary Generation Rule</FormLabel>
+                        <FormDescription>
+                            How many 'likes' does an activity need to be included in a generated itinerary?
+                        </FormDescription>
+                        <FormControl>
+                            <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex flex-col space-y-1"
+                            >
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                <RadioGroupItem value="majority" />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                Majority Rules (50% or more)
+                                </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                <RadioGroupItem value="all" />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                Unanimous (100% of participants)
+                                </FormLabel>
+                            </FormItem>
+                            </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 
                 <DialogClose asChild>
                 <Button type="submit" disabled={isLoading}>
