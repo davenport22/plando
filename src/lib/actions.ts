@@ -98,6 +98,7 @@ const NewTripDataSchema = z.object({
     destination: z.string(),
     startDate: z.string(), // YYYY-MM-DD format
     endDate: z.string(),   // YYYY-MM-DD format
+    participantEmails: z.array(z.string().email()).optional(),
 });
 
 
@@ -108,24 +109,64 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
 
     try {
         const validatedData = NewTripDataSchema.parse(data);
+        const { participantEmails = [], ...tripDetails } = validatedData;
         
+        const ownerProfile = await getUserProfile(ownerId);
+        if (!ownerProfile) {
+            return { success: false, error: "Trip creator's profile not found." };
+        }
+
+        const participantIds = new Set<string>([ownerId]);
+        const emailsToInvite: string[] = [];
+
+        for (const email of participantEmails) {
+            if (email.toLowerCase() === ownerProfile.email.toLowerCase()) {
+                continue;
+            }
+            const userToAdd = await findUserByEmail(email);
+            if (userToAdd) {
+                participantIds.add(userToAdd.id);
+            } else {
+                emailsToInvite.push(email);
+            }
+        }
+
         let generatedImageUrl: string | null = null;
         try {
-            generatedImageUrl = await generateDestinationImage({ destination: validatedData.destination });
+            generatedImageUrl = await generateDestinationImage({ destination: tripDetails.destination });
         } catch(aiError) {
              console.warn("AI Image generation failed during trip creation, but proceeding with placeholder.", aiError);
         }
         
         const newTripData = {
-            ...validatedData,
+            ...tripDetails,
             ownerId: ownerId, 
-            participantIds: [ownerId],
+            participantIds: Array.from(participantIds),
             imageUrl: generatedImageUrl || `https://placehold.co/600x400.png`,
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
+        const tripId = docRef.id;
+
+        // Fire-and-forget invitations after trip is created
+        if (emailsToInvite.length > 0) {
+            emailsToInvite.forEach(email => {
+                generateInvitationEmail({
+                    recipientEmail: email,
+                    tripName: tripDetails.name,
+                    inviterName: ownerProfile.name,
+                    tripId: tripId,
+                }).then(emailContent => {
+                    sendEmail({ to: email, subject: emailContent.subject, html: emailContent.body });
+                }).catch(genError => {
+                    const aiError = handleAIError(genError, "Failed to generate invitation email");
+                    console.error(`Background email generation failed for ${email}: ${aiError.error}`);
+                });
+            });
+        }
+
         revalidatePath('/trips');
-        return { success: true, tripId: docRef.id };
+        return { success: true, tripId: tripId };
 
     } catch (e) {
         console.error('Error creating trip:', e);

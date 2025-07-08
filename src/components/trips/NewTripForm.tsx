@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, calculateTripDuration } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Info } from "lucide-react";
+import { CalendarIcon, Loader2, Info, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { createTrip } from "@/lib/actions";
@@ -19,12 +19,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { Separator } from "@/components/ui/separator";
 
 const newTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
   destination: z.string().min(2, "Destination must be at least 2 characters.").max(100, "Destination must be at most 100 characters."),
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
+  participantEmails: z.array(z.string().email()).optional(),
 }).refine(data => data.endDate >= data.startDate, {
   message: "End date cannot be before start date.",
   path: ["endDate"],
@@ -39,6 +41,9 @@ export function NewTripForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [durationDisplay, setDurationDisplay] = useState<string>("");
 
+  const [emails, setEmails] = useState<string[]>([]);
+  const [currentEmail, setCurrentEmail] = useState('');
+
   useEffect(() => {
     if (!user) {
       router.push('/');
@@ -50,8 +55,14 @@ export function NewTripForm() {
     defaultValues: {
       name: "",
       destination: "",
+      participantEmails: [],
     },
   });
+
+  const { setValue } = form;
+  useEffect(() => {
+      setValue('participantEmails', emails);
+  }, [emails, setValue]);
 
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
@@ -68,6 +79,21 @@ export function NewTripForm() {
     }
   }, [startDate, endDate]);
 
+  const handleAddEmail = () => {
+    const emailValidation = z.string().email().safeParse(currentEmail);
+    if (currentEmail && emailValidation.success && !emails.includes(currentEmail) && currentEmail.toLowerCase() !== user?.email?.toLowerCase()) {
+      setEmails([...emails, currentEmail]);
+      setCurrentEmail('');
+    } else if (currentEmail.toLowerCase() === user?.email?.toLowerCase()) {
+      toast({ title: "You are already on the trip!", description: "You don't need to invite yourself.", variant: "default" });
+    }
+  };
+
+  const handleRemoveEmail = (emailToRemove: string) => {
+    setEmails(emails.filter(email => email !== emailToRemove));
+  };
+
+
   async function onSubmit(data: NewTripFormValues) {
     if (!user) {
         toast({ title: "Not Authenticated", description: "You must be logged in to create a trip.", variant: "destructive"});
@@ -82,6 +108,7 @@ export function NewTripForm() {
           destination: data.destination,
           startDate: format(data.startDate, "yyyy-MM-dd"),
           endDate: format(data.endDate, "yyyy-MM-dd"),
+          participantEmails: data.participantEmails,
         };
 
         const result = await createTrip(tripData, user.uid);
@@ -250,6 +277,48 @@ export function NewTripForm() {
             Trip duration: {durationDisplay}
           </p>
         )}
+
+        <Separator />
+
+        <div>
+            <FormLabel>Invite Participants (Optional)</FormLabel>
+            <FormDescription>
+                Add people to your trip by email. Existing users will be added, new users will receive an invitation.
+            </FormDescription>
+            <div className="flex items-center gap-2 mt-4">
+                <Input
+                    type="email"
+                    placeholder="friend@example.com"
+                    value={currentEmail}
+                    onChange={(e) => setCurrentEmail(e.target.value)}
+                    onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddEmail(); }}}
+                />
+                <Button type="button" onClick={handleAddEmail}>Add</Button>
+            </div>
+            <div className="space-y-2 mt-4">
+                {emails.map((email, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 rounded-md bg-muted/50 text-sm">
+                        <span>{email}</span>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveEmail(email)}>
+                            <X className="h-4 w-4" aria-label={`Remove ${email}`} />
+                        </Button>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        <FormField
+          control={form.control}
+          name="participantEmails"
+          render={({ field }) => (
+              <FormItem className="hidden">
+                  <FormControl>
+                      <Input type="hidden" {...field} />
+                  </FormControl>
+              </FormItem>
+          )}
+        />
+        
         <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Create Trip
