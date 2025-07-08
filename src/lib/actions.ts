@@ -576,7 +576,7 @@ export async function getLikedCouplesActivityIds(userId: string): Promise<string
 
 export async function addCustomCoupleActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime' | 'dataAiHint'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'dataAiHint' | 'votes'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
@@ -588,6 +588,8 @@ export async function addCustomCoupleActivity(
       id: newActivityRef.id,
       imageUrls: [`https://placehold.co/400x250.png?text=${encodeURIComponent(activityData.name)}`],
       createdBy: userId,
+      likes: 0,
+      dislikes: 0,
     };
 
     await newActivityRef.set(newActivity);
@@ -617,7 +619,7 @@ export async function getCustomCouplesActivities(): Promise<Activity[]> {
 
 export async function addCustomFriendActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime' | 'dataAiHint'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'dataAiHint' | 'votes'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
@@ -629,6 +631,8 @@ export async function addCustomFriendActivity(
       id: newActivityRef.id,
       imageUrls: [`https://placehold.co/400x250.png?text=${encodeURIComponent(activityData.name)}`],
       createdBy: userId,
+      likes: 0,
+      dislikes: 0,
     };
 
     await newActivityRef.set(newActivity);
@@ -655,7 +659,7 @@ export async function getCustomFriendActivities(): Promise<Activity[]> {
 
 export async function addCustomMeetActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime' | 'dataAiHint'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'dataAiHint' | 'votes'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
@@ -667,6 +671,8 @@ export async function addCustomMeetActivity(
       id: newActivityRef.id,
       imageUrls: [`https://placehold.co/400x250.png?text=${encodeURIComponent(activityData.name)}`],
       createdBy: userId,
+      likes: 0,
+      dislikes: 0,
     };
 
     await newActivityRef.set(newActivity);
@@ -734,14 +740,21 @@ export async function markCoupleActivityAsCompleted(
 
 // --- Trip Activities Actions ---
 
-export async function getTripActivities(tripId: string): Promise<Activity[]> {
+export async function getTripActivities(tripId: string, userId: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
         const activitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
         const activities = activitiesSnapshot.docs.map(doc => {
             const data = doc.data();
-            // This ensures every activity has a proper ID from the database, fixing the original bug.
-            return { ...data, id: doc.id } as Activity;
+            const votes = data.votes || {};
+            
+            return { 
+                ...data, 
+                id: doc.id,
+                likes: data.likes || 0,
+                dislikes: data.dislikes || 0,
+                isLiked: votes[userId], // isLiked can be true, false, or undefined
+            } as Activity;
         });
         return activities;
     } catch (error) {
@@ -750,12 +763,23 @@ export async function getTripActivities(tripId: string): Promise<Activity[]> {
     }
 }
 
-export async function addTripActivity(tripId: string, activityData: Omit<Activity, 'id'>): Promise<{ success: boolean; activityId?: string; error?: string }> {
+export async function addTripActivity(
+  tripId: string,
+  activityData: Omit<Activity, 'id' | 'likes' | 'dislikes' | 'isLiked' | 'votes'>,
+  creatorId: string
+): Promise<{ success: boolean; activityId?: string; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
     try {
-        // Ensure the ID is not part of the data being added
         const { id, ...data } = activityData as any;
-        const docRef = await firestore.collection('trips').doc(tripId).collection('activities').add(data);
+        
+        const newActivityData = {
+            ...data,
+            likes: 1, // The creator automatically likes the activity
+            dislikes: 0,
+            votes: { [creatorId]: true }
+        };
+
+        const docRef = await firestore.collection('trips').doc(tripId).collection('activities').add(newActivityData);
         revalidatePath(`/trips/${tripId}`);
         return { success: true, activityId: docRef.id };
     } catch (error) {
@@ -763,17 +787,68 @@ export async function addTripActivity(tripId: string, activityData: Omit<Activit
     }
 }
 
-export async function updateTripActivity(tripId: string, activityId: string, data: Partial<Activity>): Promise<{ success: boolean; error?: string }> {
+
+export async function voteOnTripActivity(
+    tripId: string, 
+    activityId: string, 
+    userId: string, 
+    vote: boolean
+): Promise<{ success: boolean; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
+    
+    const activityRef = firestore.collection('trips').doc(tripId).collection('activities').doc(activityId);
+
     try {
-        await firestore.collection('trips').doc(tripId).collection('activities').doc(activityId).update(data);
+        await firestore.runTransaction(async (transaction) => {
+            const activityDoc = await transaction.get(activityRef);
+            if (!activityDoc.exists) {
+                throw new Error("Activity not found.");
+            }
+
+            const data = activityDoc.data()!;
+            const votes = data.votes || {};
+            const previousVote = votes[userId];
+
+            let likesIncrement = 0;
+            let dislikesIncrement = 0;
+
+            if (previousVote === vote) {
+                return; // No change in vote
+            }
+
+            if (previousVote === undefined) {
+                // New vote
+                if (vote) likesIncrement = 1; else dislikesIncrement = 1;
+            } else {
+                // Flipped vote
+                if (vote) { // was false, now true
+                    likesIncrement = 1;
+                    dislikesIncrement = -1;
+                } else { // was true, now false
+                    likesIncrement = -1;
+                    dislikesIncrement = 1;
+                }
+            }
+            
+            // Atomically update vote counts and the voter map
+            transaction.update(activityRef, {
+                [`votes.${userId}`]: vote,
+                likes: FieldValue.increment(likesIncrement),
+                dislikes: FieldValue.increment(dislikesIncrement)
+            });
+        });
+
         revalidatePath(`/trips/${tripId}`);
         revalidatePath(`/trips/${tripId}/liked`);
         return { success: true };
+
     } catch (error) {
-        return { success: false, error: 'Failed to update activity.' };
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        console.error(`Error casting vote for activity ${activityId}:`, errorMessage);
+        return { success: false, error: 'Failed to cast vote.' };
     }
 }
+
 
 export async function getCompletedTripsForUser(userId: string): Promise<Trip[]> {
   if (!isFirebaseInitialized) return [];

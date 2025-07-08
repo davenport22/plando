@@ -77,22 +77,22 @@ export function DraggableActivityCard({ activity, onActivityClick }: DraggableAc
             <span>{activity.location}</span>
           </div>
           {activity.description && <p className="pt-1 text-xs italic line-clamp-2">{activity.description}</p>}
-          {(activity.likes !== undefined && activity.likes > 0) || (activity.dislikes !== undefined && activity.dislikes > 0) ? (
+          {(activity.likes > 0 || activity.dislikes > 0) && (
             <div className="flex items-center pt-2 gap-4">
-              {activity.likes !== undefined && activity.likes > 0 && (
-                <div className="flex items-center text-green-600">
+              {activity.likes > 0 && (
+                <div className="flex items-center text-green-600 text-xs font-medium">
                   <ThumbsUp className="h-4 w-4 mr-1" />
                   <span>{activity.likes}</span>
                 </div>
               )}
-              {activity.dislikes !== undefined && activity.dislikes > 0 && (
-                <div className="flex items-center text-red-600">
+              {activity.dislikes > 0 && (
+                <div className="flex items-center text-red-600 text-xs font-medium">
                   <ThumbsDown className="h-4 w-4 mr-1" />
                   <span>{activity.dislikes}</span>
                 </div>
               )}
             </div>
-          ) : null}
+          )}
         </div>
       </div>
     </li>

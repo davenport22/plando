@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { Trip, Activity, Itinerary, ActivityInput } from '@/types';
+import type { Trip, Activity, Itinerary, ItineraryDay, ActivityInput } from '@/types';
 import { MOCK_DESTINATION_ACTIVITIES } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
@@ -11,7 +11,7 @@ import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { suggestItineraryAction, getTrip, updateTrip, getTripActivities, addTripActivity, updateTripActivity, getItinerary, saveItinerary } from '@/lib/actions';
+import { suggestItineraryAction, getTrip, updateTrip, getTripActivities, addTripActivity, voteOnTripActivity, getItinerary, saveItinerary } from '@/lib/actions';
 import { calculateTripDuration } from '@/lib/utils';
 import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit, Vote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +30,7 @@ import { format, parseISO } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DndContext, type DragEndEvent } from '@dnd-kit/core';
 import { DndContextProvider } from '@/components/dnd/dnd-context';
+import { useAuth } from '@/context/AuthContext';
 
 const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null => {
   if (!aiOutput || !aiOutput.itinerary) return null;
@@ -84,6 +85,7 @@ export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
   const tripId = params.tripId as string;
 
   const [currentView, setCurrentView] = useState<'itinerary' | 'activities'>('itinerary');
@@ -102,13 +104,13 @@ export default function TripDetailPage() {
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!tripId) return;
+    if (!tripId || !user) return;
 
     const fetchTripData = async () => {
       setIsLoading(true);
       const [fetchedTrip, activities, itinerary] = await Promise.all([
           getTrip(tripId),
-          getTripActivities(tripId),
+          getTripActivities(tripId, user.uid),
           getItinerary(tripId)
       ]);
       
@@ -121,9 +123,9 @@ export default function TripDetailPage() {
           const destinationActivities = MOCK_DESTINATION_ACTIVITIES[fetchedTrip.destination] || [];
           if (destinationActivities.length > 0) {
               toast({ title: "Finding Activities...", description: `Adding suggested activities for ${fetchedTrip.destination}.`});
-              const seedPromises = destinationActivities.map(act => addTripActivity(tripId, { ...act, isLiked: undefined, tripId }));
+              const seedPromises = destinationActivities.map(act => addTripActivity(tripId, act, user.uid));
               await Promise.all(seedPromises);
-              currentActivities = await getTripActivities(tripId);
+              currentActivities = await getTripActivities(tripId, user.uid);
           }
         }
         setUserActivities(currentActivities);
@@ -136,7 +138,7 @@ export default function TripDetailPage() {
     };
 
     fetchTripData();
-  }, [tripId, router, toast]);
+  }, [tripId, router, toast, user]);
 
   useEffect(() => {
     if (trip && trip.startDate && trip.endDate) {
@@ -194,21 +196,52 @@ export default function TripDetailPage() {
   };
 
   const handleVote = (activityId: string, liked: boolean) => {
+    if (!user) {
+        toast({ title: "Please log in to vote.", variant: "destructive" });
+        return;
+    }
+
+    // Optimistic UI update
     const originalActivities = [...userActivities];
-    setUserActivities(prevActivities => prevActivities.map(act => act.id === activityId ? { ...act, isLiked: liked } : act));
-    updateTripActivity(tripId, activityId, { isLiked: liked }).then(result => {
+    const updatedActivities = userActivities.map(act => {
+        if (act.id === activityId) {
+            const newAct = { ...act };
+            const previousVote = newAct.isLiked;
+
+            if (previousVote === undefined) { // First vote
+                liked ? newAct.likes++ : newAct.dislikes++;
+            } else if (previousVote !== liked) { // Flipped vote
+                if (liked) {
+                    newAct.likes++;
+                    newAct.dislikes--;
+                } else {
+                    newAct.likes--;
+                    newAct.dislikes++;
+                }
+            }
+            newAct.isLiked = liked;
+            return newAct;
+        }
+        return act;
+    });
+    setUserActivities(updatedActivities);
+    
+    // Server action
+    voteOnTripActivity(tripId, activityId, user.uid, liked).then(result => {
         if (!result.success) {
             toast({ title: "Vote Sync Failed", description: "Your vote might not have been saved.", variant: "destructive"});
-            setUserActivities(originalActivities);
+            setUserActivities(originalActivities); // Revert on failure
         }
     });
   };
 
-  const handleAddCustomActivity = async (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants'>) => {
-    const activityPayload: Omit<Activity, 'id'> = { ...newActivityData, tripId, isLiked: true, imageUrls: ["https://placehold.co/400x300.png?text=Custom+Activity"], likes: 1, dislikes: 0, participants: [], };
-    const result = await addTripActivity(tripId, activityPayload);
+  const handleAddCustomActivity = async (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'votes'>) => {
+    if (!user) return;
+    const activityPayload: Omit<Activity, 'id' | 'likes' | 'dislikes' | 'isLiked' | 'votes'> = { ...newActivityData, tripId, imageUrls: ["https://placehold.co/400x300.png?text=Custom+Activity"] };
+    const result = await addTripActivity(tripId, activityPayload, user.uid);
     if (result.success && result.activityId) {
-      setUserActivities(prevActivities => [{ ...activityPayload, id: result.activityId! }, ...prevActivities]);
+      const newActivityWithState = { ...activityPayload, id: result.activityId!, likes: 1, dislikes: 0, isLiked: true };
+      setUserActivities(prevActivities => [newActivityWithState, ...prevActivities]);
       toast({ title: "Custom activity added!", description: `"${newActivityData.name}" has been saved and liked.` });
     } else {
       toast({ title: "Error", description: result.error || "Failed to add custom activity.", variant: "destructive" });
@@ -265,7 +298,7 @@ export default function TripDetailPage() {
     setIsActivityDetailDialogOpen(true);
   };
 
-  if (isLoading || !trip) {
+  if (isLoading || !trip || authLoading) {
     return (
       <div className="container mx-auto py-10 px-4 text-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />

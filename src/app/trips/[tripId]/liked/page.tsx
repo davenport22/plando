@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Trip, Activity, ItineraryDay, Itinerary } from '@/types';
-import { getTrip, getTripActivities, getItinerary, addActivityToItineraryDay, updateTripActivity } from '@/lib/actions';
+import { getTrip, getTripActivities, getItinerary, addActivityToItineraryDay, voteOnTripActivity } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, Loader2, ThumbsUp, ThumbsDown, MapPin, Clock, Info, Vote, PlusCircle, CalendarPlus } from 'lucide-react';
@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { format, parseISO } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
 
 function VotedActivityCard({ 
   activity, 
@@ -59,6 +60,7 @@ function VotedActivityCard({
           <div className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 shadow-md backdrop-blur-sm">
             {activity.isLiked === true && <ThumbsUp className="h-5 w-5 text-green-500" title="Liked" />}
             {activity.isLiked === false && <ThumbsDown className="h-5 w-5 text-red-500" title="Disliked" />}
+            {activity.isLiked === undefined && <Vote className="h-5 w-5 text-muted-foreground" title="Not Voted" />}
           </div>
         </CardHeader>
         <CardContent className="p-4 flex-grow">
@@ -73,6 +75,14 @@ function VotedActivityCard({
               <Clock className="mr-2 h-3 w-3 text-accent" />
               <span>{activity.duration} hours</span>
             </div>
+          </div>
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t">
+              <div className="flex items-center text-green-600 font-medium text-xs">
+                <ThumbsUp className="mr-1.5 h-4 w-4"/> {activity.likes}
+              </div>
+              <div className="flex items-center text-red-600 font-medium text-xs">
+                <ThumbsDown className="mr-1.5 h-4 w-4"/> {activity.dislikes}
+              </div>
           </div>
         </CardContent>
       </div>
@@ -97,6 +107,7 @@ export default function VotedActivitiesPage() {
   const params = useParams();
   const tripId = params.tripId as string;
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [likedActivities, setLikedActivities] = useState<Activity[]>([]);
@@ -111,13 +122,13 @@ export default function VotedActivitiesPage() {
   const [itineraryActivityIds, setItineraryActivityIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!tripId) return;
+    if (!tripId || !user) return;
 
     const fetchPageData = async () => {
       setIsLoading(true);
       const [fetchedTrip, allActivities, fetchedItinerary] = await Promise.all([
         getTrip(tripId),
-        getTripActivities(tripId),
+        getTripActivities(tripId, user.uid),
         getItinerary(tripId)
       ]);
 
@@ -139,7 +150,7 @@ export default function VotedActivitiesPage() {
     };
 
     fetchPageData();
-  }, [tripId, router]);
+  }, [tripId, router, user]);
 
   const handleOpenActivityDetail = (activity: Activity) => {
     setSelectedActivityForDialog(activity);
@@ -171,7 +182,7 @@ export default function VotedActivitiesPage() {
     }
   };
 
-  if (isLoading || !trip) {
+  if (isLoading || !trip || authLoading) {
     return (
       <div className="container mx-auto py-10 px-4 text-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />

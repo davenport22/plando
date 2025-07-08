@@ -7,7 +7,7 @@ import type { GenerateActivityDescriptionOutput } from '@/ai/flows/generate-acti
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, MapPin, Clock, ThumbsUp, ThumbsDown, Info, CalendarDays, Tag, Loader2, Briefcase, DollarSign, Sunrise, Building } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Clock, ThumbsUp, ThumbsDown, Info, CalendarDays, Tag, Loader2, DollarSign, Sunrise } from "lucide-react";
 import { Badge } from '../ui/badge';
 import { enhanceActivityDescriptionAction } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -189,22 +189,22 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
                       Category: <Badge variant={categoryVariantMap[category] || 'secondary'} className="ml-2">{category}</Badge>
                   </div>
               )}
-              {(likes !== undefined && likes > 0) || (dislikes !== undefined && dislikes > 0) ? (
+              {(likes > 0 || dislikes > 0) && (
                 <div className="flex items-center pt-1 gap-6 sm:col-span-2">
-                  {likes !== undefined && likes > 0 && (
+                  {likes > 0 && (
                       <div className="flex items-center text-green-600">
                       <ThumbsUp className="mr-2 h-5 w-5" />
                       <span className="font-medium">{likes} Like{likes > 1 ? 's' : ''}</span>
                       </div>
                   )}
-                  {dislikes !== undefined && dislikes > 0 && (
+                  {dislikes > 0 && (
                       <div className="flex items-center text-red-600">
                       <ThumbsDown className="mr-2 h-5 w-5" />
                       <span className="font-medium">{dislikes} Dislike{dislikes > 1 ? 's' : ''}</span>
                       </div>
                   )}
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
