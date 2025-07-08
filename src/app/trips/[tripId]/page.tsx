@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Trip, Activity, Itinerary, ItineraryDay, ActivityInput } from '@/types';
-import { MOCK_DESTINATION_ACTIVITIES } from '@/types'; 
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
 import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
@@ -114,19 +113,7 @@ export default function TripDetailPage() {
       if (fetchedTrip) {
         setTrip(fetchedTrip);
         setGeneratedItinerary(itinerary);
-
-        let currentActivities = activities;
-        if (currentActivities.length === 0) {
-          const destinationActivities = MOCK_DESTINATION_ACTIVITIES[fetchedTrip.destination] || [];
-          if (destinationActivities.length > 0) {
-              toast({ title: "Finding Activities...", description: `Adding suggested activities for ${fetchedTrip.destination}.`});
-              const seedPromises = destinationActivities.map(act => addTripActivity(tripId, act, user.uid));
-              await Promise.all(seedPromises);
-              currentActivities = await getTripActivities(tripId, user.uid);
-          }
-        }
-        setUserActivities(currentActivities);
-
+        setUserActivities(activities);
       } else {
         toast({ title: "Trip not found", description: "The trip you are looking for does not exist.", variant: "destructive" });
         router.push('/trips');
@@ -336,8 +323,8 @@ export default function TripDetailPage() {
                 ) : (
                   <div className="text-center text-muted-foreground">
                     <Wand2 className="h-16 w-16 mx-auto mb-4 text-primary/50" />
-                    <p className="text-xl mb-2">{userActivities.length > 0 ? "All activities voted on!" : "No activities suggested yet."}</p>
-                    <p>{userActivities.length > 0 ? "Ready to generate your itinerary?" : "Try adding a custom activity!"}</p>
+                    <p className="text-xl mb-2">{userActivities.length > 0 ? "All activities voted on!" : "No activities found for this trip."}</p>
+                    <p>{userActivities.length > 0 ? "Ready to generate your itinerary?" : "Try adding a custom activity to get started!"}</p>
                   </div>
                 )}
               </CardContent>

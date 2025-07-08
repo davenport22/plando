@@ -6,7 +6,7 @@ import { generateActivityDescription, type GenerateActivityDescriptionInput, typ
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
 import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-flow';
 import { sendEmail } from '@/lib/emailService';
-import { type ActivityInput, type Trip, type UserProfile, MOCK_USER_PROFILE, ALL_MOCK_USERS, type Activity, type Itinerary, ItineraryGenerationRule } from '@/types';
+import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { getStorage } from 'firebase-admin/storage';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -45,16 +45,32 @@ export async function suggestItineraryAction(
       return { error: "Trip start and end dates are required to generate an itinerary." };
     }
 
-    const allActivities = await getTripActivities(tripId, trip.ownerId); // UserID is only for `isLiked` which we don't need here.
+    const allActivities = await getTripActivities(tripId, trip.ownerId);
 
     const rule = trip.itineraryGenerationRule || 'majority';
     const numParticipants = trip.participantIds.length;
-    const requiredVotes = rule === 'all' ? numParticipants : Math.ceil(numParticipants / 2);
     
-    const qualifiedActivities = allActivities.filter(act => act.likes >= requiredVotes);
+    const qualifiedActivities = allActivities.filter(act => {
+        if (act.likes === 0) return false;
+
+        if (rule === 'all') {
+            // All participants must have liked it. This implies everyone voted.
+            return act.likes === numParticipants;
+        } else { // majority
+            // Of those who voted, a simple majority must have liked it.
+            const hasMajorityOfVotes = act.likes > act.dislikes;
+            
+            // A quorum is required: at least half the participants must have voted.
+            const totalVotes = act.likes + act.dislikes;
+            const quorum = Math.ceil(numParticipants / 2);
+            const hasQuorum = totalVotes >= quorum;
+
+            return hasMajorityOfVotes && hasQuorum;
+        }
+    });
     
     if (qualifiedActivities.length === 0) {
-      return { error: `No activities met the required threshold of ${requiredVotes} 'like' vote(s). Please vote on more activities.` };
+      return { error: `No activities met the required threshold based on your trip's itinerary rule. Please vote on more activities.` };
     }
 
     const activitiesInput: ActivityInput[] = qualifiedActivities.map(act => ({

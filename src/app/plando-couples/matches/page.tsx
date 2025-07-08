@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Activity, MatchedActivity, UserProfile } from '@/types'; 
-import { MOCK_COUPLES_ACTIVITIES_BY_CITY } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, UserCheck, Sparkles, Users, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -11,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { MatchedActivityCard } from '@/components/activities/MatchedActivityCard';
 import { useToast } from '@/hooks/use-toast';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
-import { getLikedCouplesActivityIds, saveCoupleVote, getUserProfile, markCoupleActivityAsCompleted } from '@/lib/actions';
+import { getLikedCouplesActivityIds, saveCoupleVote, getUserProfile, markCoupleActivityAsCompleted, getCustomCouplesActivities } from '@/lib/actions';
 import { useAuth } from '@/context/AuthContext';
 import { MarkAsDoneDialog } from '@/components/couples/MarkAsDoneDialog';
 
@@ -58,16 +57,13 @@ export default function PlandoCouplesMatchesPage() {
         return;
     }
 
-    const partnerLikedIds = await getLikedCouplesActivityIds(connectedPartner.id);
-
+    const [partnerLikedIds, allPossibleActivities] = await Promise.all([
+      getLikedCouplesActivityIds(connectedPartner.id),
+      getCustomCouplesActivities()
+    ]);
+    
     const mutualIds = userLikedIds.filter(id => partnerLikedIds.includes(id));
-    
-    // Determine the shared, deterministic location key for finding activities
-    const primaryUser = userProfile.id < connectedPartner.id ? userProfile : connectedPartner;
-    const secondaryUser = userProfile.id < connectedPartner.id ? connectedPartner : userProfile;
-    const locationKey = primaryUser.location || secondaryUser.location || "Default";
-    const allPossibleActivities = MOCK_COUPLES_ACTIVITIES_BY_CITY[locationKey] || MOCK_COUPLES_ACTIVITIES_BY_CITY["Default"];
-    
+        
     const mutualActivities = mutualIds.map(id => {
         const activity = allPossibleActivities.find(act => act.id === id);
         if (activity) {

@@ -237,7 +237,7 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
                         <FormItem className="space-y-3">
                         <FormLabel>Itinerary Generation Rule</FormLabel>
                         <FormDescription>
-                            How many 'likes' does an activity need to be included in a generated itinerary?
+                            Choose how activities qualify for the automatic itinerary.
                         </FormDescription>
                         <FormControl>
                             <RadioGroup
@@ -250,7 +250,7 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
                                 <RadioGroupItem value="majority" />
                                 </FormControl>
                                 <FormLabel className="font-normal">
-                                Majority Rules (50% or more)
+                                 Majority of Voters Like It (with >50% participation)
                                 </FormLabel>
                             </FormItem>
                             <FormItem className="flex items-center space-x-3 space-y-0">
@@ -258,7 +258,7 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
                                 <RadioGroupItem value="all" />
                                 </FormControl>
                                 <FormLabel className="font-normal">
-                                Unanimous (100% of participants)
+                                 All Participants Like It
                                 </FormLabel>
                             </FormItem>
                             </RadioGroup>

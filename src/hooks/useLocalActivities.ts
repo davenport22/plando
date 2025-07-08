@@ -3,10 +3,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Activity, UserProfile } from '@/types';
-import { 
-    MOCK_ACTIVITIES_BY_CITY, 
-    MOCK_COUPLES_ACTIVITIES_BY_CITY 
-} from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { getLikedCouplesActivityIds, getCustomCouplesActivities, getCustomFriendActivities, getCustomMeetActivities } from '@/lib/actions';
 
@@ -44,10 +40,6 @@ export function useLocalActivities(
 
         setCurrentLocationKey(determinedLocationKey);
         setLocationStatusMessage(statusMsg);
-
-        const activitySource = moduleType === 'couples' 
-            ? MOCK_COUPLES_ACTIVITIES_BY_CITY 
-            : MOCK_ACTIVITIES_BY_CITY;
         
         let previouslyVotedIds = new Set<string>();
         if (moduleType === 'couples' && userProfile) {
@@ -64,17 +56,12 @@ export function useLocalActivities(
             case 'friends':
                 customActivities = await getCustomFriendActivities();
                 break;
-            case 'meet':
+_            case 'meet':
                 customActivities = await getCustomMeetActivities();
                 break;
         }
 
-        const allSourceActivities = [...(activitySource[determinedLocationKey] || activitySource["Default"]), ...customActivities];
-        
-        // Deduplicate in case an ID exists in both mock and custom
-        const uniqueActivities = Array.from(new Map(allSourceActivities.map(item => [item.id, item])).values());
-
-        const activitiesToShow = uniqueActivities
+        const activitiesToShow = customActivities
                                   .filter(act => !previouslyVotedIds.has(act.id))
                                   .map(act => ({ ...act, isLiked: undefined }));
 
