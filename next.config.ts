@@ -36,6 +36,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb',
     },
     // Other experimental features can go here if needed
+    serverComponentsExternalPackages: ['handlebars'],
   },
 };
 
