@@ -22,6 +22,7 @@ const ExtractActivityDetailsFromUrlOutputSchema = z.object({
   name: z.string().describe('The name of the activity or place.'),
   description: z
     .string()
+    .max(200, "Description must be 200 characters or less.")
     .optional()
     .describe('A concise, engaging summary of the activity (max 200 characters).'),
   location: z
@@ -56,7 +57,9 @@ const prompt = ai.definePrompt({
   name: 'extractActivityDetailsFromUrlPrompt',
   input: {schema: ExtractActivityDetailsFromUrlInputSchema},
   output: {schema: ExtractActivityDetailsFromUrlOutputSchema},
-  prompt: `You are an expert travel assistant that extracts information from web pages. Your primary task is to analyze the content at the following URL: {{url}}
+  prompt: `You are a meticulous information extraction assistant. Your task is to analyze the content *exclusively* from the webpage at the provided URL and extract specific details.
+
+**CRITICAL RULE: You MUST use ONLY the information present on the webpage at {{url}}. Do NOT use your general knowledge, perform any other web searches, or infer information not explicitly stated on the page.** If a piece of information is not available on the page, you must omit it from the output.
 
 **IMPORTANT INSTRUCTIONS FOR GOOGLE MAPS LINKS:**
 If the URL is from Google Maps (e.g., includes maps.google.com, www.google.com/maps, or maps.app.goo.gl), your task is to identify the SINGLE, PRIMARY point of interest featured on the page.
@@ -70,15 +73,15 @@ You MUST COMPLETELY IGNORE all other information on the page, including but not 
 
 Focus ONLY on the place named in the main title of the map view. For example, if the URL is for "Buckingham Palace", extract details for Buckingham Palace and nothing else.
 
-For any given URL, extract the following details and return them in the specified JSON format:
-1.  **name**: The official name of the place, event, or activity.
-2.  **description**: A brief, engaging summary. Keep it under 200 characters.
-3.  **location**: The general location, like the city or neighborhood.
-4.  **duration**: If mentioned, the typical or suggested duration in hours. If not mentioned, estimate it based on the activity type (e.g., a museum visit is typically 2-3 hours).
-5.  **address**: The specific street address, if you can find one.
-6.  **dataAiHint**: Provide two concise keywords that best represent this activity for an image search (e.g., "eiffel tower" or "cooking class").
+From the content of the given URL, extract the following details and return them in the specified JSON format:
+1.  **name**: The official name of the place, event, or activity, as stated on the page.
+2.  **description**: A brief, engaging summary copied or summarized *directly from the page content*. Keep it under 200 characters. If no suitable summary exists, omit it.
+3.  **location**: The general location, like the city or neighborhood, as found on the page.
+4.  **duration**: If mentioned *on the webpage*, the typical or suggested duration in hours. If it is not mentioned, omit this field entirely.
+5.  **address**: The specific street address, if you can find one on the page.
+6.  **dataAiHint**: Provide two concise keywords that best represent this activity based on the page content for an image search (e.g., "eiffel tower" or "cooking class").
 
-Be precise and concise in your extraction.
+Your extraction must be precise, concise, and based *only* on the provided webpage.
 `,
 });
 
