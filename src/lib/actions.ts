@@ -707,11 +707,30 @@ export async function addCustomCoupleActivity(
   }
 }
 
-export async function getCustomCouplesActivities(): Promise<Activity[]> {
+export async function getCustomCouplesActivities(location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const snapshot = await firestore.collection('couplesActivities').get();
-        return snapshot.docs.map(doc => doc.data() as Activity);
+        const activityPromises = [];
+        const defaultLocation = "Vienna, Austria";
+        
+        // Promise for user's location activities
+        if (location && location !== "Default" && location !== defaultLocation) {
+             activityPromises.push(firestore.collection('couplesActivities').where('location', '==', location).get());
+        }
+
+        // Promise for default activities
+        activityPromises.push(firestore.collection('couplesActivities').where('location', '==', defaultLocation).get());
+
+        const snapshots = await Promise.all(activityPromises);
+        
+        const allActivities = snapshots.flatMap(snapshot => 
+            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity))
+        );
+
+        // Deduplicate activities based on ID
+        const uniqueActivities = Array.from(new Map(allActivities.map(item => [item.id, item])).values());
+        
+        return uniqueActivities;
     } catch (error) {
         console.error('Error fetching custom couples activities:', error);
         return [];
@@ -762,11 +781,15 @@ export async function addCustomFriendActivity(
   }
 }
 
-export async function getCustomFriendActivities(): Promise<Activity[]> {
+export async function getCustomFriendActivities(location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const snapshot = await firestore.collection('friendsActivities').get();
-        return snapshot.docs.map(doc => doc.data() as Activity);
+        const query = location && location !== "Default" 
+            ? firestore.collection('friendsActivities').where('location', '==', location)
+            : firestore.collection('friendsActivities');
+        
+        const snapshot = await query.get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
     } catch (error) {
         console.error('Error fetching custom friend activities:', error);
         return [];
@@ -817,11 +840,15 @@ export async function addCustomMeetActivity(
   }
 }
 
-export async function getCustomMeetActivities(): Promise<Activity[]> {
+export async function getCustomMeetActivities(location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const snapshot = await firestore.collection('meetActivities').get();
-        return snapshot.docs.map(doc => doc.data() as Activity);
+        const query = location && location !== "Default" 
+            ? firestore.collection('meetActivities').where('location', '==', location)
+            : firestore.collection('meetActivities');
+            
+        const snapshot = await query.get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
     } catch (error) {
         console.error('Error fetching custom meet activities:', error);
         return [];

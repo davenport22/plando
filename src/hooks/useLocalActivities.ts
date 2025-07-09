@@ -51,13 +51,13 @@ export function useLocalActivities(
         let customActivities: Activity[] = [];
         switch(moduleType) {
             case 'couples':
-                customActivities = await getCustomCouplesActivities();
+                customActivities = await getCustomCouplesActivities(determinedLocationKey);
                 break;
             case 'friends':
-                customActivities = await getCustomFriendActivities();
+                customActivities = await getCustomFriendActivities(determinedLocationKey);
                 break;
             case 'meet':
-                customActivities = await getCustomMeetActivities();
+                customActivities = await getCustomMeetActivities(determinedLocationKey);
                 break;
         }
 

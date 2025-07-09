@@ -137,7 +137,7 @@ export default function PlandoCouplesPage() {
   };
 
   const handleResetDeck = () => {
-    toast({ title: "Resetting Date Ideas Deck...", description: `Reloading couples activities for ${currentLocationKey}.`});
+    toast({ title: "Checking for new date ideas...", description: `Reloading activities for ${currentLocationKey}.`});
     fetchNewActivities();
   };
 
@@ -293,11 +293,11 @@ export default function PlandoCouplesPage() {
                     : `No local date ideas found for ${currentLocationKey === "Default" ? "your area" : currentLocationKey}.` 
                   }
                 </p>
-                <p className="text-sm">Check back later or reset the deck for more date suggestions.</p>
+                <p className="text-sm">Check back later or add your own custom activities!</p>
                 <div className="flex flex-col sm:flex-row gap-2 justify-center">
                   <Button onClick={handleResetDeck} variant="outline" disabled={isLoading}>
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
-                    Reset Deck
+                    Check for new date ideas
                   </Button>
                 </div>
               </div>
