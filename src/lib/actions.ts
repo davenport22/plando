@@ -10,7 +10,6 @@ import { generateActivityImage } from '@/ai/flows/generate-activity-image-flow';
 import { sendEmail } from '@/lib/emailService';
 import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule, type CompletedActivity } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
-import { getStorage } from 'firebase-admin/storage';
 import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
