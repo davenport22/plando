@@ -5,6 +5,7 @@ import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type 
 import { generateActivityDescription, type GenerateActivityDescriptionInput, type GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
 import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-flow';
+import { extractActivityDetailsFromUrl, type ExtractActivityDetailsFromUrlOutput } from '@/ai/flows/extract-activity-details-from-url-flow';
 import { sendEmail } from '@/lib/emailService';
 import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
@@ -123,6 +124,25 @@ export async function enhanceActivityDescriptionAction(
 
   } catch (error) {
     return handleAIError(error, "Failed to generate enhanced description");
+  }
+}
+
+export async function extractActivityDetailsFromUrlAction(
+  url: string
+): Promise<ExtractActivityDetailsFromUrlOutput | { error: string }> {
+  const urlValidation = z.string().url().safeParse(url);
+  if (!urlValidation.success) {
+    return { error: 'Invalid URL provided.' };
+  }
+
+  try {
+    const result = await extractActivityDetailsFromUrl({ url });
+    if (!result || !result.name) {
+      return { error: 'Failed to extract details: AI returned invalid data.' };
+    }
+    return result;
+  } catch (error) {
+    return handleAIError(error, 'Failed to extract details from URL');
   }
 }
 
@@ -612,7 +632,7 @@ export async function getLikedCouplesActivityIds(userId: string): Promise<string
 
 export async function addCustomCoupleActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'dataAiHint' | 'votes'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
@@ -655,7 +675,7 @@ export async function getCustomCouplesActivities(): Promise<Activity[]> {
 
 export async function addCustomFriendActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'dataAiHint' | 'votes'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
@@ -695,7 +715,7 @@ export async function getCustomFriendActivities(): Promise<Activity[]> {
 
 export async function addCustomMeetActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'dataAiHint' | 'votes'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };

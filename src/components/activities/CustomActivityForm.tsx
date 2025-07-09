@@ -5,13 +5,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Activity } from "@/types";
-import { Loader2, PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { DialogClose } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { extractActivityDetailsFromUrlAction } from "@/lib/actions";
 
 const customActivitySchema = z.object({
   name: z.string().min(2, "Activity name is too short.").max(100, "Activity name is too long."),
@@ -23,11 +25,16 @@ const customActivitySchema = z.object({
 type CustomActivityFormValues = z.infer<typeof customActivitySchema>;
 
 interface CustomActivityFormProps {
-  onAddActivity: (activity: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'dataAiHint' | 'votes'>) => Promise<void>;
+  onAddActivity: (activity: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes'>) => Promise<void>;
 }
 
 export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
+  const [url, setUrl] = useState('');
+  const [dataAiHint, setDataAiHint] = useState<string | undefined>(undefined);
+  const { toast } = useToast();
+
   const form = useForm<CustomActivityFormValues>({
     resolver: zodResolver(customActivitySchema),
     defaultValues: {
@@ -38,17 +45,75 @@ export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
     },
   });
 
+  async function handleFetchDetails() {
+    if (!url) {
+      toast({ title: 'Please enter a URL.', variant: 'destructive' });
+      return;
+    }
+    setIsFetchingDetails(true);
+    const result = await extractActivityDetailsFromUrlAction(url);
+    setIsFetchingDetails(false);
+
+    if ('error' in result) {
+      toast({ title: 'Failed to Fetch Details', description: result.error, variant: 'destructive' });
+    } else {
+      form.setValue('name', result.name || '');
+      form.setValue('description', result.description || '');
+      form.setValue('location', result.location || '');
+      if (result.duration) {
+        form.setValue('duration', result.duration);
+      }
+      if (result.address && result.location && !result.location.includes(result.address)) {
+         form.setValue('location', `${result.address}, ${result.location}`);
+      }
+      setDataAiHint(result.dataAiHint);
+      toast({ title: 'Details Fetched!', description: 'Activity details have been populated. Please review and save.' });
+    }
+  }
+
   async function onSubmit(data: CustomActivityFormValues) {
     setIsLoading(true);
-    await onAddActivity(data);
+    const payload = { ...data, dataAiHint };
+    await onAddActivity(payload);
     form.reset();
+    setDataAiHint(undefined);
+    setUrl('');
     setIsLoading(false);
     // Dialog will be closed by DialogClose wrapper on the button
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+       <div className="space-y-4 pt-2">
+        <div className="space-y-2">
+          <FormLabel htmlFor="activity-url">Import from URL (Optional)</FormLabel>
+          <div className="flex items-center gap-2">
+            <Input
+              id="activity-url"
+              placeholder="e.g., Google Maps link, website..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              disabled={isFetchingDetails}
+            />
+            <Button type="button" onClick={handleFetchDetails} disabled={!url || isFetchingDetails} variant="outline" size="icon">
+              {isFetchingDetails ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+              <span className="sr-only">Fetch Details with AI</span>
+            </Button>
+          </div>
+          <FormDescription>
+            Paste a link and let AI fill in the details for you.
+          </FormDescription>
+        </div>
+        <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or Enter Manually</span>
+            </div>
+        </div>
+      </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="name"
