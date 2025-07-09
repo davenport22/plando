@@ -648,6 +648,16 @@ export async function getLikedCouplesActivityIds(userId: string): Promise<string
     }
 }
 
+export async function getVotedOnCouplesActivityIds(userId: string): Promise<string[]> {
+    try {
+        const snapshot = await firestore.collection('users').doc(userId).collection('couplesVotes').get();
+        return snapshot.docs.map(doc => doc.id);
+    } catch (error) {
+        console.error(`Error fetching voted-on couples activity IDs for user ${userId}:`, error);
+        return [];
+    }
+}
+
 export async function addCustomCoupleActivity(
   userId: string,
   activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants'>

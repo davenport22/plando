@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Activity, UserProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getLikedCouplesActivityIds, getCustomCouplesActivities, getCustomFriendActivities, getCustomMeetActivities } from '@/lib/actions';
+import { getVotedOnCouplesActivityIds, getCustomCouplesActivities, getCustomFriendActivities, getCustomMeetActivities } from '@/lib/actions';
 
 type ActivityModuleType = 'friends' | 'meet' | 'couples';
 
@@ -43,7 +43,7 @@ export function useLocalActivities(
         
         let previouslyVotedIds = new Set<string>();
         if (moduleType === 'couples' && userProfile) {
-            const ids = await getLikedCouplesActivityIds(userProfile.id);
+            const ids = await getVotedOnCouplesActivityIds(userProfile.id);
             previouslyVotedIds = new Set(ids);
             setVotedActivityIds(previouslyVotedIds);
         }
