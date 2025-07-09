@@ -47,7 +47,8 @@ const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null
           description: act.description || '',
           likes: act.likes !== undefined ? act.likes : 0,
           dislikes: act.dislikes !== undefined ? act.dislikes : 0,
-          imageUrls: [`https://placehold.co/400x300.png?text=${encodeURIComponent(act.name || 'Activity')}`],
+          imageUrls: [`https://placehold.co/400x300.png`],
+          dataAiHint: `${act.name || ''} ${act.location || ''}`.trim(),
       })),
     })),
   };
@@ -169,34 +170,31 @@ export default function TripDetailPage() {
     });
   };
 
-  const handleVote = (activityId: string, liked: boolean) => {
+  const handleVote = async (activityId: string, liked: boolean) => {
     if (!user) {
         toast({ title: "Please log in to vote.", variant: "destructive" });
         return;
     }
 
     const originalActivities = [...userActivities];
-    // Remove the voted activity from the UI immediately for a faster feel.
     setUserActivities(prev => prev.filter(act => act.id !== activityId));
     
-    // Server action
-    voteOnTripActivity(tripId, activityId, user.uid, liked).then(result => {
-        if (!result.success || !result.updatedActivity) {
-            toast({ title: "Vote Sync Failed", description: result.error || "Your vote might not have been saved.", variant: "destructive"});
-            setUserActivities(originalActivities); // Revert on failure
-        }
-        // No need to update state with result, as we've removed the card already.
-        // The list of all votes is on the "View Votes" page which will have fresh data.
-    });
-  };
+    const result = await voteOnTripActivity(tripId, activityId, user.uid, liked);
 
-  const handleAddCustomActivity = async (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'votes'>) => {
+    if (result.success && result.updatedActivity) {
+        // Optional: you could update the full activity list with the returned activity, 
+        // but for now, just removing it is fine.
+    } else {
+        toast({ title: "Vote Sync Failed", description: result.error || "Your vote might not have been saved.", variant: "destructive"});
+        setUserActivities(originalActivities); // Revert on failure
+    }
+};
+
+  const handleAddCustomActivity = async (newActivityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'votes' | 'category' | 'startTime' | 'participants'>) => {
     if (!user) return;
-    const activityPayload: Omit<Activity, 'id' | 'likes' | 'dislikes' | 'isLiked' | 'votes'> = { ...newActivityData, tripId, imageUrls: ["https://placehold.co/400x300.png?text=Custom+Activity"] };
-    const result = await addTripActivity(tripId, activityPayload, user.uid);
-    if (result.success && result.activityId) {
-      const newActivityWithState = { ...activityPayload, id: result.activityId!, likes: 1, dislikes: 0, isLiked: true };
-      setUserActivities(prevActivities => [newActivityWithState, ...prevActivities]);
+    const result = await addTripActivity(tripId, newActivityData, user.uid);
+    if (result.success && result.newActivity) {
+      setUserActivities(prevActivities => [result.newActivity!, ...prevActivities]);
       toast({ title: "Custom activity added!", description: `"${newActivityData.name}" has been saved and liked.` });
     } else {
       toast({ title: "Error", description: result.error || "Failed to add custom activity.", variant: "destructive" });
@@ -351,7 +349,7 @@ export default function TripDetailPage() {
                   {trip && <EditTripForm currentTrip={trip} onSubmit={handleUpdateTripDetails} />}
                 </DialogContent>
               </Dialog>
-              {currentView === 'activities' && (
+              
                 <Dialog>
                   <DialogTrigger asChild><Button variant="outline" className="w-full py-3 text-md"><PlusCircle className="mr-2 h-5 w-5" />Add Custom Activity</Button></DialogTrigger>
                   <DialogContent className="sm:max-w-[480px]">
@@ -362,7 +360,7 @@ export default function TripDetailPage() {
                     <CustomActivityForm onAddActivity={handleAddCustomActivity} />
                   </DialogContent>
                 </Dialog>
-              )}
+              
             </CardContent>
           </Card>
         </div>

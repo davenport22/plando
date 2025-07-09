@@ -258,7 +258,7 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
                                 <RadioGroupItem value="all" />
                                 </FormControl>
                                 <FormLabel className="font-normal">
-                                 All Participants Like It
+                                 All Participants Must Like It
                                 </FormLabel>
                             </FormItem>
                             </RadioGroup>

@@ -56,7 +56,7 @@ export function useLocalActivities(
             case 'friends':
                 customActivities = await getCustomFriendActivities();
                 break;
-_            case 'meet':
+            case 'meet':
                 customActivities = await getCustomMeetActivities();
                 break;
         }

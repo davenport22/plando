@@ -6,6 +6,7 @@ import { generateActivityDescription, type GenerateActivityDescriptionInput, typ
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
 import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-flow';
 import { extractActivityDetailsFromUrl, type ExtractActivityDetailsFromUrlOutput } from '@/ai/flows/extract-activity-details-from-url-flow';
+import { generateActivityImage } from '@/ai/flows/generate-activity-image-flow';
 import { sendEmail } from '@/lib/emailService';
 import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
@@ -71,7 +72,7 @@ export async function suggestItineraryAction(
     });
     
     if (qualifiedActivities.length === 0) {
-      return { error: `No activities met the required threshold based on your trip's itinerary rule. Please vote on more activities.` };
+      return { error: `No activities met the required threshold based on your trip's itinerary rule ("${rule}"). Please have more participants vote on activities.` };
     }
 
     const activitiesInput: ActivityInput[] = qualifiedActivities.map(act => ({
@@ -441,13 +442,29 @@ export async function getOrCreateUserProfile(user: {
     const doc = await userRef.get();
 
     if (doc.exists) {
-      return { profile: doc.data() as UserProfile, isNewUser: false };
+      const existingProfile = doc.data() as UserProfile;
+      // If user logs in with Google after email, update their name and avatar if they are generic
+      const updates: Partial<UserProfile> = {};
+      if (user.name && existingProfile.name === 'New User') {
+          updates.name = user.name;
+      }
+      if (user.photoURL && existingProfile.avatarUrl?.includes('avatar.vercel.sh')) {
+          updates.avatarUrl = user.photoURL;
+      }
+
+      if (Object.keys(updates).length > 0) {
+          await userRef.update(updates);
+          const updatedProfile = { ...existingProfile, ...updates };
+          return { profile: updatedProfile, isNewUser: false };
+      }
+
+      return { profile: existingProfile, isNewUser: false };
     } else {
       const newUserProfile: UserProfile = {
         id: user.uid,
         email: user.email || '',
         name: user.name || 'New User',
-        avatarUrl: user.photoURL || `https://avatar.vercel.sh/${user.email}.png`,
+        avatarUrl: user.photoURL || `https://avatar.vercel.sh/${user.email || user.uid}.png`,
         bio: '',
         location: '',
         memberSince: format(new Date(), 'MMMM yyyy'),
@@ -560,7 +577,8 @@ export async function connectPartner(currentUserId: string, partnerEmail: string
         }
 
         if (partnerProfile.partnerId) {
-            return { success: false, error: `This user is already connected with another partner.` };
+            const theirPartner = await getUserProfile(partnerProfile.partnerId);
+            return { success: false, error: `${partnerProfile.name} is already connected with ${theirPartner?.name || 'someone'}.` };
         }
         
         const userRef = firestore.collection('users').doc(currentUserId);
@@ -632,17 +650,32 @@ export async function getLikedCouplesActivityIds(userId: string): Promise<string
 
 export async function addCustomCoupleActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
 
   try {
     const newActivityRef = firestore.collection('couplesActivities').doc();
+    
+    let imageUrl = `https://placehold.co/400x250.png`; // Fallback
+    try {
+        const generatedImage = await generateActivityImage({
+            activityName: activityData.name,
+            location: activityData.location,
+            dataAiHint: activityData.dataAiHint,
+        });
+        if (generatedImage) {
+            imageUrl = generatedImage;
+        }
+    } catch (aiError) {
+        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to placeholder.`, aiError);
+    }
+
     const newActivity: Activity = {
       ...activityData,
       id: newActivityRef.id,
-      imageUrls: [`https://placehold.co/400x250.png?text=${encodeURIComponent(activityData.name)}`],
+      imageUrls: [imageUrl],
       createdBy: userId,
       likes: 0,
       dislikes: 0,
@@ -675,17 +708,32 @@ export async function getCustomCouplesActivities(): Promise<Activity[]> {
 
 export async function addCustomFriendActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
 
   try {
     const newActivityRef = firestore.collection('friendsActivities').doc();
+
+    let imageUrl = `https://placehold.co/400x250.png`; // Fallback
+    try {
+        const generatedImage = await generateActivityImage({
+            activityName: activityData.name,
+            location: activityData.location,
+            dataAiHint: activityData.dataAiHint,
+        });
+        if (generatedImage) {
+            imageUrl = generatedImage;
+        }
+    } catch (aiError) {
+        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to placeholder.`, aiError);
+    }
+
     const newActivity: Activity = {
       ...activityData,
       id: newActivityRef.id,
-      imageUrls: [`https://placehold.co/400x250.png?text=${encodeURIComponent(activityData.name)}`],
+      imageUrls: [imageUrl],
       createdBy: userId,
       likes: 0,
       dislikes: 0,
@@ -715,17 +763,32 @@ export async function getCustomFriendActivities(): Promise<Activity[]> {
 
 export async function addCustomMeetActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
 
   try {
     const newActivityRef = firestore.collection('meetActivities').doc();
+    
+    let imageUrl = `https://placehold.co/400x250.png`; // Fallback
+    try {
+        const generatedImage = await generateActivityImage({
+            activityName: activityData.name,
+            location: activityData.location,
+            dataAiHint: activityData.dataAiHint,
+        });
+        if (generatedImage) {
+            imageUrl = generatedImage;
+        }
+    } catch (aiError) {
+        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to placeholder.`, aiError);
+    }
+
     const newActivity: Activity = {
       ...activityData,
       id: newActivityRef.id,
-      imageUrls: [`https://placehold.co/400x250.png?text=${encodeURIComponent(activityData.name)}`],
+      imageUrls: [imageUrl],
       createdBy: userId,
       likes: 0,
       dislikes: 0,
@@ -821,23 +884,43 @@ export async function getTripActivities(tripId: string, userId: string): Promise
 
 export async function addTripActivity(
   tripId: string,
-  activityData: Omit<Activity, 'id' | 'likes' | 'dislikes' | 'isLiked' | 'votes'>,
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'votes' | 'category' | 'startTime' | 'participants'>,
   creatorId: string
-): Promise<{ success: boolean; activityId?: string; error?: string }> {
+): Promise<{ success: boolean; newActivity?: Activity; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
     try {
         const { id, ...data } = activityData as any;
         
-        const newActivityData = {
-            ...data,
+        let imageUrl = `https://placehold.co/400x300.png`; // Fallback
+        try {
+            const generatedImage = await generateActivityImage({
+                activityName: data.name,
+                location: data.location,
+                dataAiHint: data.dataAiHint,
+            });
+            if (generatedImage) {
+                imageUrl = generatedImage;
+            }
+        } catch(aiError) {
+             console.warn(`AI image generation failed for activity "${data.name}", falling back to placeholder.`, aiError);
+        }
+
+        const docRef = firestore.collection('trips').doc(tripId).collection('activities').doc();
+
+        const newActivityPayload: Activity = {
+            ...(data as Omit<Activity, 'id'>),
+            id: docRef.id,
+            imageUrls: [imageUrl],
             likes: 1, // The creator automatically likes the activity
             dislikes: 0,
+            isLiked: true, // For the creator's view
             votes: { [creatorId]: true }
         };
 
-        const docRef = await firestore.collection('trips').doc(tripId).collection('activities').add(newActivityData);
+        await docRef.set(newActivityPayload);
+        
         revalidatePath(`/trips/${tripId}`);
-        return { success: true, activityId: docRef.id };
+        return { success: true, newActivity: newActivityPayload };
     } catch (error) {
         return { success: false, error: 'Failed to add activity.' };
     }

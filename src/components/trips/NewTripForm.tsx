@@ -129,6 +129,7 @@ export function NewTripForm() {
             description: result.error,
             variant: "destructive",
           });
+          setIsLoading(false);
         }
     } catch (error) {
         toast({
@@ -136,7 +137,6 @@ export function NewTripForm() {
             description: "Could not create trip. Please try again.",
             variant: "destructive",
         });
-    } finally {
         setIsLoading(false);
     }
   }
@@ -312,7 +312,7 @@ export function NewTripForm() {
                       <RadioGroupItem value="all" />
                     </FormControl>
                     <FormLabel className="font-normal">
-                      All Participants Like It
+                      All Participants Must Like It
                     </FormLabel>
                   </FormItem>
                 </RadioGroup>
@@ -364,7 +364,7 @@ export function NewTripForm() {
         />
         
         <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
           Create Trip
         </Button>
       </form>
