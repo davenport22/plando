@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for extracting activity details from a URL.
@@ -53,7 +52,7 @@ const PageContentInputSchema = z.object({
 });
 
 /**
- * Fetches the content of a given URL and then passes it to an AI flow
+ * Fetches the content of a given URL, cleans it, and then passes it to an AI flow
  * to extract structured data about an activity.
  * @param input An object containing the URL to fetch.
  * @returns A promise that resolves to the extracted activity details.
@@ -74,10 +73,27 @@ export async function extractActivityDetailsFromUrl(
     }
 
     const pageContent = await response.text();
-    // Now call the underlying flow with the fetched content.
-    return await extractActivityDetailsFromUrlFlow({ pageContent });
+    
+    // To speed up processing and improve reliability, we pre-process the HTML.
+    // We remove large, irrelevant sections like script, style, and SVG tags.
+    // This reduces the amount of data sent to the AI, making it faster and less likely to hit limits.
+    const scriptRegex = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
+    const styleRegex = /<style\b[^<]*((?:<\/style>)<[^<]*)*<\/style>/gi;
+    const svgRegex = /<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi;
+
+    const cleanedContent = pageContent
+      .replace(scriptRegex, '')
+      .replace(styleRegex, '')
+      .replace(svgRegex, '')
+      .replace(/\s{2,}/g, ' '); // Condense whitespace
+
+    // Now call the underlying flow with the cleaned content.
+    return await extractActivityDetailsFromUrlFlow({ pageContent: cleanedContent });
   } catch (error) {
     console.error("Error in extractActivityDetailsFromUrl:", error);
+    if (error instanceof Error && error.message.includes("503")) {
+        throw new Error("The AI service is currently busy. Please try again in a few moments.");
+    }
     throw new Error(error instanceof Error ? error.message : "An unknown error occurred during URL fetch or processing.");
   }
 }
