@@ -19,6 +19,9 @@ import { format, parseISO } from 'date-fns';
 const handleAIError = (error: unknown, defaultMessage: string): { error: string } => {
     console.error(defaultMessage, error);
     if (error instanceof Error) {
+        if (error.message.includes("503") || error.message.includes("overloaded")) {
+            return { error: "The AI service is currently busy or unavailable. Please try again in a few moments." };
+        }
         if (error.message.includes("API key not valid")) {
             return { error: 'The provided GOOGLE_API_KEY is not valid. Please generate a new key from Google AI Studio and add it to your .env file.' };
         }
