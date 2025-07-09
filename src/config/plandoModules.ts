@@ -34,6 +34,7 @@ export interface PlandoModuleConfig {
   light?: PlandoThemeColors; // Optional: only for modules with distinct themes
   dark?: PlandoThemeColors; // Optional: only for modules with distinct themes
   isGlobal?: boolean; // Indicates if it's a global page like Profile/Settings
+  disabled?: boolean;
 }
 
 const defaultTravelThemeLight: PlandoThemeColors = { 
@@ -99,6 +100,7 @@ export const plandoModules: PlandoModuleConfig[] = [
     path: '/plando-friends',
     Icon: Users,
     themeClass: 'theme-plando-friends',
+    disabled: true,
     light: {
       background: "140 65% 96%", 
       foreground: "140 35% 25%", 
@@ -149,6 +151,7 @@ export const plandoModules: PlandoModuleConfig[] = [
     path: '/plando-meet',
     Icon: Sparkles,
     themeClass: 'theme-plando-meet',
+    disabled: true,
     light: {
       background: "35 100% 96%", 
       foreground: "30 50% 30%",  

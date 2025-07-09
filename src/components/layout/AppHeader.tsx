@@ -1,3 +1,4 @@
+
 "use client";
 
 import Logo from '@/components/common/Logo';
@@ -17,6 +18,7 @@ import { usePathname } from 'next/navigation';
 import { plandoModules, getModuleByPath } from '@/config/plandoModules';
 import { useEffect, useState } from 'react';
 import type { PlandoModuleConfig } from '@/config/plandoModules';
+import { Badge } from "@/components/ui/badge";
 
 const AppHeader = () => {
   const pathname = usePathname();
@@ -61,17 +63,32 @@ const AppHeader = () => {
                   <span className="sr-only">Open Plando Apps</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuContent align="start" className="w-64">
                 <DropdownMenuLabel>Plando Suite</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {plandoModules.filter(m => !m.isGlobal).map((module) => (
-                  <DropdownMenuItem key={module.id} asChild data-active={module.id === currentModule.id}>
-                    <Link href={module.path} className="flex items-center">
-                      <module.Icon className="mr-2 h-4 w-4" />
-                      <span>{module.name}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
+                {plandoModules.filter(m => !m.isGlobal).map((module) => {
+                    if (module.disabled) {
+                        return (
+                            <DropdownMenuItem key={module.id} disabled>
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center">
+                                        <module.Icon className="mr-2 h-4 w-4" />
+                                        <span>{module.name}</span>
+                                    </div>
+                                    <Badge variant="secondary" className="font-normal">Soon</Badge>
+                                </div>
+                            </DropdownMenuItem>
+                        );
+                    }
+                    return (
+                        <DropdownMenuItem key={module.id} asChild data-active={module.id === currentModule.id}>
+                            <Link href={module.path} className="flex items-center">
+                                <module.Icon className="mr-2 h-4 w-4" />
+                                <span>{module.name}</span>
+                            </Link>
+                        </DropdownMenuItem>
+                    );
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
