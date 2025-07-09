@@ -8,7 +8,7 @@ import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-fl
 import { extractActivityDetailsFromUrl, type ExtractActivityDetailsFromUrlOutput } from '@/ai/flows/extract-activity-details-from-url-flow';
 import { generateActivityImage } from '@/ai/flows/generate-activity-image-flow';
 import { sendEmail } from '@/lib/emailService';
-import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule } from '@/types';
+import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule, type CompletedActivity } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { getStorage } from 'firebase-admin/storage';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -832,28 +832,39 @@ export async function getCustomMeetActivities(): Promise<Activity[]> {
 export async function markCoupleActivityAsCompleted(
   userId: string,
   partnerId: string,
-  activityId: string,
+  activity: Activity,
   wouldDoAgain: boolean
 ): Promise<{ success: boolean; error?: string }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-  if (!userId || !partnerId || !activityId) {
-    return { success: false, error: 'Missing required IDs to complete this action.' };
+  if (!userId || !partnerId || !activity || !activity.id) {
+    return { success: false, error: 'Missing required IDs or activity data to complete this action.' };
   }
 
   try {
     const batch = firestore.batch();
     
+    const completedActivityData: CompletedActivity = {
+        ...activity,
+        completedDate: new Date().toISOString()
+    };
+    
+    const userCompletedRef = firestore.collection('users').doc(userId).collection('completedCouplesActivities').doc(activity.id);
+    const partnerCompletedRef = firestore.collection('users').doc(partnerId).collection('completedCouplesActivities').doc(activity.id);
+
+    batch.set(userCompletedRef, completedActivityData);
+    batch.set(partnerCompletedRef, completedActivityData);
+    
     // If the couple wants to see this activity again in the future,
     // we delete their 'like' votes. This makes the activity eligible
     // to reappear in their swiping deck.
     if (wouldDoAgain) {
-      const userVoteRef = firestore.collection('users').doc(userId).collection('couplesVotes').doc(activityId);
-      const partnerVoteRef = firestore.collection('users').doc(partnerId).collection('couplesVotes').doc(activityId);
+      const userVoteRef = firestore.collection('users').doc(userId).collection('couplesVotes').doc(activity.id);
+      const partnerVoteRef = firestore.collection('users').doc(partnerId).collection('couplesVotes').doc(activity.id);
       batch.delete(userVoteRef);
       batch.delete(partnerVoteRef);
     }
     
-    // If wouldDoAgain is false, we do nothing on the backend.
+    // If wouldDoAgain is false, we do nothing with the votes.
     // The client will remove it from the matched list, but the 'like' votes
     // remain in the database, preventing it from being shown in the swiping deck again.
 
@@ -865,9 +876,20 @@ export async function markCoupleActivityAsCompleted(
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    console.error(`Failed to mark activity ${activityId} as done for couple ${userId}/${partnerId}:`, error);
+    console.error(`Failed to mark activity ${activity.id} as done for couple ${userId}/${partnerId}:`, error);
     return { success: false, error: `Failed to update activity status: ${errorMessage}` };
   }
+}
+
+export async function getCompletedCouplesActivities(userId: string): Promise<CompletedActivity[]> {
+    if (!isFirebaseInitialized || !userId) return [];
+    try {
+        const snapshot = await firestore.collection('users').doc(userId).collection('completedCouplesActivities').orderBy('completedDate', 'desc').get();
+        return snapshot.docs.map(doc => doc.data() as CompletedActivity);
+    } catch (error) {
+        console.error(`Error fetching completed couples activities for user ${userId}:`, error);
+        return [];
+    }
 }
 
 // --- Trip Activities Actions ---

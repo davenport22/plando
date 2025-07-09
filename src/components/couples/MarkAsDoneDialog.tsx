@@ -16,14 +16,14 @@ interface MarkAsDoneDialogProps {
   activity: Activity | null;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onConfirm: (activityId: string, wouldDoAgain: boolean) => void;
+  onConfirm: (activity: Activity, wouldDoAgain: boolean) => void;
 }
 
 export function MarkAsDoneDialog({ activity, isOpen, onOpenChange, onConfirm }: MarkAsDoneDialogProps) {
   if (!activity) return null;
 
   const handleConfirm = (wouldDoAgain: boolean) => {
-    onConfirm(activity.id, wouldDoAgain);
+    onConfirm(activity, wouldDoAgain);
     onOpenChange(false);
   };
 
@@ -33,7 +33,7 @@ export function MarkAsDoneDialog({ activity, isOpen, onOpenChange, onConfirm }: 
         <AlertDialogHeader>
           <AlertDialogTitle>Did you enjoy "{activity.name}"?</AlertDialogTitle>
           <AlertDialogDescription>
-            Marking this as done will remove it from your matched list. Would you like to see this date idea again in the future?
+            Marking this as done will move it to your history. Would you like to see this date idea again in the future?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2">

@@ -2,23 +2,24 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Activity, MatchedActivity, UserProfile } from '@/types'; 
+import type { Activity, MatchedActivity, UserProfile, CompletedActivity } from '@/types'; 
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, UserCheck, Sparkles, Users, Loader2 } from 'lucide-react';
+import { ArrowLeft, UserCheck, Sparkles, Users, Loader2, History } from 'lucide-react';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MatchedActivityCard } from '@/components/activities/MatchedActivityCard';
 import { useToast } from '@/hooks/use-toast';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
-import { getLikedCouplesActivityIds, saveCoupleVote, getUserProfile, markCoupleActivityAsCompleted, getCustomCouplesActivities } from '@/lib/actions';
+import { getLikedCouplesActivityIds, getUserProfile, markCoupleActivityAsCompleted, getCustomCouplesActivities, getCompletedCouplesActivities } from '@/lib/actions';
 import { useAuth } from '@/context/AuthContext';
 import { MarkAsDoneDialog } from '@/components/couples/MarkAsDoneDialog';
+import { CompletedActivityCard } from '@/components/couples/CompletedActivityCard';
 
 
 export default function PlandoCouplesMatchesPage() {
   const { userProfile } = useAuth();
   const [matchedActivities, setMatchedActivities] = useState<MatchedActivity[]>([]);
-  const [userLikedActivitiesCount, setUserLikedActivitiesCount] = useState(0);
+  const [completedActivities, setCompletedActivities] = useState<CompletedActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [connectedPartner, setConnectedPartner] = useState<UserProfile | null>(null);
@@ -44,12 +45,13 @@ export default function PlandoCouplesMatchesPage() {
 
     if (!userProfile) {
         setMatchedActivities([]);
+        setCompletedActivities([]);
         setIsLoading(false);
         return;
     }
 
-    const userLikedIds = await getLikedCouplesActivityIds(userProfile.id);
-    setUserLikedActivitiesCount(userLikedIds.length);
+    const completed = await getCompletedCouplesActivities(userProfile.id);
+    setCompletedActivities(completed);
 
     if (!connectedPartner) {
         setMatchedActivities([]);
@@ -57,7 +59,8 @@ export default function PlandoCouplesMatchesPage() {
         return;
     }
 
-    const [partnerLikedIds, allPossibleActivities] = await Promise.all([
+    const [userLikedIds, partnerLikedIds, allPossibleActivities] = await Promise.all([
+      getLikedCouplesActivityIds(userProfile.id),
       getLikedCouplesActivityIds(connectedPartner.id),
       getCustomCouplesActivities()
     ]);
@@ -87,32 +90,8 @@ export default function PlandoCouplesMatchesPage() {
     }
   }, [fetchMatches, userProfile]);
 
-  const handleClearLikes = async () => {
-    if (!userProfile) return;
-
-    const userLikedIds = await getLikedCouplesActivityIds(userProfile.id);
-    
-    if (userLikedIds.length === 0) {
-        toast({ title: "No Likes to Clear", description: "You haven't liked any date ideas yet." });
-        return;
-    }
-
-    toast({ title: "Clearing Likes...", description: "Please wait while we update your preferences." });
-    
-    const clearPromises = userLikedIds.map(id => saveCoupleVote(userProfile.id, id, false));
-    await Promise.all(clearPromises);
-    
-    setMatchedActivities([]);
-    setUserLikedActivitiesCount(0);
-    toast({ title: "Cleared!", description: "Your liked date ideas have been cleared. Any mutual matches are also removed." });
-  };
-
-  const handleOpenActivityDetail = (activity: MatchedActivity) => {
-    const fullActivity: Activity = {
-        ...activity, 
-        isLiked: true, // Since it's a matched activity, the current user liked it.
-    };
-    setSelectedActivityForDialog(fullActivity);
+  const handleOpenActivityDetail = (activity: Activity) => {
+    setSelectedActivityForDialog(activity);
     setIsActivityDetailDialogOpen(true);
   };
   
@@ -121,17 +100,18 @@ export default function PlandoCouplesMatchesPage() {
     setIsMarkAsDoneOpen(true);
   };
   
-  const handleConfirmMarkAsDone = async (activityId: string, wouldDoAgain: boolean) => {
+  const handleConfirmMarkAsDone = async (activity: Activity, wouldDoAgain: boolean) => {
     if (!userProfile || !connectedPartner) {
         toast({ title: "Error", description: "Cannot perform action without user or partner information.", variant: "destructive" });
         return;
     }
     
-    const result = await markCoupleActivityAsCompleted(userProfile.id, connectedPartner.id, activityId, wouldDoAgain);
+    const result = await markCoupleActivityAsCompleted(userProfile.id, connectedPartner.id, activity, wouldDoAgain);
 
     if (result.success) {
-        toast({ title: "Activity Updated!", description: "The activity has been marked as done." });
-        setMatchedActivities(prev => prev.filter(act => act.id !== activityId));
+        toast({ title: "Activity Updated!", description: "The activity has been added to your history." });
+        // Refetch all data to update both lists
+        fetchMatches();
     } else {
         toast({ title: "Error", description: result.error || "Could not update the activity.", variant: "destructive" });
     }
@@ -143,7 +123,7 @@ export default function PlandoCouplesMatchesPage() {
       <div className="container mx-auto py-12 px-4 text-center">
         <div className="flex flex-col items-center justify-center">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Finding mutual date ideas...</p>
+          <p className="mt-4 text-muted-foreground">Finding your date ideas...</p>
         </div>
       </div>
     );
@@ -157,10 +137,10 @@ export default function PlandoCouplesMatchesPage() {
         icon: UserCheck
       };
     }
-    if (matchedActivities.length === 0) {
+    if (matchedActivities.length === 0 && completedActivities.length === 0) {
       return {
         title: "No Mutual Date Ideas Yet!",
-        description: `It looks like you and ${connectedPartner.name} haven't mutually liked any activities yet. Keep swiping, or ensure your partner has also liked some of the same ideas!`,
+        description: `It looks like you and ${connectedPartner.name} haven't mutually liked any activities. Keep swiping!`,
         icon: Users
       };
     }
@@ -178,20 +158,18 @@ export default function PlandoCouplesMatchesPage() {
             Back to Swiping
           </Button>
         </Link>
-        <div>
-            <h1 className="text-3xl font-headline text-primary text-center">
-              Our Matched Date Ideas
+        <div className="text-center">
+            <h1 className="text-3xl font-headline text-primary">
+              Our Date Ideas
             </h1>
             {connectedPartner && (
                 <p className="text-sm text-muted-foreground text-center mt-1">
                     <UserCheck className="inline h-4 w-4 mr-1 text-green-500" />
-                    Viewing matches with {connectedPartner.name}.
+                    Viewing matches & history with {connectedPartner.name}.
                 </p>
             )}
         </div>
-        <Button variant="ghost" onClick={handleClearLikes} disabled={userLikedActivitiesCount === 0}>
-          Clear My Likes
-        </Button>
+        <div className="w-[170px]" /> {/* Spacer to balance the back button */}
       </div>
 
       {emptyState ? (
@@ -215,15 +193,43 @@ export default function PlandoCouplesMatchesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {matchedActivities.map((activity) => (
-            <MatchedActivityCard 
-                key={activity.id} 
-                activity={activity} 
-                onCardClick={() => handleOpenActivityDetail(activity)}
-                onMarkAsDone={handleOpenMarkAsDone}
-            />
-          ))}
+        <div className="space-y-12">
+          {matchedActivities.length > 0 && (
+            <section>
+              <div className="flex items-center gap-3 mb-4">
+                  <Sparkles className="h-7 w-7 text-primary" />
+                  <h2 className="text-2xl font-headline text-foreground">Matched Date Ideas ({matchedActivities.length})</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {matchedActivities.map((activity) => (
+                  <MatchedActivityCard 
+                      key={activity.id} 
+                      activity={activity} 
+                      onCardClick={() => handleOpenActivityDetail(activity)}
+                      onMarkAsDone={handleOpenMarkAsDone}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {completedActivities.length > 0 && (
+            <section>
+              <div className="flex items-center gap-3 mb-4">
+                  <History className="h-7 w-7 text-green-600" />
+                  <h2 className="text-2xl font-headline text-foreground">Cool Stuff We Did ({completedActivities.length})</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {completedActivities.map((activity) => (
+                  <CompletedActivityCard 
+                    key={activity.id} 
+                    activity={activity} 
+                    onCardClick={() => handleOpenActivityDetail(activity)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
        <ActivityDetailDialog 

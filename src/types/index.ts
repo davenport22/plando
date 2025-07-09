@@ -80,6 +80,10 @@ export interface MatchedActivity extends Activity {
   partnerAlsoLiked: boolean; 
 }
 
+export interface CompletedActivity extends Activity {
+  completedDate: string; // ISO string
+}
+
 
 declare module 'react' {
   interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
