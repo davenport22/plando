@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutGrid, Grid } from 'lucide-react'; 
+import { LayoutGrid, CheckSquare } from 'lucide-react'; 
 import { usePathname } from 'next/navigation';
 import { plandoModules, getModuleByPath } from '@/config/plandoModules';
 import { useEffect, useState } from 'react';
@@ -38,7 +38,7 @@ const AppHeader = () => {
   // On authentication pages, show a generic "Plando" logo that links to the root.
   if (isAuthPage) {
     displayModuleName = 'Plando';
-    displayModuleIcon = Grid; // Using Grid as a neutral "suite" icon
+    displayModuleIcon = CheckSquare; // Using CheckSquare as a neutral "suite" icon
     displayBasePath = '/';
   } else if (currentModule.isGlobal) {
      // For /users/[userId], the base path is /users, but clicking logo should ideally go to a sensible default or stay.
@@ -58,7 +58,7 @@ const AppHeader = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
-                  <Grid className="h-5 w-5" />
+                  <CheckSquare className="h-5 w-5" />
                   <span className="sr-only">Open Plando Apps</span>
                 </Button>
               </DropdownMenuTrigger>
