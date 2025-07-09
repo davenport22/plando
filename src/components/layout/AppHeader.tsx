@@ -1,4 +1,3 @@
-
 "use client";
 
 import Logo from '@/components/common/Logo';
@@ -13,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutGrid, CheckSquare } from 'lucide-react'; 
+import { LayoutGrid, ChevronsUpDown, CheckSquare } from 'lucide-react'; 
 import { usePathname } from 'next/navigation';
 import { plandoModules, getModuleByPath } from '@/config/plandoModules';
 import { useEffect, useState } from 'react';
@@ -58,7 +57,7 @@ const AppHeader = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
-                  <CheckSquare className="h-5 w-5" />
+                  <ChevronsUpDown className="h-5 w-5" />
                   <span className="sr-only">Open Plando Apps</span>
                 </Button>
               </DropdownMenuTrigger>
