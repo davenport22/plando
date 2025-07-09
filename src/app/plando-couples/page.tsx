@@ -218,8 +218,8 @@ export default function PlandoCouplesPage() {
           <CardTitle className="text-3xl font-headline text-primary">{couplesModule?.name || "Plando Couples"}</CardTitle>
           <CardDescription className="text-md text-muted-foreground">
             {connectedPartner 
-              ? `Finding romantic activities for you and ${connectedPartner.name}!` 
-              : "Discover and swipe on romantic activities. Connect with your partner to share ideas!"}
+              ? `Finding date ideas for you and ${connectedPartner.name}!` 
+              : "Discover and swipe on date ideas. Connect with your partner to share ideas!"}
           </CardDescription>
         </CardHeader>
 
@@ -293,7 +293,7 @@ export default function PlandoCouplesPage() {
                     : `No local date ideas found for ${currentLocationKey === "Default" ? "your area" : currentLocationKey}.` 
                   }
                 </p>
-                <p className="text-sm">Check back later or reset the deck for more romantic suggestions.</p>
+                <p className="text-sm">Check back later or reset the deck for more date suggestions.</p>
                 <div className="flex flex-col sm:flex-row gap-2 justify-center">
                   <Button onClick={handleResetDeck} variant="outline" disabled={isLoading}>
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}

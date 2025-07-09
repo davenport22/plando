@@ -11,7 +11,7 @@ export default function ModulesPage() {
         case 'travel': return 'Collaboratively plan group trips with AI-powered suggestions.';
         case 'friends': return 'Discover and share fun activities to do with your friends.';
         case 'meet': return 'Find interesting things to do and meet new people around you.';
-        case 'couples': return 'Discover and swipe on romantic date ideas with your partner.';
+        case 'couples': return 'Discover and swipe on date ideas with your partner.';
         default: return 'An exciting Plando module.';
     }
   }
