@@ -37,8 +37,8 @@ const ExtractActivityDetailsFromUrlOutputSchema = z.object({
     .describe('The specific street address, if available from the webpage.'),
   dataAiHint: z
     .string()
-    .optional()
     .max(50)
+    .optional()
     .describe('Two keywords for a search on Unsplash for a representative image. E.g., "museum art" or "eiffel tower".'),
 });
 
