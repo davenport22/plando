@@ -1,5 +1,5 @@
 
-import { PlaneTakeoff, Users, Sparkles, Heart, Settings, User as UserIcon, type LucideIcon } from 'lucide-react';
+import { PlaneTakeoff, Users, Sparkles, Heart, Settings, User as UserIcon, type LucideIcon, Grid } from 'lucide-react';
 
 export interface PlandoThemeColors {
   background: string;
@@ -280,6 +280,18 @@ export const plandoModules: PlandoModuleConfig[] = [
 
 export const getModuleByPath = (pathname: string): PlandoModuleConfig => {
   const defaultModule = plandoModules.find(m => m.id === 'travel')!;
+
+  if (pathname === '/modules') {
+    return {
+        id: 'home',
+        name: 'Plando',
+        displayName: 'Plando',
+        path: '/modules',
+        Icon: Grid,
+        isGlobal: true,
+        themeClass: 'theme-plando-travel',
+    };
+  }
 
   // Exact matches first
   const exactMatch = plandoModules.find(module => module.path === pathname && module.path !== '/');

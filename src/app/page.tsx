@@ -87,7 +87,7 @@ export default function LoginPage() {
   // STATE 3: Redirecting
   // If the user is logged in and there's no error, render the Redirecting component.
   if (user && userProfile && !profileError) {
-    const destination = isNewUser ? '/profile/edit' : '/trips';
+    const destination = isNewUser ? '/profile/edit' : '/modules';
     return <Redirecting to={destination} />;
   }
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from 'react';
@@ -8,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 export default function LoginPageRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace('/trips');
+    router.replace('/modules');
   }, [router]);
 
   return (

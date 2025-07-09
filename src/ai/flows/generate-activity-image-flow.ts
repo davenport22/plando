@@ -11,6 +11,9 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import sharp from 'sharp';
+import { getStorage } from 'firebase-admin/storage';
+import { randomUUID } from 'crypto';
+import { isFirebaseInitialized } from '@/lib/firebase';
 
 const GenerateActivityImageInputSchema = z.object({
   activityName: z.string().describe('The name of the travel activity (e.g., "Eiffel Tower Visit", "Cooking Class").'),
@@ -21,8 +24,8 @@ export type GenerateActivityImageInput = z.infer<
   typeof GenerateActivityImageInputSchema
 >;
 
-// The output is just a string containing the data URI of the generated image.
-const GenerateActivityImageOutputSchema = z.string().describe('The data URI of the generated image.');
+// The output is a string containing the public URL of the generated image.
+const GenerateActivityImageOutputSchema = z.string().url().describe('The public URL of the generated image.');
 export type GenerateActivityImageOutput = z.infer<
   typeof GenerateActivityImageOutputSchema
 >;
@@ -40,7 +43,10 @@ const generateActivityImageFlow = ai.defineFlow(
     outputSchema: GenerateActivityImageOutputSchema,
   },
   async ({ activityName, location, dataAiHint }) => {
-    // Prefer dataAiHint if available as it's more specific for image searching
+     if (!isFirebaseInitialized) {
+        throw new Error('Firebase Storage is not initialized. Cannot upload image.');
+    }
+
     const promptQuery = dataAiHint || `${activityName} in ${location}`;
     
     const {media} = await ai.generate({
@@ -55,20 +61,28 @@ const generateActivityImageFlow = ai.defineFlow(
       throw new Error('Image generation failed to return a media object.');
     }
 
-    // Deconstruct the data URI
     const parts = media.url.split(',');
     const base64Data = parts[1];
     const imageBuffer = Buffer.from(base64Data, 'base64');
 
-    // Resize and compress the image using sharp
     const compressedImageBuffer = await sharp(imageBuffer)
-      .resize({ width: 400 }) // Resize to a max width of 400px for card view
-      .jpeg({ quality: 75 }) // Convert to JPEG with 75% quality
+      .resize({ width: 400 }) 
+      .jpeg({ quality: 75 })
       .toBuffer();
 
-    const compressedBase64 = compressedImageBuffer.toString('base64');
-    const compressedDataUri = `data:image/jpeg;base64,${compressedBase64}`;
+    const bucket = getStorage().bucket();
+    const fileName = `images/activities/${randomUUID()}.jpeg`;
+    const file = bucket.file(fileName);
 
-    return compressedDataUri;
+    await file.save(compressedImageBuffer, {
+        metadata: {
+            contentType: 'image/jpeg',
+            cacheControl: 'public, max-age=31536000', // Cache for 1 year
+        },
+    });
+
+    await file.makePublic();
+
+    return file.publicUrl();
   }
 );

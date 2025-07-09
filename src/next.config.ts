@@ -23,11 +23,20 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   experimental: {
-    // Other experimental features can go here if needed
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
   },
+  serverExternalPackages: ['handlebars'],
 };
 
 export default nextConfig;
