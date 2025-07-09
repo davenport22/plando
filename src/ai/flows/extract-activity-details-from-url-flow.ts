@@ -57,31 +57,26 @@ const prompt = ai.definePrompt({
   name: 'extractActivityDetailsFromUrlPrompt',
   input: {schema: ExtractActivityDetailsFromUrlInputSchema},
   output: {schema: ExtractActivityDetailsFromUrlOutputSchema},
-  prompt: `You are a meticulous information extraction assistant. Your task is to analyze the content *exclusively* from the webpage at the provided URL and extract specific details.
+  prompt: `You are an information extraction engine. Your only task is to analyze the content of the webpage at the provided URL and fill in a JSON object.
 
-**CRITICAL RULE: You MUST use ONLY the information present on the webpage at {{url}}. Do NOT use your general knowledge, perform any other web searches, or infer information not explicitly stated on the page.** If a piece of information is not available on the page, you must omit it from the output.
+**PRIMARY DIRECTIVE: Use ONLY information found on the webpage at {{url}}. Do NOT use your general knowledge, do NOT infer details, and do NOT perform any other searches.**
 
-**IMPORTANT INSTRUCTIONS FOR GOOGLE MAPS LINKS:**
-If the URL is from Google Maps (e.g., includes maps.google.com, www.google.com/maps, or maps.app.goo.gl), your task is to identify the SINGLE, PRIMARY point of interest featured on the page.
+If the webpage is about a place, event, or activity that a person can visit or do, extract the following information. If the webpage is NOT about a specific, real-world activity (e.g., it's a corporate "about us" page, a blog post, a news article), you MUST still extract the page title as the 'name', but leave other activity-specific fields like 'duration' or 'location' blank unless they are explicitly mentioned in the context of an activity on that page.
 
-You MUST COMPLETELY IGNORE all other information on the page, including but not limited to:
-- "You might also like" sections
-- "People also search for" lists
-- Nearby places, hotels, or restaurants
-- User reviews, ratings, and photos
-- Advertisements
+**Instructions for all pages:**
 
-Focus ONLY on the place named in the main title of the map view. For example, if the URL is for "Buckingham Palace", extract details for Buckingham Palace and nothing else.
+1.  **name**: Extract the primary name of the place, event, or the title of the webpage.
+2.  **description**: Summarize the content of the page. Keep it under 200 characters. If there is no clear summary, use the meta description of the page or the first few sentences.
+3.  **location**: If a real-world city or neighborhood is clearly stated as the location of a business or event, extract it. Otherwise, omit this field.
+4.  **address**: If a specific street address is stated on the page, extract it. Otherwise, omit it.
+5.  **duration**: Only extract this if the page explicitly mentions a duration for an activity in hours (e.g., "Tour takes 2 hours"). Otherwise, you MUST omit this field.
+6.  **dataAiHint**: Provide two concise keywords based *only* on the page's main subject for an image search (e.g., "eiffel tower" or "design studio").
 
-From the content of the given URL, extract the following details and return them in the specified JSON format:
-1.  **name**: The official name of the place, event, or activity, as stated on the page.
-2.  **description**: A brief, engaging summary copied or summarized *directly from the page content*. Keep it under 200 characters. If no suitable summary exists, omit it.
-3.  **location**: The general location, like the city or neighborhood, as found on the page.
-4.  **duration**: If mentioned *on the webpage*, the typical or suggested duration in hours. If it is not mentioned, omit this field entirely.
-5.  **address**: The specific street address, if you can find one on the page.
-6.  **dataAiHint**: Provide two concise keywords that best represent this activity based on the page content for an image search (e.g., "eiffel tower" or "cooking class").
+**Special instructions for Google Maps links (maps.google.com, maps.app.goo.gl, etc.):**
+- Focus ONLY on the primary point of interest named in the page title.
+- IGNORE all other sections like "You might also like", reviews, or nearby places.
 
-Your extraction must be precise, concise, and based *only* on the provided webpage.
+Your output must be precise and based *only* on the provided webpage.
 `,
 });
 
