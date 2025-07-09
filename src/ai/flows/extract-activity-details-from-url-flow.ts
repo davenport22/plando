@@ -27,15 +27,16 @@ const ExtractActivityDetailsFromUrlOutputSchema = z.object({
     .describe('A concise, engaging summary of the activity (max 200 characters).'),
   location: z
     .string()
-    .describe('The general location (e.g., city, neighborhood) of the activity.'),
+    .optional()
+    .describe('The general location (e.g., city, neighborhood) of the activity. OMIT THIS ENTIRELY if no location is mentioned.'),
   duration: z.coerce
     .number()
     .optional()
-    .describe('The suggested or typical duration for the activity in hours. Example: 2.5'),
+    .describe('The suggested or typical duration for the activity in hours. Example: 2.5. OMIT THIS ENTIRELY if no duration is mentioned.'),
   address: z
     .string()
     .optional()
-    .describe('The specific street address, if available from the webpage.'),
+    .describe('The specific street address, if available from the webpage. OMIT THIS ENTIRELY if no address is mentioned.'),
   dataAiHint: z
     .string()
     .max(50)
@@ -57,26 +58,27 @@ const prompt = ai.definePrompt({
   name: 'extractActivityDetailsFromUrlPrompt',
   input: {schema: ExtractActivityDetailsFromUrlInputSchema},
   output: {schema: ExtractActivityDetailsFromUrlOutputSchema},
-  prompt: `You are an information extraction engine. Your only task is to analyze the content of the webpage at the provided URL and fill in a JSON object.
+  prompt: `You are a highly precise information extraction engine. Your ONLY function is to analyze the content of the webpage at the provided URL and fill a JSON object according to the following strict rules.
 
-**PRIMARY DIRECTIVE: Use ONLY information found on the webpage at {{url}}. Do NOT use your general knowledge, do NOT infer details, and do NOT perform any other searches.**
+**NON-NEGOTIABLE CORE DIRECTIVES:**
+1.  **USE ONLY THE PROVIDED URL:** You MUST NOT use any external knowledge, perform searches, or infer information not explicitly present on the webpage at \`{{url}}\`.
+2.  **DO NOT INVENT:** If a piece of information is not on the page, you MUST omit the corresponding field in your output. Do not guess, assume, or create placeholder information.
+3.  **MATCH THE SCHEMA:** Your output must strictly adhere to the requested JSON schema.
 
-If the webpage is about a place, event, or activity that a person can visit or do, extract the following information. If the webpage is NOT about a specific, real-world activity (e.g., it's a corporate "about us" page, a blog post, a news article), you MUST still extract the page title as the 'name', but leave other activity-specific fields like 'duration' or 'location' blank unless they are explicitly mentioned in the context of an activity on that page.
+**EXTRACTION RULES BY FIELD:**
 
-**Instructions for all pages:**
+*   **\`name\`**: Always extract the primary name of the place, event, or the main title of the webpage. This field is required.
+*   **\`description\`**: Provide a concise summary of the page's main content, under 200 characters. If no clear summary exists, use the page's meta description or the first few sentences.
+*   **\`location\`**: OMIT this field unless a real-world city or neighborhood is explicitly stated as the location of a business or event on the page.
+*   **\`address\`**: OMIT this field unless a specific street address is explicitly stated on the page.
+*   **\`duration\`**: OMIT this field unless the page explicitly states a duration in hours for a specific activity (e.g., "Tour takes 2 hours"). Do not calculate or estimate.
+*   **\`dataAiHint\`**: Provide two concise keywords based *only* on the page's main subject for an image search (e.g., "eiffel tower" or "design studio").
 
-1.  **name**: Extract the primary name of the place, event, or the title of the webpage.
-2.  **description**: Summarize the content of the page. Keep it under 200 characters. If there is no clear summary, use the meta description of the page or the first few sentences.
-3.  **location**: If a real-world city or neighborhood is clearly stated as the location of a business or event, extract it. Otherwise, omit this field.
-4.  **address**: If a specific street address is stated on the page, extract it. Otherwise, omit it.
-5.  **duration**: Only extract this if the page explicitly mentions a duration for an activity in hours (e.g., "Tour takes 2 hours"). Otherwise, you MUST omit this field.
-6.  **dataAiHint**: Provide two concise keywords based *only* on the page's main subject for an image search (e.g., "eiffel tower" or "design studio").
+**SPECIAL INSTRUCTIONS for GOOGLE MAPS links (e.g., maps.google.com, maps.app.goo.gl):**
+*   Focus EXCLUSIVELY on the primary point of interest named in the page title.
+*   You MUST IGNORE all other sections, including but not limited to: "You might also like," "People also search for," "Reviews," user photos, and nearby places. For example, if the page is for Buckingham Palace, extract ONLY its details, not a nearby pub mentioned in a review.
 
-**Special instructions for Google Maps links (maps.google.com, maps.app.goo.gl, etc.):**
-- Focus ONLY on the primary point of interest named in the page title.
-- IGNORE all other sections like "You might also like", reviews, or nearby places.
-
-Your output must be precise and based *only* on the provided webpage.
+Your output must be precise and derived solely from the provided webpage.
 `,
 });
 
