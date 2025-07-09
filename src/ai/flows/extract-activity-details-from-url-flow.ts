@@ -56,19 +56,19 @@ const prompt = ai.definePrompt({
   name: 'extractActivityDetailsFromUrlPrompt',
   input: {schema: ExtractActivityDetailsFromUrlInputSchema},
   output: {schema: ExtractActivityDetailsFromUrlOutputSchema},
-  prompt: `You are an expert travel assistant that extracts information from web pages.
-Analyze the content at the following URL: {{url}}
+  prompt: `You are an expert travel assistant that extracts information from web pages. Your primary task is to analyze the content at the following URL: {{url}}
 
-Extract the following details and return them in the specified JSON format:
+**Crucially, if the URL is from Google Maps (maps.google.com), you MUST focus *only* on the main point of interest.** Ignore all other content on the page, such as reviews, "People also search for," nearby places, or advertisements. Extract the details for the specific location identified in the URL's title.
+
+For any given URL, extract the following details and return them in the specified JSON format:
 1.  **name**: The official name of the place, event, or activity.
 2.  **description**: A brief, engaging summary. Keep it under 200 characters.
 3.  **location**: The general location, like the city or neighborhood.
-4.  **duration**: If mentioned, the typical or suggested duration in hours. If not mentioned, you can estimate it based on the activity type (e.g., a museum visit is typically 2-3 hours).
+4.  **duration**: If mentioned, the typical or suggested duration in hours. If not mentioned, estimate it based on the activity type (e.g., a museum visit is typically 2-3 hours).
 5.  **address**: The specific street address, if you can find one.
 6.  **dataAiHint**: Provide two concise keywords that best represent this activity for an image search (e.g., "eiffel tower" or "cooking class").
 
-If the URL is a Google Maps link, extract the information for the specified location.
-If it is a general webpage, summarize the main activity it describes. Be precise and concise.
+Be precise and concise in your extraction.
 `,
 });
 
