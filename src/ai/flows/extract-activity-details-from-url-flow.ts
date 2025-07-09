@@ -58,7 +58,17 @@ const prompt = ai.definePrompt({
   output: {schema: ExtractActivityDetailsFromUrlOutputSchema},
   prompt: `You are an expert travel assistant that extracts information from web pages. Your primary task is to analyze the content at the following URL: {{url}}
 
-**Crucially, if the URL is from Google Maps (maps.google.com), you MUST focus *only* on the main point of interest.** Ignore all other content on the page, such as reviews, "People also search for," nearby places, or advertisements. Extract the details for the specific location identified in the URL's title.
+**IMPORTANT INSTRUCTIONS FOR GOOGLE MAPS LINKS:**
+If the URL is from Google Maps (e.g., includes maps.google.com, www.google.com/maps, or maps.app.goo.gl), your task is to identify the SINGLE, PRIMARY point of interest featured on the page.
+
+You MUST COMPLETELY IGNORE all other information on the page, including but not limited to:
+- "You might also like" sections
+- "People also search for" lists
+- Nearby places, hotels, or restaurants
+- User reviews, ratings, and photos
+- Advertisements
+
+Focus ONLY on the place named in the main title of the map view. For example, if the URL is for "Buckingham Palace", extract details for Buckingham Palace and nothing else.
 
 For any given URL, extract the following details and return them in the specified JSON format:
 1.  **name**: The official name of the place, event, or activity.
