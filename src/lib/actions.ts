@@ -707,30 +707,26 @@ export async function addCustomCoupleActivity(
   }
 }
 
-export async function getCustomCouplesActivities(location?: string): Promise<Activity[]> {
+export async function getCustomCouplesActivities(userId: string, partnerId?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const activityPromises = [];
-        const defaultLocation = "Vienna, Austria";
-        
-        // Promise for user's location activities
-        if (location && location !== "Default" && location !== defaultLocation) {
-             activityPromises.push(firestore.collection('couplesActivities').where('location', '==', location).get());
+        // This query fetches activities created by the current user OR their partner.
+        // It covers the case where a user might not have a partner yet.
+        const userIdsToQuery = [userId];
+        if (partnerId) {
+            userIdsToQuery.push(partnerId);
         }
 
-        // Promise for default activities
-        activityPromises.push(firestore.collection('couplesActivities').where('location', '==', defaultLocation).get());
+        const q = firestore.collection('couplesActivities').where('createdBy', 'in', userIdsToQuery);
+        const snapshot = await q.get();
 
-        const snapshots = await Promise.all(activityPromises);
+        const customActivities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
         
-        const allActivities = snapshots.flatMap(snapshot => 
-            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity))
-        );
+        // This approach can be expanded later to include public activities for a given location,
+        // but for now, it strictly shares activities between partners.
+        
+        return customActivities;
 
-        // Deduplicate activities based on ID
-        const uniqueActivities = Array.from(new Map(allActivities.map(item => [item.id, item])).values());
-        
-        return uniqueActivities;
     } catch (error) {
         console.error('Error fetching custom couples activities:', error);
         return [];

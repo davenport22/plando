@@ -24,16 +24,21 @@ export function useLocalActivities(
     const fetchActivities = useCallback(async () => {
         setIsLoading(true);
         
-        let determinedLocationKey = userProfile?.location || "Default";
+        if (!userProfile) {
+            setIsLoading(false);
+            return [];
+        }
+
+        let determinedLocationKey = userProfile.location || "Default";
         let statusMsg: string;
 
-        if (moduleType === 'couples' && userProfile && partnerProfile) {
+        if (moduleType === 'couples' && partnerProfile) {
             const primaryUser = userProfile.id < partnerProfile.id ? userProfile : partnerProfile;
             const secondaryUser = userProfile.id < partnerProfile.id ? partnerProfile : userProfile;
             determinedLocationKey = primaryUser.location || secondaryUser.location || "Default";
             statusMsg = `Viewing shared date ideas for ${determinedLocationKey}.`;
         } else {
-             statusMsg = userProfile?.location
+             statusMsg = userProfile.location
                 ? `Using your profile location for activities: ${determinedLocationKey}.`
                 : "No profile location set. Using default activities.";
         }
@@ -42,7 +47,7 @@ export function useLocalActivities(
         setLocationStatusMessage(statusMsg);
         
         let previouslyVotedIds = new Set<string>();
-        if (moduleType === 'couples' && userProfile) {
+        if (moduleType === 'couples') {
             const ids = await getVotedOnCouplesActivityIds(userProfile.id);
             previouslyVotedIds = new Set(ids);
             setVotedActivityIds(previouslyVotedIds);
@@ -51,7 +56,7 @@ export function useLocalActivities(
         let customActivities: Activity[] = [];
         switch(moduleType) {
             case 'couples':
-                customActivities = await getCustomCouplesActivities(determinedLocationKey);
+                customActivities = await getCustomCouplesActivities(userProfile.id, partnerProfile?.id);
                 break;
             case 'friends':
                 customActivities = await getCustomFriendActivities(determinedLocationKey);
@@ -68,7 +73,7 @@ export function useLocalActivities(
         setActivities(activitiesToShow);
         setIsLoading(false);
         
-        if (activitiesToShow.length === 0 && previouslyVotedIds.size > 0) {
+        if (activitiesToShow.length === 0 && previouslyVotedIds.size > 0 && customActivities.length > 0) {
              toast({ 
                 title: "All Activities Voted On", 
                 description: "You've already seen all available activities for your area!",
