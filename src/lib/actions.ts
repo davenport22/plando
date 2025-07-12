@@ -1190,10 +1190,7 @@ async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (count:
     }
 }
 
-/**
- * Server action to clear all activity collections and related user subcollections.
- */
-export async function clearAllActivities(): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
+export async function clearLocalActivities(city?: string): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
     if (!isFirebaseInitialized) {
         return { success: false, error: 'Firebase is not initialized. Cannot clear data.' };
     }
@@ -1203,24 +1200,52 @@ export async function clearAllActivities(): Promise<{ success: boolean; deletedC
         let totalDeleted = 0;
 
         for (const collectionName of collectionsToDelete) {
-            const query = firestore.collection(collectionName).limit(50);
+            let query = firestore.collection(collectionName).limit(50);
+            if (city) {
+                query = query.where('location', '==', city);
+            }
             const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query, resolve, reject));
             totalDeleted += count;
-            console.log(`Cleared ${count} documents from ${collectionName}.`);
-        }
-
-        const usersSnapshot = await firestore.collection('users').get();
-        for (const userDoc of usersSnapshot.docs) {
-            const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
-            const completedQuery = userDoc.ref.collection('completedCouplesActivities').limit(50);
-            const [votesCount, completedCount] = await Promise.all([
-                 new Promise<number>((resolve, reject) => deleteQueryBatch(votesQuery, resolve, reject)),
-                 new Promise<number>((resolve, reject) => deleteQueryBatch(completedQuery, resolve, reject)),
-            ]);
-            totalDeleted += votesCount + completedCount;
+            console.log(`Cleared ${count} documents from ${collectionName} for city: ${city || 'all'}.`);
         }
         
-        // Clear all trips and their subcollections
+        if (!city) {
+            // If clearing all cities, also clear all votes and completed activities.
+            const usersSnapshot = await firestore.collection('users').get();
+            for (const userDoc of usersSnapshot.docs) {
+                const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
+                const completedQuery = userDoc.ref.collection('completedCouplesActivities').limit(50);
+                const [votesCount, completedCount] = await Promise.all([
+                     new Promise<number>((resolve, reject) => deleteQueryBatch(votesQuery, resolve, reject)),
+                     new Promise<number>((resolve, reject) => deleteQueryBatch(completedQuery, resolve, reject)),
+                ]);
+                totalDeleted += votesCount + completedCount;
+            }
+        }
+        
+        revalidatePath('/plando-couples', 'layout');
+        revalidatePath('/plando-friends', 'layout');
+        revalidatePath('/plando-meet', 'layout');
+        
+        return { success: true, deletedCount: totalDeleted };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        console.error('Error clearing local activities:', error);
+        return { success: false, error: `Failed to clear data: ${errorMessage}` };
+    }
+}
+
+
+/**
+ * Server action to clear all trip data.
+ */
+export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
+    if (!isFirebaseInitialized) {
+        return { success: false, error: 'Firebase is not initialized. Cannot clear data.' };
+    }
+    
+    let totalDeleted = 0;
+    try {
         const tripsSnapshot = await firestore.collection('trips').get();
         for (const tripDoc of tripsSnapshot.docs) {
             const tripId = tripDoc.id;
@@ -1236,7 +1261,7 @@ export async function clearAllActivities(): Promise<{ success: boolean; deletedC
             totalDeleted += 1 + activitiesCount + itinerariesCount;
         }
 
-        revalidatePath('/', 'layout');
+        revalidatePath('/trips', 'layout');
 
         return { success: true, deletedCount: totalDeleted };
     } catch (error) {
