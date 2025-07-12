@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
@@ -200,25 +201,28 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
                 emailsToInvite.push(email);
             }
         }
-
-        let generatedImageUrl: string | null = null;
-        try {
-            generatedImageUrl = await generateDestinationImage({ destination: tripDetails.destination });
-        } catch(aiError) {
-             console.warn("AI Image generation failed during trip creation, but proceeding with placeholder.", aiError);
-        }
         
         const newTripData = {
             ...tripDetails,
             ownerId: ownerId, 
             participantIds: Array.from(participantIds),
-            imageUrl: generatedImageUrl || `https://placehold.co/600x400.png`,
+            imageUrl: `https://placehold.co/600x400.png`, // Start with placeholder
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
         const tripId = docRef.id;
 
-        // Fire-and-forget invitations after trip is created
+        // Fire-and-forget image generation and invitations
+        generateDestinationImage({ destination: tripDetails.destination })
+            .then(generatedImageUrl => {
+                if (generatedImageUrl) {
+                    firestore.collection('trips').doc(tripId).update({ imageUrl: generatedImageUrl });
+                }
+            })
+            .catch(aiError => {
+                console.warn(`Background AI Image generation failed for trip ${tripId}, but proceeding.`, aiError);
+            });
+
         if (emailsToInvite.length > 0) {
             emailsToInvite.forEach(email => {
                 generateInvitationEmail({
@@ -240,9 +244,6 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
 
     } catch (e) {
         console.error('Error creating trip:', e);
-        if (e instanceof Error && (e.message.includes("API") || e.message.includes("permission"))) {
-             return { success: false, ...handleAIError(e, "Could not create trip due to an AI service error.") };
-        }
         const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
         return { success: false, error: `Failed to create trip: ${errorMessage}` };
     }
@@ -1162,34 +1163,35 @@ export async function addActivityToItineraryDay(tripId: string, activity: Activi
  * @returns The total number of documents deleted.
  */
 async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (count: number) => void, reject: (reason?: any) => void, deletedCount: number = 0) {
-    const snapshot = await query.get();
+    try {
+        const snapshot = await query.get();
 
-    if (snapshot.size === 0) {
-        resolve(deletedCount);
-        return;
-    }
+        if (snapshot.size === 0) {
+            resolve(deletedCount);
+            return;
+        }
 
-    const batch = firestore.batch();
-    snapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-    });
-    await batch.commit();
-
-    deletedCount += snapshot.size;
-
-    if (snapshot.size > 0) {
-        process.nextTick(() => {
-            deleteQueryBatch(query, resolve, reject, deletedCount);
+        const batch = firestore.batch();
+        snapshot.docs.forEach((doc) => {
+            batch.delete(doc.ref);
         });
-    } else {
-        resolve(deletedCount);
+        await batch.commit();
+
+        deletedCount += snapshot.size;
+
+        if (snapshot.size > 0) {
+            process.nextTick(() => {
+                deleteQueryBatch(query, resolve, reject, deletedCount);
+            });
+        } else {
+            resolve(deletedCount);
+        }
+    } catch(error) {
+        reject(error);
     }
 }
 
-/**
- * Server action to clear all activity collections and related user subcollections.
- */
-export async function clearAllActivities(): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
+export async function clearLocalActivities(city?: string): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
     if (!isFirebaseInitialized) {
         return { success: false, error: 'Firebase is not initialized. Cannot clear data.' };
     }
@@ -1199,39 +1201,74 @@ export async function clearAllActivities(): Promise<{ success: boolean; deletedC
         let totalDeleted = 0;
 
         for (const collectionName of collectionsToDelete) {
-            const query = firestore.collection(collectionName).limit(50);
+            let query = firestore.collection(collectionName).limit(50);
+            if (city) {
+                query = query.where('location', '==', city);
+            }
             const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query, resolve, reject));
             totalDeleted += count;
-            console.log(`Cleared ${count} documents from ${collectionName}.`);
+            console.log(`Cleared ${count} documents from ${collectionName} for city: ${city || 'all'}.`);
         }
-
-        // Also clear user-specific votes and completed activities
-        const usersSnapshot = await firestore.collection('users').get();
-        for (const userDoc of usersSnapshot.docs) {
-            const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
-            const completedQuery = userDoc.ref.collection('completedCouplesActivities').limit(50);
-
-            const [votesCount, completedCount] = await Promise.all([
-                 new Promise<number>((resolve, reject) => deleteQueryBatch(votesQuery, resolve, reject)),
-                 new Promise<number>((resolve, reject) => deleteQueryBatch(completedQuery, resolve, reject)),
-            ]);
-            
-            if(votesCount > 0) {
-              console.log(`Cleared ${votesCount} votes from user ${userDoc.id}.`);
-            }
-            if(completedCount > 0) {
-                console.log(`Cleared ${completedCount} completed activities from user ${userDoc.id}.`);
+        
+        if (!city) {
+            // If clearing all cities, also clear all votes and completed activities.
+            const usersSnapshot = await firestore.collection('users').get();
+            for (const userDoc of usersSnapshot.docs) {
+                const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
+                const completedQuery = userDoc.ref.collection('completedCouplesActivities').limit(50);
+                const [votesCount, completedCount] = await Promise.all([
+                     new Promise<number>((resolve, reject) => deleteQueryBatch(votesQuery, resolve, reject)),
+                     new Promise<number>((resolve, reject) => deleteQueryBatch(completedQuery, resolve, reject)),
+                ]);
+                totalDeleted += votesCount + completedCount;
             }
         }
-
+        
         revalidatePath('/plando-couples', 'layout');
         revalidatePath('/plando-friends', 'layout');
         revalidatePath('/plando-meet', 'layout');
+        
+        return { success: true, deletedCount: totalDeleted };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        console.error('Error clearing local activities:', error);
+        return { success: false, error: `Failed to clear data: ${errorMessage}` };
+    }
+}
+
+
+/**
+ * Server action to clear all trip data.
+ */
+export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
+    if (!isFirebaseInitialized) {
+        return { success: false, error: 'Firebase is not initialized. Cannot clear data.' };
+    }
+    
+    let totalDeleted = 0;
+    try {
+        const tripsSnapshot = await firestore.collection('trips').get();
+        for (const tripDoc of tripsSnapshot.docs) {
+            const tripId = tripDoc.id;
+            const activitiesQuery = tripDoc.ref.collection('activities').limit(50);
+            const itinerariesQuery = tripDoc.ref.collection('itineraries').limit(50);
+
+            const [activitiesCount, itinerariesCount] = await Promise.all([
+                 new Promise<number>((resolve, reject) => deleteQueryBatch(activitiesQuery, resolve, reject)),
+                 new Promise<number>((resolve, reject) => deleteQueryBatch(itinerariesQuery, resolve, reject)),
+            ]);
+
+            await tripDoc.ref.delete();
+            totalDeleted += 1 + activitiesCount + itinerariesCount;
+        }
+
+        revalidatePath('/trips', 'layout');
 
         return { success: true, deletedCount: totalDeleted };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        console.error('Error clearing activity collections:', error);
+        console.error('Error clearing all data:', error);
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
+
