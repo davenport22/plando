@@ -239,7 +239,7 @@ export default function PlandoCouplesPage() {
 
           <div className="flex justify-center gap-2 mb-4">
             <Link href="/plando-couples/matches" passHref>
-                <Button variant="secondary" disabled={matchesCount === 0 && !connectedPartner}>
+                <Button variant="secondary" disabled={activities.length === 0 && matchesCount === 0 && !connectedPartner}>
                     <ListChecks className="mr-2 h-4 w-4" />
                     View Matches ({matchesCount})
                 </Button>
@@ -288,7 +288,7 @@ export default function PlandoCouplesPage() {
               <div className="text-center text-muted-foreground space-y-4 py-8">
                 <Users className="h-20 w-20 mx-auto text-primary/40" />
                 <p className="text-xl">
-                  {votedActivityIds.size > 0 && activities.length === 0
+                  {activities.length === 0 && votedActivityIds.size > 0
                     ? "You've swiped through all available date ideas!"
                     : `No date ideas found. Add a custom one to get started!` 
                   }

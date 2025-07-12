@@ -1156,41 +1156,38 @@ export async function addActivityToItineraryDay(tripId: string, activity: Activi
 
 
 /**
- * Deletes all documents from a collection in batches.
+ * Deletes all documents from a collection or subcollection in batches.
+ * @param query The query for the collection/subcollection to delete.
+ * @param batchSize The number of documents to delete in each batch.
+ * @returns The total number of documents deleted.
  */
-async function deleteCollection(collectionPath: string, batchSize: number): Promise<number> {
-    const collectionRef = firestore.collection(collectionPath);
-    const query = collectionRef.orderBy('__name__').limit(batchSize);
-    let deletedCount = 0;
+async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (count: number) => void, reject: (reason?: any) => void, deletedCount: number = 0) {
+    const snapshot = await query.get();
 
-    return new Promise((resolve, reject) => {
-        deleteQueryBatch(query, resolve, reject);
+    if (snapshot.size === 0) {
+        resolve(deletedCount);
+        return;
+    }
+
+    const batch = firestore.batch();
+    snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
     });
+    await batch.commit();
 
-    async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (count: number) => void, reject: (reason?: any) => void) {
-        const snapshot = await query.get();
+    deletedCount += snapshot.size;
 
-        if (snapshot.size === 0) {
-            resolve(deletedCount);
-            return;
-        }
-
-        const batch = firestore.batch();
-        snapshot.docs.forEach((doc) => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-
-        deletedCount += snapshot.size;
-
+    if (snapshot.size > 0) {
         process.nextTick(() => {
-            deleteQueryBatch(query, resolve, reject);
+            deleteQueryBatch(query, resolve, reject, deletedCount);
         });
+    } else {
+        resolve(deletedCount);
     }
 }
 
 /**
- * Server action to clear all activity collections.
+ * Server action to clear all activity collections and related user subcollections.
  */
 export async function clearAllActivities(): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
     if (!isFirebaseInitialized) {
@@ -1198,18 +1195,30 @@ export async function clearAllActivities(): Promise<{ success: boolean; deletedC
     }
 
     try {
-        const collections = ['couplesActivities', 'friendsActivities', 'meetActivities'];
+        const collectionsToDelete = ['couplesActivities', 'friendsActivities', 'meetActivities'];
         let totalDeleted = 0;
 
-        for (const collection of collections) {
-            const count = await deleteCollection(collection, 50);
+        for (const collectionName of collectionsToDelete) {
+            const query = firestore.collection(collectionName).limit(50);
+            const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query, resolve, reject));
             totalDeleted += count;
-            console.log(`Cleared ${count} documents from ${collection}.`);
+            console.log(`Cleared ${count} documents from ${collectionName}.`);
         }
 
-        revalidatePath('/plando-couples');
-        revalidatePath('/plando-friends');
-        revalidatePath('/plando-meet');
+        // Also clear user-specific votes
+        const usersSnapshot = await firestore.collection('users').get();
+        for (const userDoc of usersSnapshot.docs) {
+            const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
+            const votesCount = await new Promise<number>((resolve, reject) => deleteQueryBatch(votesQuery, resolve, reject));
+            if(votesCount > 0) {
+              console.log(`Cleared ${votesCount} votes from user ${userDoc.id}.`);
+            }
+        }
+
+
+        revalidatePath('/plando-couples', 'layout');
+        revalidatePath('/plando-friends', 'layout');
+        revalidatePath('/plando-meet', 'layout');
 
         return { success: true, deletedCount: totalDeleted };
     } catch (error) {
