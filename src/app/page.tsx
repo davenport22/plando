@@ -86,7 +86,7 @@ export default function LoginPage() {
 
   // STATE 3: Redirecting
   // If the user is logged in and there's no error, render the Redirecting component.
-  if (user && userProfile && !profileError) {
+  if ((user && userProfile && !profileError) || isAdmin) {
     let destination = '/modules';
     if (isAdmin) {
       destination = '/settings/admin';
@@ -139,7 +139,7 @@ export default function LoginPage() {
         <ShieldCheck className="h-4 w-4 text-primary" />
         <AlertTitle className="font-semibold text-primary/90">Admin Access</AlertTitle>
         <AlertDescription>
-            To use admin features, first create a user `admin@admin.com` in your Firebase Console, then log in here with that email and the password `admin`.
+            To use admin features, you can log in with the email `admin@admin.com` and the password `admin`.
         </AlertDescription>
     </Alert>
     </div>

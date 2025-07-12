@@ -72,7 +72,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       setProfileError(null);
-      setIsAdmin(false);
       const pendingTripId = localStorage.getItem('pendingTripId');
 
       if (firebaseUser) {
@@ -105,10 +104,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
       } else {
-        // User is signed out, clear all state.
-        setUser(null);
-        setUserProfile(null);
-        setIsNewUser(null);
+        // User is signed out, clear all state, unless we are in local admin mode.
+        if (!isAdmin) {
+            setUser(null);
+            setUserProfile(null);
+            setIsNewUser(null);
+        }
+        
         if (pendingTripId) {
             localStorage.removeItem('pendingTripId');
         }
@@ -117,7 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isAdmin]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
@@ -144,6 +146,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const loginWithEmail = async (email: string, password: string) => {
+    // Special local admin check
+    if (email.toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+        setLoading(true);
+        setIsAdmin(true);
+        setUser(null);
+        setUserProfile(null);
+        setLoading(false);
+        return;
+    }
+
     try {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
@@ -155,10 +167,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await signOut(auth);
-      setIsAdmin(false);
     } catch (error) {
       console.error("Error signing out:", error);
     }
+    // Always reset admin state on logout
+    setIsAdmin(false);
   };
 
   const refreshUserProfile = async (prefetchedProfile?: UserProfile) => {
