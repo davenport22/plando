@@ -235,21 +235,7 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
         
         // Import local activities if requested
         if (importLocalActivities) {
-            const localActivities = await getCustomCouplesActivities(undefined, undefined, tripDetails.destination);
-            const batch = firestore.batch();
-            
-            for (const activity of localActivities) {
-                const newActivityRef = firestore.collection('trips').doc(tripId).collection('activities').doc();
-                const newActivity: Activity = {
-                    ...activity,
-                    id: newActivityRef.id,
-                    votes: {},
-                    likes: 0,
-                    dislikes: 0,
-                };
-                batch.set(newActivityRef, newActivity);
-            }
-            await batch.commit();
+            await importLocalActivitiesToTrip(tripId);
         }
 
 
@@ -1279,5 +1265,61 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         console.error('Error clearing all data:', error);
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
+    }
+}
+
+export async function importLocalActivitiesToTrip(tripId: string): Promise<{ success: boolean; importedCount?: number; error?: string }> {
+    if (!isFirebaseInitialized) {
+        return { success: false, error: 'Firebase is not initialized.' };
+    }
+
+    try {
+        const trip = await getTrip(tripId);
+        if (!trip || !trip.destination) {
+            return { success: false, error: 'Trip not found or has no destination.' };
+        }
+
+        // Fetch local activities from all relevant modules for the trip's destination
+        const localCouplesActivities = await getCustomCouplesActivities(undefined, undefined, trip.destination);
+        // You would add calls for friends and meet activities here as well and combine them
+        const allLocalActivities = [...localCouplesActivities]; // Combine all sources
+
+        if (allLocalActivities.length === 0) {
+            return { success: false, error: `No local activities found for "${trip.destination}".` };
+        }
+
+        const existingTripActivities = await getTripActivities(tripId, trip.ownerId);
+        const existingTripActivityNames = new Set(existingTripActivities.map(a => a.name));
+
+        const activitiesToImport = allLocalActivities.filter(localActivity => !existingTripActivityNames.has(localActivity.name));
+
+        if (activitiesToImport.length === 0) {
+            return { success: true, importedCount: 0, error: 'All local activities for this destination are already in the trip.' };
+        }
+
+        const batch = firestore.batch();
+        const tripActivitiesRef = firestore.collection('trips').doc(tripId).collection('activities');
+
+        for (const activity of activitiesToImport) {
+            const newActivityRef = tripActivitiesRef.doc();
+            const newActivity: Activity = {
+                ...activity,
+                id: newActivityRef.id,
+                tripId: tripId,
+                votes: {},
+                likes: 0,
+                dislikes: 0,
+            };
+            batch.set(newActivityRef, newActivity);
+        }
+
+        await batch.commit();
+        revalidatePath(`/trips/${tripId}`);
+
+        return { success: true, importedCount: activitiesToImport.length };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        console.error(`Error importing local activities to trip ${tripId}:`, error);
+        return { success: false, error: `Failed to import activities: ${errorMessage}` };
     }
 }

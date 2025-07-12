@@ -12,13 +12,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DialogClose } from "@/components/ui/dialog";
 import { cn, calculateTripDuration } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, Loader2, Save } from "lucide-react";
+import { CalendarIcon, Loader2, Save, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Trip } from "@/types";
 import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 import { Separator } from "@/components/ui/separator";
 import { ParticipantManager } from "./ParticipantManager";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { importLocalActivitiesToTrip } from "@/lib/actions";
+import { useToast } from "@/hooks/use-toast";
 
 const editTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
@@ -43,7 +45,9 @@ interface EditTripFormProps {
 
 export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [durationDisplay, setDurationDisplay] = useState<string>("");
+  const { toast } = useToast();
 
   const form = useForm<EditTripFormValues>({
     resolver: zodResolver(editTripFormSchema),
@@ -109,6 +113,26 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
     });
     setIsLoading(false);
   }
+
+  const handleImportActivities = async () => {
+    setIsImporting(true);
+    const result = await importLocalActivitiesToTrip(currentTrip.id);
+    setIsImporting(false);
+
+    if (result.success) {
+      toast({
+        title: "Activities Imported!",
+        description: `Successfully imported ${result.importedCount} new local activities for ${currentTrip.destination}.`,
+      });
+    } else {
+      toast({
+        title: "Import Failed",
+        description: result.error,
+        variant: "destructive",
+      });
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -276,6 +300,17 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
                 </DialogClose>
             </form>
         </Form>
+        <Separator />
+        <div>
+            <Label className="text-base font-semibold">Activity Suggestions</Label>
+            <p className="text-sm text-muted-foreground mb-3">
+                Import local activity suggestions for your trip's destination.
+            </p>
+            <Button onClick={handleImportActivities} disabled={isImporting} variant="outline" className="w-full">
+                {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                Import Local Activities for "{currentTrip.destination}"
+            </Button>
+        </div>
         <Separator />
         <ParticipantManager trip={currentTrip} />
     </div>
