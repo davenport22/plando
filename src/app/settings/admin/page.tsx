@@ -42,7 +42,7 @@ export default function AdminSettingsPage() {
     if (result.success) {
       toast({
         title: "Data Cleared Successfully!",
-        description: `Removed ${result.deletedCount} activities from the database.`,
+        description: `Removed ${result.deletedCount} documents from the database.`,
       });
     } else {
       toast({
@@ -101,23 +101,23 @@ export default function AdminSettingsPage() {
         <CardContent>
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
-              <h3 className="font-semibold text-lg">Clear All Activity Data</h3>
+              <h3 className="font-semibold text-lg">Clear All App Data</h3>
               <p className="text-sm text-muted-foreground">
-                This will permanently delete all activities from the 'couples', 'friends', and 'meet' modules.
+                This will permanently delete all trips and all local activities. User profiles will remain.
               </p>
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Clear Data
+                  Clear All Data
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete all activity data from your database.
+                    This action cannot be undone. This will permanently delete ALL trip and activity data from your database.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -129,7 +129,7 @@ export default function AdminSettingsPage() {
                         Clearing...
                       </>
                     ) : (
-                      "Yes, delete all activities"
+                      "Yes, delete all data"
                     )}
                   </AlertDialogAction>
                 </AlertDialogFooter>

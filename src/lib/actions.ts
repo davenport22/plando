@@ -1162,27 +1162,31 @@ export async function addActivityToItineraryDay(tripId: string, activity: Activi
  * @returns The total number of documents deleted.
  */
 async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (count: number) => void, reject: (reason?: any) => void, deletedCount: number = 0) {
-    const snapshot = await query.get();
+    try {
+        const snapshot = await query.get();
 
-    if (snapshot.size === 0) {
-        resolve(deletedCount);
-        return;
-    }
+        if (snapshot.size === 0) {
+            resolve(deletedCount);
+            return;
+        }
 
-    const batch = firestore.batch();
-    snapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-    });
-    await batch.commit();
-
-    deletedCount += snapshot.size;
-
-    if (snapshot.size > 0) {
-        process.nextTick(() => {
-            deleteQueryBatch(query, resolve, reject, deletedCount);
+        const batch = firestore.batch();
+        snapshot.docs.forEach((doc) => {
+            batch.delete(doc.ref);
         });
-    } else {
-        resolve(deletedCount);
+        await batch.commit();
+
+        deletedCount += snapshot.size;
+
+        if (snapshot.size > 0) {
+            process.nextTick(() => {
+                deleteQueryBatch(query, resolve, reject, deletedCount);
+            });
+        } else {
+            resolve(deletedCount);
+        }
+    } catch(error) {
+        reject(error);
     }
 }
 
@@ -1205,25 +1209,39 @@ export async function clearAllActivities(): Promise<{ success: boolean; deletedC
             console.log(`Cleared ${count} documents from ${collectionName}.`);
         }
 
-        // Also clear user-specific votes
         const usersSnapshot = await firestore.collection('users').get();
         for (const userDoc of usersSnapshot.docs) {
             const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
-            const votesCount = await new Promise<number>((resolve, reject) => deleteQueryBatch(votesQuery, resolve, reject));
-            if(votesCount > 0) {
-              console.log(`Cleared ${votesCount} votes from user ${userDoc.id}.`);
-            }
+            const completedQuery = userDoc.ref.collection('completedCouplesActivities').limit(50);
+            const [votesCount, completedCount] = await Promise.all([
+                 new Promise<number>((resolve, reject) => deleteQueryBatch(votesQuery, resolve, reject)),
+                 new Promise<number>((resolve, reject) => deleteQueryBatch(completedQuery, resolve, reject)),
+            ]);
+            totalDeleted += votesCount + completedCount;
+        }
+        
+        // Clear all trips and their subcollections
+        const tripsSnapshot = await firestore.collection('trips').get();
+        for (const tripDoc of tripsSnapshot.docs) {
+            const tripId = tripDoc.id;
+            const activitiesQuery = tripDoc.ref.collection('activities').limit(50);
+            const itinerariesQuery = tripDoc.ref.collection('itineraries').limit(50);
+
+            const [activitiesCount, itinerariesCount] = await Promise.all([
+                 new Promise<number>((resolve, reject) => deleteQueryBatch(activitiesQuery, resolve, reject)),
+                 new Promise<number>((resolve, reject) => deleteQueryBatch(itinerariesQuery, resolve, reject)),
+            ]);
+
+            await tripDoc.ref.delete();
+            totalDeleted += 1 + activitiesCount + itinerariesCount;
         }
 
-
-        revalidatePath('/plando-couples', 'layout');
-        revalidatePath('/plando-friends', 'layout');
-        revalidatePath('/plando-meet', 'layout');
+        revalidatePath('/', 'layout');
 
         return { success: true, deletedCount: totalDeleted };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        console.error('Error clearing activity collections:', error);
+        console.error('Error clearing all data:', error);
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
