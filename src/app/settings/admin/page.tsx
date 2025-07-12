@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { clearAllActivities } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertTriangle, Trash2 } from 'lucide-react';
+import { Loader2, AlertTriangle, Trash2, ShieldCheck, User, LogOut } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,10 +18,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AdminSettingsPage() {
+  const { isAdmin, loading, logout, userProfile } = useAuth();
+  const router = useRouter();
   const [isClearing, setIsClearing] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      router.push('/');
+    }
+  }, [isAdmin, loading, router]);
 
   const handleClearData = async () => {
     setIsClearing(true);
@@ -41,13 +52,43 @@ export default function AdminSettingsPage() {
       });
     }
   };
+  
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  }
+
+  if (loading || !isAdmin) {
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Verifying access...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-2xl">
       <header className="mb-8">
-        <h1 className="text-4xl font-headline font-bold text-primary">Temporary Admin Panel</h1>
-        <p className="text-lg text-muted-foreground">One-time actions for managing your app data.</p>
+        <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-4xl font-headline font-bold text-primary flex items-center gap-3">
+                    <ShieldCheck className="h-10 w-10" />
+                    Admin Panel
+                </h1>
+                <p className="text-lg text-muted-foreground">App management and one-time actions.</p>
+            </div>
+            <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2"/>Log Out</Button>
+        </div>
       </header>
+
+      <Alert className="mb-8 border-green-500/50 bg-green-500/10 text-green-700">
+        <User className="h-4 w-4 text-green-600" />
+        <AlertTitle className="text-green-800">Logged in as {userProfile?.name}</AlertTitle>
+        <AlertDescription>
+            You are currently in admin mode.
+        </AlertDescription>
+      </Alert>
 
       <Card className="shadow-lg border-destructive/50">
         <CardHeader>
@@ -97,9 +138,6 @@ export default function AdminSettingsPage() {
           </div>
         </CardContent>
       </Card>
-       <div className="mt-6 text-center text-muted-foreground text-sm">
-            <p>After you are done, please ask me to remove this page.</p>
-        </div>
     </div>
   );
 }

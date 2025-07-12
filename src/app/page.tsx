@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Loader2, AlertTriangle, LogIn, UserPlus } from "lucide-react";
+import { Loader2, AlertTriangle, LogIn, UserPlus, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -40,7 +40,7 @@ const Redirecting = ({ to }: { to: string }) => {
 
 
 export default function LoginPage() {
-  const { user, userProfile, loading, signInWithGoogle, isNewUser, profileError, logout } = useAuth();
+  const { user, userProfile, loading, signInWithGoogle, isNewUser, profileError, logout, isAdmin } = useAuth();
 
   // STATE 1: Loading
   // Show a spinner while the auth state is being determined. This is the default initial state.
@@ -87,7 +87,12 @@ export default function LoginPage() {
   // STATE 3: Redirecting
   // If the user is logged in and there's no error, render the Redirecting component.
   if (user && userProfile && !profileError) {
-    const destination = isNewUser ? '/profile/edit' : '/modules';
+    let destination = '/modules';
+    if (isAdmin) {
+      destination = '/settings/admin';
+    } else if (isNewUser) {
+      destination = '/profile/edit';
+    }
     return <Redirecting to={destination} />;
   }
 
@@ -130,6 +135,13 @@ export default function LoginPage() {
             </p>
         </CardFooter>
       </Card>
+      <Alert variant="default" className="max-w-md mt-6 shadow-md border-primary/20 bg-primary/5">
+        <ShieldCheck className="h-4 w-4 text-primary" />
+        <AlertTitle className="font-semibold text-primary/90">Admin Access</AlertTitle>
+        <AlertDescription>
+            To use admin features, first create a user `admin@admin.com` in your Firebase Console, then log in here with that email and the password `admin`.
+        </AlertDescription>
+    </Alert>
     </div>
   );
 }

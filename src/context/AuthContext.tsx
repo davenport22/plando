@@ -33,6 +33,9 @@ const getFriendlyAuthErrorMessage = (errorCode: string) => {
     return FIREBASE_ERROR_MESSAGES[errorCode] || "An unexpected authentication error occurred. Please try again.";
 };
 
+const ADMIN_EMAIL = 'admin@admin.com';
+const ADMIN_PASSWORD = 'admin';
+
 
 interface AuthContextType {
   user: User | null;
@@ -40,6 +43,7 @@ interface AuthContextType {
   isNewUser: boolean | null;
   loading: boolean;
   profileError: string | null;
+  isAdmin: boolean;
   signInWithGoogle: () => Promise<void>;
   registerWithEmail: (email: string, password: string, name: string) => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
@@ -55,6 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // If the client-side Firebase config is missing, render a helpful error page.
   // This prevents the app from crashing and guides the user to fix their .env file.
@@ -67,9 +72,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       setProfileError(null);
+      setIsAdmin(false);
       const pendingTripId = localStorage.getItem('pendingTripId');
 
       if (firebaseUser) {
+        if (firebaseUser.email === ADMIN_EMAIL) {
+            setIsAdmin(true);
+        }
         try {
           const { profile, isNewUser: newUserStatus } = await getOrCreateUserProfile({
               uid: firebaseUser.uid,
@@ -124,14 +133,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const registerWithEmail = async (email: string, password: string, name: string) => {
     try {
+        if (email.toLowerCase() === ADMIN_EMAIL) {
+            throw new Error("This email is reserved for administration.");
+        }
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // The onAuthStateChanged listener will handle the rest, including profile creation.
-        // We just need to make sure the display name is available for the initial profile creation.
-        // NOTE: Firebase does not automatically update the user object on creation.
-        // We will pass the name to getOrCreateUserProfile which will use it if displayName is null.
     } catch (error: any) {
         console.error("Error during email registration:", error);
-        throw new Error(getFriendlyAuthErrorMessage(error.code));
+        throw new Error(getFriendlyAuthErrorMessage(error.code) || error.message);
     }
   };
 
@@ -147,6 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await signOut(auth);
+      setIsAdmin(false);
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -170,7 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value = { user, userProfile, isNewUser, loading, profileError, signInWithGoogle, registerWithEmail, loginWithEmail, logout, refreshUserProfile };
+  const value = { user, userProfile, isNewUser, loading, profileError, isAdmin, signInWithGoogle, registerWithEmail, loginWithEmail, logout, refreshUserProfile };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
