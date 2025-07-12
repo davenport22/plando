@@ -200,19 +200,17 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
                 emailsToInvite.push(email);
             }
         }
-
-        let generatedImageUrl: string | null = null;
-        try {
-            generatedImageUrl = await generateDestinationImage({ destination: tripDetails.destination });
-        } catch(aiError) {
-             console.warn("AI Image generation failed during trip creation, but proceeding with placeholder.", aiError);
-        }
         
+        // Use Unsplash for a fast, reliable image source.
+        const imageUrl = `https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=${encodeURIComponent(
+          tripDetails.destination
+        )}`;
+
         const newTripData = {
             ...tripDetails,
             ownerId: ownerId, 
             participantIds: Array.from(participantIds),
-            imageUrl: generatedImageUrl || `https://placehold.co/600x400.png`,
+            imageUrl: imageUrl,
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
@@ -240,9 +238,6 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
 
     } catch (e) {
         console.error('Error creating trip:', e);
-        if (e instanceof Error && (e.message.includes("API") || e.message.includes("permission"))) {
-             return { success: false, ...handleAIError(e, "Could not create trip due to an AI service error.") };
-        }
         const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
         return { success: false, error: `Failed to create trip: ${errorMessage}` };
     }
@@ -337,18 +332,13 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const imageUrlMissingOrPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
+        const imageUrlMissingOrPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co') || !currentTripData.imageUrl.includes('unsplash');
 
         if (destinationChanged || imageUrlMissingOrPlaceholder) {
-            const destinationForImage = data.destination || currentTripData.destination;
-            try {
-                const generatedImageUrl = await generateDestinationImage({ destination: destinationForImage });
-                if (generatedImageUrl) {
-                    updatedData.imageUrl = generatedImageUrl;
-                }
-            } catch (aiError) {
-                console.warn("AI Image generation failed during trip update, but other data will be saved.", aiError);
-            }
+             const destinationForImage = data.destination || currentTripData.destination;
+            updatedData.imageUrl = `https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=${encodeURIComponent(
+              destinationForImage
+            )}`;
         }
 
         await tripRef.update(updatedData);
@@ -1270,3 +1260,4 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
+
