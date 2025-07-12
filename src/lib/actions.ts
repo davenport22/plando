@@ -722,7 +722,7 @@ export async function addCustomCoupleActivity(
 export async function getCustomCouplesActivities(userId?: string, partnerId?: string, location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        let query: admin.firestore.Query = firestore.collection('couplesActivities');
+        let query: FirebaseFirestore.Query = firestore.collection('couplesActivities');
 
         // This query fetches activities created by the current user OR their partner, AND public activities for their location.
         const userIdsToQuery = [userId, partnerId].filter(id => !!id) as string[];
@@ -736,7 +736,7 @@ export async function getCustomCouplesActivities(userId?: string, partnerId?: st
             
             const [locationSnapshot, usersSnapshot] = await Promise.all([
                 locationQuery.get(),
-                usersQuery ? usersQuery.get() : Promise.resolve({ docs: [] as admin.firestore.QueryDocumentSnapshot[] })
+                usersQuery ? usersQuery.get() : Promise.resolve({ docs: [] as FirebaseFirestore.QueryDocumentSnapshot[] })
             ]);
 
             const activitiesMap = new Map<string, Activity>();
@@ -1151,5 +1151,70 @@ export async function addActivityToItineraryDay(tripId: string, activity: Activi
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
+    }
+}
+
+
+/**
+ * Deletes all documents from a collection in batches.
+ */
+async function deleteCollection(collectionPath: string, batchSize: number): Promise<number> {
+    const collectionRef = firestore.collection(collectionPath);
+    const query = collectionRef.orderBy('__name__').limit(batchSize);
+    let deletedCount = 0;
+
+    return new Promise((resolve, reject) => {
+        deleteQueryBatch(query, resolve, reject);
+    });
+
+    async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (count: number) => void, reject: (reason?: any) => void) {
+        const snapshot = await query.get();
+
+        if (snapshot.size === 0) {
+            resolve(deletedCount);
+            return;
+        }
+
+        const batch = firestore.batch();
+        snapshot.docs.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        deletedCount += snapshot.size;
+
+        process.nextTick(() => {
+            deleteQueryBatch(query, resolve, reject);
+        });
+    }
+}
+
+/**
+ * Server action to clear all activity collections.
+ */
+export async function clearAllActivities(): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
+    if (!isFirebaseInitialized) {
+        return { success: false, error: 'Firebase is not initialized. Cannot clear data.' };
+    }
+
+    try {
+        const collections = ['couplesActivities', 'friendsActivities', 'meetActivities'];
+        let totalDeleted = 0;
+
+        for (const collection of collections) {
+            const count = await deleteCollection(collection, 50);
+            totalDeleted += count;
+            console.log(`Cleared ${count} documents from ${collection}.`);
+        }
+
+        revalidatePath('/plando-couples');
+        revalidatePath('/plando-friends');
+        revalidatePath('/plando-meet');
+
+        return { success: true, deletedCount: totalDeleted };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        console.error('Error clearing activity collections:', error);
+        return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
