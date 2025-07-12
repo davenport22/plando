@@ -711,47 +711,16 @@ export async function addCustomCoupleActivity(
   }
 }
 
-export async function getCustomCouplesActivities(userId?: string, partnerId?: string, location?: string): Promise<Activity[]> {
+export async function getCustomCouplesActivities(location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
         let query: FirebaseFirestore.Query = firestore.collection('couplesActivities');
-
-        // This query fetches activities created by the current user OR their partner, AND public activities for their location.
-        const userIdsToQuery = [userId, partnerId].filter(id => !!id) as string[];
-
-        // If a location is provided, we fetch activities for that location OR created by the users.
         if (location && location !== "Default") {
-            // This requires a composite query in Firestore. Since we can't do (location == X OR createdBy in [Y, Z]),
-            // we will fetch in two parts and combine.
-            const locationQuery = firestore.collection('couplesActivities').where('location', '==', location);
-            const usersQuery = userIdsToQuery.length > 0 ? firestore.collection('couplesActivities').where('createdBy', 'in', userIdsToQuery) : null;
-            
-            const [locationSnapshot, usersSnapshot] = await Promise.all([
-                locationQuery.get(),
-                usersQuery ? usersQuery.get() : Promise.resolve({ docs: [] as FirebaseFirestore.QueryDocumentSnapshot[] })
-            ]);
-
-            const activitiesMap = new Map<string, Activity>();
-            
-            locationSnapshot.docs.forEach(doc => {
-                activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
-            });
-            usersSnapshot.docs.forEach(doc => {
-                activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
-            });
-
-            return Array.from(activitiesMap.values());
-        } else if (userIdsToQuery.length > 0) {
-            // If no location, just fetch activities created by the couple.
-            query = firestore.collection('couplesActivities').where('createdBy', 'in', userIdsToQuery);
-        } else {
-             // Fallback for default activities if no user/location context
-            query = firestore.collection('couplesActivities').where('createdBy', '==', 'system');
+            query = query.where('location', '==', location);
         }
         
         const snapshot = await query.get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-
     } catch (error) {
         console.error('Error fetching custom couples activities:', error);
         return [];
@@ -805,9 +774,10 @@ export async function addCustomFriendActivity(
 export async function getCustomFriendActivities(location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const query = location && location !== "Default" 
-            ? firestore.collection('friendsActivities').where('location', '==', location)
-            : firestore.collection('friendsActivities');
+        let query: FirebaseFirestore.Query = firestore.collection('friendsActivities');
+        if (location && location !== "Default") {
+            query = query.where('location', '==', location);
+        }
         
         const snapshot = await query.get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
@@ -864,9 +834,10 @@ export async function addCustomMeetActivity(
 export async function getCustomMeetActivities(location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const query = location && location !== "Default" 
-            ? firestore.collection('meetActivities').where('location', '==', location)
-            : firestore.collection('meetActivities');
+        let query: FirebaseFirestore.Query = firestore.collection('meetActivities');
+        if (location && location !== "Default") {
+            query = query.where('location', '==', location);
+        }
             
         const snapshot = await query.get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
@@ -972,7 +943,7 @@ export async function getTripActivities(tripId: string, userId: string): Promise
         if (tripData.syncLocalActivities && tripData.destination) {
             // Fetch from all relevant local collections
             const [couplesActivities, friendsActivities, meetActivities] = await Promise.all([
-                getCustomCouplesActivities(undefined, undefined, tripData.destination),
+                getCustomCouplesActivities(tripData.destination),
                 getCustomFriendActivities(tripData.destination),
                 getCustomMeetActivities(tripData.destination),
             ]);
@@ -1059,7 +1030,7 @@ export async function voteOnTripActivity(
 
     try {
         await firestore.runTransaction(async (transaction) => {
-            const activityDoc = await transaction.get(activityRef);
+            let activityDoc = await transaction.get(activityRef);
             if (!activityDoc.exists) {
                 // It's a synced local activity, not a trip-specific one yet.
                 // We need to find its data in the root collections and create it here.
@@ -1082,10 +1053,11 @@ export async function voteOnTripActivity(
                 // Create a new document in the trip's activities subcollection with default votes
                 const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
                 transaction.set(activityRef, newActivityData);
+                activityDoc = await transaction.get(activityRef); // Reread the doc we just created
             }
 
             // Now, get the document again (it's either the original or the one we just created)
-            const docForUpdate = await transaction.get(activityRef);
+            const docForUpdate = activityDoc;
             const data = docForUpdate.data()!;
             const votes = data.votes || {};
             const previousVote = votes[userId];
@@ -1252,11 +1224,11 @@ export async function clearLocalActivities(city?: string): Promise<{ success: bo
         let totalDeleted = 0;
 
         for (const collectionName of collectionsToDelete) {
-            let query = firestore.collection(collectionName).limit(50);
+            let query: FirebaseFirestore.Query = firestore.collection(collectionName);
             if (city) {
                 query = query.where('location', '==', city);
             }
-            const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query, resolve, reject));
+            const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query.limit(50), resolve, reject));
             totalDeleted += count;
             console.log(`Cleared ${count} documents from ${collectionName} for city: ${city || 'all'}.`);
         }
