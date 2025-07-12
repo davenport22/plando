@@ -711,16 +711,41 @@ export async function addCustomCoupleActivity(
   }
 }
 
-export async function getCustomCouplesActivities(location?: string): Promise<Activity[]> {
+export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        let query: FirebaseFirestore.Query = firestore.collection('couplesActivities');
+        // This query fetches activities created by the current user OR their partner, AND public activities for their location.
+        const userIdsToQuery = [userId, partnerId].filter(id => !!id) as string[];
+
+        const activitiesMap = new Map<string, Activity>();
+
+        // Fetch activities for the specific location, if provided and not default
         if (location && location !== "Default") {
-            query = query.where('location', '==', location);
+            const locationQuery = firestore.collection('couplesActivities').where('location', '==', location);
+            const locationSnapshot = await locationQuery.get();
+            locationSnapshot.docs.forEach(doc => {
+                activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
+            });
+        } else {
+            // Fetch system-default activities if no location is specified
+            const systemQuery = firestore.collection('couplesActivities').where('createdBy', '==', 'system');
+            const systemSnapshot = await systemQuery.get();
+            systemSnapshot.docs.forEach(doc => {
+                activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
+            });
+        }
+
+        // Fetch activities created by the user or their partner, regardless of location
+        if (userIdsToQuery.length > 0) {
+            const usersQuery = firestore.collection('couplesActivities').where('createdBy', 'in', userIdsToQuery);
+            const usersSnapshot = await usersQuery.get();
+            usersSnapshot.docs.forEach(doc => {
+                activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
+            });
         }
         
-        const snapshot = await query.get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+        return Array.from(activitiesMap.values());
+
     } catch (error) {
         console.error('Error fetching custom couples activities:', error);
         return [];

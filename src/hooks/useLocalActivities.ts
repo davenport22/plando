@@ -56,7 +56,7 @@ export function useLocalActivities(
         let customActivities: Activity[] = [];
         switch(moduleType) {
             case 'couples':
-                customActivities = await getCustomCouplesActivities(userProfile.id, partnerProfile?.id);
+                customActivities = await getCustomCouplesActivities(determinedLocationKey, userProfile.id, partnerProfile?.id);
                 break;
             case 'friends':
                 customActivities = await getCustomFriendActivities(determinedLocationKey);
