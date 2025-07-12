@@ -1,6 +1,5 @@
 
 import admin from 'firebase-admin';
-import { seedCouplesActivities } from '@/lib/seed';
 
 // This flag tracks whether the Firebase Admin SDK has been successfully initialized.
 let isFirebaseInitialized = false;
@@ -32,10 +31,6 @@ if (!admin.apps.length) {
             storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         });
         isFirebaseInitialized = true;
-        // Call the seeding function here. It runs once on server start.
-        // It's an async function, but we don't need to await it here.
-        // Let it run in the background to not block server startup.
-        seedCouplesActivities();
     } else {
         // This is a helpful warning for developers during setup to let them know the backend is not connected.
         const missingKeys = [
