@@ -19,8 +19,7 @@ import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput
 import { Separator } from "@/components/ui/separator";
 import { ParticipantManager } from "./ParticipantManager";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { importLocalActivitiesToTrip } from "@/lib/actions";
-import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 const editTripFormSchema = z.object({
@@ -29,6 +28,7 @@ const editTripFormSchema = z.object({
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
   itineraryGenerationRule: z.enum(['majority', 'all']).default('majority'),
+  syncLocalActivities: z.boolean().default(true),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   placeId: z.string().optional(),
@@ -46,9 +46,7 @@ interface EditTripFormProps {
 
 export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
   const [durationDisplay, setDurationDisplay] = useState<string>("");
-  const { toast } = useToast();
 
   const form = useForm<EditTripFormValues>({
     resolver: zodResolver(editTripFormSchema),
@@ -58,6 +56,7 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
       startDate: currentTrip.startDate ? parseISO(currentTrip.startDate) : new Date(),
       endDate: currentTrip.endDate ? parseISO(currentTrip.endDate) : new Date(),
       itineraryGenerationRule: currentTrip.itineraryGenerationRule || 'majority',
+      syncLocalActivities: currentTrip.syncLocalActivities ?? true,
       latitude: currentTrip.latitude,
       longitude: currentTrip.longitude,
       placeId: currentTrip.placeId,
@@ -98,6 +97,7 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
       startDate: currentTrip.startDate ? parseISO(currentTrip.startDate) : new Date(),
       endDate: currentTrip.endDate ? parseISO(currentTrip.endDate) : new Date(),
       itineraryGenerationRule: currentTrip.itineraryGenerationRule || 'majority',
+      syncLocalActivities: currentTrip.syncLocalActivities ?? true,
       latitude: currentTrip.latitude,
       longitude: currentTrip.longitude,
       placeId: currentTrip.placeId,
@@ -114,26 +114,6 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
     });
     setIsLoading(false);
   }
-
-  const handleImportActivities = async () => {
-    setIsImporting(true);
-    const result = await importLocalActivitiesToTrip(currentTrip.id);
-    setIsImporting(false);
-
-    if (result.success) {
-      toast({
-        title: "Activities Imported!",
-        description: `Successfully imported ${result.importedCount} new local activities for ${currentTrip.destination}.`,
-      });
-    } else {
-      toast({
-        title: "Import Failed",
-        description: result.error,
-        variant: "destructive",
-      });
-    }
-  };
-
 
   return (
     <div className="space-y-6">
@@ -292,6 +272,31 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
                         </FormItem>
                     )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="syncLocalActivities"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-primary" />
+                          Sync Local Activities
+                        </FormLabel>
+                        <FormDescription>
+                          Automatically include local discovery activities for your trip's destination.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          aria-label="Sync local activities"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
                 
                 <DialogClose asChild>
                 <Button type="submit" disabled={isLoading}>
@@ -301,17 +306,6 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
                 </DialogClose>
             </form>
         </Form>
-        <Separator />
-        <div>
-            <Label className="text-base font-semibold">Activity Suggestions</Label>
-            <p className="text-sm text-muted-foreground mb-3">
-                Import local activity suggestions for your trip's destination.
-            </p>
-            <Button onClick={handleImportActivities} disabled={isImporting} variant="outline" className="w-full">
-                {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                Import Local Activities for "{currentTrip.destination}"
-            </Button>
-        </div>
         <Separator />
         <ParticipantManager trip={currentTrip} />
     </div>

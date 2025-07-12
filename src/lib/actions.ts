@@ -169,7 +169,7 @@ const NewTripDataSchema = z.object({
     endDate: z.string(),   // YYYY-MM-DD format
     itineraryGenerationRule: z.enum(['majority', 'all']),
     participantEmails: z.array(z.string().email()).optional(),
-    importLocalActivities: z.boolean().optional(),
+    syncLocalActivities: z.boolean().optional(),
 });
 
 
@@ -180,7 +180,7 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
 
     try {
         const validatedData = NewTripDataSchema.parse(data);
-        const { participantEmails = [], importLocalActivities, ...tripDetails } = validatedData;
+        const { participantEmails = [], ...tripDetails } = validatedData;
         
         const ownerProfile = await getUserProfile(ownerId);
         if (!ownerProfile) {
@@ -232,12 +232,6 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
                 });
             });
         }
-        
-        // Import local activities if requested
-        if (importLocalActivities) {
-            await importLocalActivitiesToTrip(tripId);
-        }
-
 
         revalidatePath('/trips');
         revalidatePath(`/trips/${tripId}`);
@@ -276,6 +270,7 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
             participants: participants,
             imageUrl: data.imageUrl,
             itineraryGenerationRule: data.itineraryGenerationRule || 'majority',
+            syncLocalActivities: data.syncLocalActivities ?? true,
             latitude: data.latitude,
             longitude: data.longitude,
             placeId: data.placeId,
@@ -949,20 +944,52 @@ export async function getCompletedCouplesActivities(userId: string): Promise<Com
 export async function getTripActivities(tripId: string, userId: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const activitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
-        const activities = activitiesSnapshot.docs.map(doc => {
+        // First, get the main trip data to check the sync flag.
+        const tripDoc = await firestore.collection('trips').doc(tripId).get();
+        if (!tripDoc.exists) {
+            console.error(`Trip with ID ${tripId} not found.`);
+            return [];
+        }
+        const tripData = tripDoc.data() as Trip;
+
+        // Fetch activities specifically created for this trip.
+        const tripActivitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
+        const tripSpecificActivities = new Map<string, Activity>();
+        
+        tripActivitiesSnapshot.docs.forEach(doc => {
             const data = doc.data();
             const votes = data.votes || {};
-            
-            return { 
+            tripSpecificActivities.set(doc.id, { 
                 ...data, 
                 id: doc.id,
                 likes: data.likes || 0,
                 dislikes: data.dislikes || 0,
-                isLiked: votes[userId], // isLiked can be true, false, or undefined
-            } as Activity;
+                isLiked: votes[userId],
+            } as Activity);
         });
-        return activities;
+
+        // If the sync flag is true, fetch relevant local activities.
+        if (tripData.syncLocalActivities && tripData.destination) {
+            const localActivities = await getCustomCouplesActivities(undefined, undefined, tripData.destination);
+            // You could extend this to fetch from friends/meet activities as well
+            
+            for (const localActivity of localActivities) {
+                // Avoid adding duplicates if an activity with the same name already exists in the trip-specific list.
+                if (!Array.from(tripSpecificActivities.values()).some(a => a.name === localActivity.name)) {
+                     // Since local activities don't have trip-specific votes, we set defaults.
+                    tripSpecificActivities.set(localActivity.id, {
+                        ...localActivity,
+                        tripId: tripId, // Assign tripId for context
+                        isLiked: undefined, // User has not voted on this in the context of the trip
+                        likes: 0,
+                        dislikes: 0,
+                        votes: {},
+                    });
+                }
+            }
+        }
+
+        return Array.from(tripSpecificActivities.values());
     } catch (error) {
         console.error(`Error getting trip activities for trip ${tripId}:`, error)
         return [];
@@ -1028,10 +1055,24 @@ export async function voteOnTripActivity(
         await firestore.runTransaction(async (transaction) => {
             const activityDoc = await transaction.get(activityRef);
             if (!activityDoc.exists) {
-                throw new Error("Activity not found.");
+                // This could be a local activity that doesn't exist in the subcollection.
+                // We need to create it before we can vote on it.
+                const trip = await getTrip(tripId);
+                if (!trip || !trip.destination) throw new Error("Trip not found");
+
+                const localActivities = await getCustomCouplesActivities(undefined, undefined, trip.destination);
+                const activityToCreate = localActivities.find(a => a.id === activityId);
+                
+                if (!activityToCreate) throw new Error("Activity not found.");
+
+                // Create a new document in the trip's activities subcollection
+                const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
+                transaction.set(activityRef, newActivityData);
             }
 
-            const data = activityDoc.data()!;
+            // Now, get the document again (it's either the original or the one we just created)
+            const docForUpdate = await transaction.get(activityRef);
+            const data = docForUpdate.data()!;
             const votes = data.votes || {};
             const previousVote = votes[userId];
 
@@ -1265,61 +1306,5 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         console.error('Error clearing all data:', error);
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
-    }
-}
-
-export async function importLocalActivitiesToTrip(tripId: string): Promise<{ success: boolean; importedCount?: number; error?: string }> {
-    if (!isFirebaseInitialized) {
-        return { success: false, error: 'Firebase is not initialized.' };
-    }
-
-    try {
-        const trip = await getTrip(tripId);
-        if (!trip || !trip.destination) {
-            return { success: false, error: 'Trip not found or has no destination.' };
-        }
-
-        // Fetch local activities from all relevant modules for the trip's destination
-        const localCouplesActivities = await getCustomCouplesActivities(undefined, undefined, trip.destination);
-        // You would add calls for friends and meet activities here as well and combine them
-        const allLocalActivities = [...localCouplesActivities]; // Combine all sources
-
-        if (allLocalActivities.length === 0) {
-            return { success: false, error: `No local activities found for "${trip.destination}".` };
-        }
-
-        const existingTripActivities = await getTripActivities(tripId, trip.ownerId);
-        const existingTripActivityNames = new Set(existingTripActivities.map(a => a.name));
-
-        const activitiesToImport = allLocalActivities.filter(localActivity => !existingTripActivityNames.has(localActivity.name));
-
-        if (activitiesToImport.length === 0) {
-            return { success: true, importedCount: 0, error: 'All local activities for this destination are already in the trip.' };
-        }
-
-        const batch = firestore.batch();
-        const tripActivitiesRef = firestore.collection('trips').doc(tripId).collection('activities');
-
-        for (const activity of activitiesToImport) {
-            const newActivityRef = tripActivitiesRef.doc();
-            const newActivity: Activity = {
-                ...activity,
-                id: newActivityRef.id,
-                tripId: tripId,
-                votes: {},
-                likes: 0,
-                dislikes: 0,
-            };
-            batch.set(newActivityRef, newActivity);
-        }
-
-        await batch.commit();
-        revalidatePath(`/trips/${tripId}`);
-
-        return { success: true, importedCount: activitiesToImport.length };
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        console.error(`Error importing local activities to trip ${tripId}:`, error);
-        return { success: false, error: `Failed to import activities: ${errorMessage}` };
     }
 }

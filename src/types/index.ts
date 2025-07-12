@@ -31,6 +31,7 @@ export interface Trip {
   latitude?: number;
   longitude?: number;
   placeId?: string;
+  syncLocalActivities?: boolean; // New flag to control syncing
 }
 
 export interface Activity {

@@ -30,7 +30,7 @@ const newTripFormSchema = z.object({
   endDate: z.date({ required_error: "End date is required." }),
   itineraryGenerationRule: z.enum(['majority', 'all']).default('majority'),
   participantEmails: z.array(z.string().email()).optional(),
-  importLocalActivities: z.boolean().default(false),
+  syncLocalActivities: z.boolean().default(true),
 }).refine(data => data.endDate >= data.startDate, {
   message: "End date cannot be before start date.",
   path: ["endDate"],
@@ -61,7 +61,7 @@ export function NewTripForm() {
       destination: "",
       itineraryGenerationRule: "majority",
       participantEmails: [],
-      importLocalActivities: false,
+      syncLocalActivities: true,
     },
   });
 
@@ -116,7 +116,7 @@ export function NewTripForm() {
           endDate: format(data.endDate, "yyyy-MM-dd"),
           itineraryGenerationRule: data.itineraryGenerationRule,
           participantEmails: data.participantEmails,
-          importLocalActivities: data.importLocalActivities,
+          syncLocalActivities: data.syncLocalActivities,
         };
 
         const result = await createTrip(tripData, user.uid);
@@ -330,16 +330,16 @@ export function NewTripForm() {
 
         <FormField
           control={form.control}
-          name="importLocalActivities"
+          name="syncLocalActivities"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <FormLabel className="text-base flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
-                  Import Local Activities
+                  Include Local Discovery Activities
                 </FormLabel>
                 <FormDescription>
-                  Automatically add local discovery activities (from Plando Couples, etc.) for your destination.
+                  Automatically include activities from other Plando modules for your destination.
                 </FormDescription>
               </div>
               <FormControl>
