@@ -35,6 +35,18 @@ const handleAIError = (error: unknown, defaultMessage: string): { error: string 
     return { error: "An unknown error occurred." };
 }
 
+// A fallback SVG icon for custom activities if AI image generation fails.
+const customActivityFallbackSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250">
+  <rect width="100%" height="100%" fill="#f0f8ff" />
+  <g transform="translate(175, 100)" stroke="#a9a9a9" stroke-width="12" stroke-linecap="round">
+    <line x1="0" y1="25" x2="50" y2="25" />
+    <line x1="25" y1="0" x2="25" y2="50" />
+  </g>
+</svg>`;
+const customActivityFallbackImageUrl = `data:image/svg+xml;base64,${Buffer.from(customActivityFallbackSvg).toString('base64')}`;
+
+
 // This function will be called from client components to generate the itinerary.
 export async function suggestItineraryAction(
   tripId: string
@@ -670,7 +682,7 @@ export async function addCustomCoupleActivity(
   try {
     const newActivityRef = firestore.collection('couplesActivities').doc();
     
-    let imageUrl = `https://placehold.co/400x250.png`; // Fallback
+    let imageUrl = customActivityFallbackImageUrl;
     try {
         const generatedImage = await generateActivityImage({
             activityName: activityData.name,
@@ -707,11 +719,47 @@ export async function addCustomCoupleActivity(
   }
 }
 
-export async function getCustomCouplesActivities(): Promise<Activity[]> {
+export async function getCustomCouplesActivities(userId?: string, partnerId?: string, location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const snapshot = await firestore.collection('couplesActivities').get();
+        let query: FirebaseFirestore.Query = firestore.collection('couplesActivities');
+
+        // This query fetches activities created by the current user OR their partner, AND public activities for their location.
+        const userIdsToQuery = [userId, partnerId].filter(id => !!id) as string[];
+
+        // If a location is provided, we fetch activities for that location OR created by the users.
+        if (location && location !== "Default") {
+            // This requires a composite query in Firestore. Since we can't do (location == X OR createdBy in [Y, Z]),
+            // we will fetch in two parts and combine.
+            const locationQuery = firestore.collection('couplesActivities').where('location', '==', location);
+            const usersQuery = userIdsToQuery.length > 0 ? firestore.collection('couplesActivities').where('createdBy', 'in', userIdsToQuery) : null;
+            
+            const [locationSnapshot, usersSnapshot] = await Promise.all([
+                locationQuery.get(),
+                usersQuery ? usersQuery.get() : Promise.resolve({ docs: [] as FirebaseFirestore.QueryDocumentSnapshot[] })
+            ]);
+
+            const activitiesMap = new Map<string, Activity>();
+            
+            locationSnapshot.docs.forEach(doc => {
+                activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
+            });
+            usersSnapshot.docs.forEach(doc => {
+                activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
+            });
+
+            return Array.from(activitiesMap.values());
+        } else if (userIdsToQuery.length > 0) {
+            // If no location, just fetch activities created by the couple.
+            query = firestore.collection('couplesActivities').where('createdBy', 'in', userIdsToQuery);
+        } else {
+             // Fallback for default activities if no user/location context
+            query = firestore.collection('couplesActivities').where('createdBy', '==', 'system');
+        }
+        
+        const snapshot = await query.get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+
     } catch (error) {
         console.error('Error fetching custom couples activities:', error);
         return [];
@@ -728,7 +776,7 @@ export async function addCustomFriendActivity(
   try {
     const newActivityRef = firestore.collection('friendsActivities').doc();
 
-    let imageUrl = `https://placehold.co/400x250.png`; // Fallback
+    let imageUrl = customActivityFallbackImageUrl;
     try {
         const generatedImage = await generateActivityImage({
             activityName: activityData.name,
@@ -762,10 +810,14 @@ export async function addCustomFriendActivity(
   }
 }
 
-export async function getCustomFriendActivities(): Promise<Activity[]> {
+export async function getCustomFriendActivities(location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const snapshot = await firestore.collection('friendsActivities').get();
+        const query = location && location !== "Default" 
+            ? firestore.collection('friendsActivities').where('location', '==', location)
+            : firestore.collection('friendsActivities');
+        
+        const snapshot = await query.get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
     } catch (error) {
         console.error('Error fetching custom friend activities:', error);
@@ -783,7 +835,7 @@ export async function addCustomMeetActivity(
   try {
     const newActivityRef = firestore.collection('meetActivities').doc();
     
-    let imageUrl = `https://placehold.co/400x250.png`; // Fallback
+    let imageUrl = customActivityFallbackImageUrl;
     try {
         const generatedImage = await generateActivityImage({
             activityName: activityData.name,
@@ -817,10 +869,14 @@ export async function addCustomMeetActivity(
   }
 }
 
-export async function getCustomMeetActivities(): Promise<Activity[]> {
+export async function getCustomMeetActivities(location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const snapshot = await firestore.collection('meetActivities').get();
+        const query = location && location !== "Default" 
+            ? firestore.collection('meetActivities').where('location', '==', location)
+            : firestore.collection('meetActivities');
+            
+        const snapshot = await query.get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
     } catch (error) {
         console.error('Error fetching custom meet activities:', error);
@@ -925,7 +981,7 @@ export async function addTripActivity(
     try {
         const { id, ...data } = activityData as any;
         
-        let imageUrl = `https://placehold.co/400x300.png`; // Fallback
+        let imageUrl = customActivityFallbackImageUrl; 
         try {
             const generatedImage = await generateActivityImage({
                 activityName: data.name,
@@ -1095,5 +1151,87 @@ export async function addActivityToItineraryDay(tripId: string, activity: Activi
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
+    }
+}
+
+
+/**
+ * Deletes all documents from a collection or subcollection in batches.
+ * @param query The query for the collection/subcollection to delete.
+ * @param batchSize The number of documents to delete in each batch.
+ * @returns The total number of documents deleted.
+ */
+async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (count: number) => void, reject: (reason?: any) => void, deletedCount: number = 0) {
+    const snapshot = await query.get();
+
+    if (snapshot.size === 0) {
+        resolve(deletedCount);
+        return;
+    }
+
+    const batch = firestore.batch();
+    snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    deletedCount += snapshot.size;
+
+    if (snapshot.size > 0) {
+        process.nextTick(() => {
+            deleteQueryBatch(query, resolve, reject, deletedCount);
+        });
+    } else {
+        resolve(deletedCount);
+    }
+}
+
+/**
+ * Server action to clear all activity collections and related user subcollections.
+ */
+export async function clearAllActivities(): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
+    if (!isFirebaseInitialized) {
+        return { success: false, error: 'Firebase is not initialized. Cannot clear data.' };
+    }
+
+    try {
+        const collectionsToDelete = ['couplesActivities', 'friendsActivities', 'meetActivities'];
+        let totalDeleted = 0;
+
+        for (const collectionName of collectionsToDelete) {
+            const query = firestore.collection(collectionName).limit(50);
+            const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query, resolve, reject));
+            totalDeleted += count;
+            console.log(`Cleared ${count} documents from ${collectionName}.`);
+        }
+
+        // Also clear user-specific votes and completed activities
+        const usersSnapshot = await firestore.collection('users').get();
+        for (const userDoc of usersSnapshot.docs) {
+            const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
+            const completedQuery = userDoc.ref.collection('completedCouplesActivities').limit(50);
+
+            const [votesCount, completedCount] = await Promise.all([
+                 new Promise<number>((resolve, reject) => deleteQueryBatch(votesQuery, resolve, reject)),
+                 new Promise<number>((resolve, reject) => deleteQueryBatch(completedQuery, resolve, reject)),
+            ]);
+            
+            if(votesCount > 0) {
+              console.log(`Cleared ${votesCount} votes from user ${userDoc.id}.`);
+            }
+            if(completedCount > 0) {
+                console.log(`Cleared ${completedCount} completed activities from user ${userDoc.id}.`);
+            }
+        }
+
+        revalidatePath('/plando-couples', 'layout');
+        revalidatePath('/plando-friends', 'layout');
+        revalidatePath('/plando-meet', 'layout');
+
+        return { success: true, deletedCount: totalDeleted };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        console.error('Error clearing activity collections:', error);
+        return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
