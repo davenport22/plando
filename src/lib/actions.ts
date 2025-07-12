@@ -169,6 +169,7 @@ const NewTripDataSchema = z.object({
     endDate: z.string(),   // YYYY-MM-DD format
     itineraryGenerationRule: z.enum(['majority', 'all']),
     participantEmails: z.array(z.string().email()).optional(),
+    importLocalActivities: z.boolean().optional(),
 });
 
 
@@ -179,7 +180,7 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
 
     try {
         const validatedData = NewTripDataSchema.parse(data);
-        const { participantEmails = [], ...tripDetails } = validatedData;
+        const { participantEmails = [], importLocalActivities, ...tripDetails } = validatedData;
         
         const ownerProfile = await getUserProfile(ownerId);
         if (!ownerProfile) {
@@ -201,7 +202,6 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
-        // Use Unsplash for a fast, reliable image source.
         const imageUrl = `https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=${encodeURIComponent(
           tripDetails.destination
         )}`;
@@ -232,8 +232,29 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
                 });
             });
         }
+        
+        // Import local activities if requested
+        if (importLocalActivities) {
+            const localActivities = await getCustomCouplesActivities(undefined, undefined, tripDetails.destination);
+            const batch = firestore.batch();
+            
+            for (const activity of localActivities) {
+                const newActivityRef = firestore.collection('trips').doc(tripId).collection('activities').doc();
+                const newActivity: Activity = {
+                    ...activity,
+                    id: newActivityRef.id,
+                    votes: {},
+                    likes: 0,
+                    dislikes: 0,
+                };
+                batch.set(newActivityRef, newActivity);
+            }
+            await batch.commit();
+        }
+
 
         revalidatePath('/trips');
+        revalidatePath(`/trips/${tripId}`);
         return { success: true, tripId: tripId };
 
     } catch (e) {
@@ -1260,4 +1281,3 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
-
