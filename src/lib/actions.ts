@@ -970,10 +970,16 @@ export async function getTripActivities(tripId: string, userId: string): Promise
 
         // If the sync flag is true, fetch relevant local activities.
         if (tripData.syncLocalActivities && tripData.destination) {
-            const localActivities = await getCustomCouplesActivities(undefined, undefined, tripData.destination);
-            // You could extend this to fetch from friends/meet activities as well
+            // Fetch from all relevant local collections
+            const [couplesActivities, friendsActivities, meetActivities] = await Promise.all([
+                getCustomCouplesActivities(undefined, undefined, tripData.destination),
+                getCustomFriendActivities(tripData.destination),
+                getCustomMeetActivities(tripData.destination),
+            ]);
             
-            for (const localActivity of localActivities) {
+            const allLocalActivities = [...couplesActivities, ...friendsActivities, ...meetActivities];
+
+            for (const localActivity of allLocalActivities) {
                 // Avoid adding duplicates if an activity with the same name already exists in the trip-specific list.
                 if (!Array.from(tripSpecificActivities.values()).some(a => a.name === localActivity.name)) {
                      // Since local activities don't have trip-specific votes, we set defaults.
@@ -1055,17 +1061,25 @@ export async function voteOnTripActivity(
         await firestore.runTransaction(async (transaction) => {
             const activityDoc = await transaction.get(activityRef);
             if (!activityDoc.exists) {
-                // This could be a local activity that doesn't exist in the subcollection.
-                // We need to create it before we can vote on it.
+                // It's a synced local activity, not a trip-specific one yet.
+                // We need to find its data in the root collections and create it here.
                 const trip = await getTrip(tripId);
-                if (!trip || !trip.destination) throw new Error("Trip not found");
+                if (!trip || !trip.destination) throw new Error("Trip not found for syncing activity.");
 
-                const localActivities = await getCustomCouplesActivities(undefined, undefined, trip.destination);
-                const activityToCreate = localActivities.find(a => a.id === activityId);
+                // Search all relevant collections for the activity by ID
+                const collectionsToSearch = ['couplesActivities', 'friendsActivities', 'meetActivities'];
+                let activityToCreate: Activity | null = null;
+                for (const collectionName of collectionsToSearch) {
+                    const doc = await firestore.collection(collectionName).doc(activityId).get();
+                    if (doc.exists) {
+                        activityToCreate = { id: doc.id, ...doc.data() } as Activity;
+                        break;
+                    }
+                }
                 
-                if (!activityToCreate) throw new Error("Activity not found.");
+                if (!activityToCreate) throw new Error("Activity not found in any local collection.");
 
-                // Create a new document in the trip's activities subcollection
+                // Create a new document in the trip's activities subcollection with default votes
                 const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
                 transaction.set(activityRef, newActivityData);
             }
