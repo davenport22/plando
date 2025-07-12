@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, calculateTripDuration } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Info, X } from "lucide-react";
+import { CalendarIcon, Loader2, Info, X, PlusCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { createTrip } from "@/lib/actions";
