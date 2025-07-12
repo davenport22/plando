@@ -21,6 +21,7 @@ import { ParticipantManager } from "./ParticipantManager";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { importLocalActivitiesToTrip } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
 
 const editTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
