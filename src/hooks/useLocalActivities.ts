@@ -18,7 +18,7 @@ export function useLocalActivities(
     const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [locationStatusMessage, setLocationStatusMessage] = useState<string | null>(null);
-    const [currentLocationKey, setCurrentLocationKey] = useState<string>("Default");
+    const [currentLocationKey, setCurrentLocationKey] = useState<string>("Vienna, Austria");
     const [votedActivityIds, setVotedActivityIds] = useState<Set<string>>(new Set());
 
     const fetchActivities = useCallback(async () => {
@@ -29,18 +29,19 @@ export function useLocalActivities(
             return [];
         }
 
-        let determinedLocationKey = userProfile.location || "Default";
+        let determinedLocationKey: string;
         let statusMsg: string;
 
         if (moduleType === 'couples' && partnerProfile) {
             const primaryUser = userProfile.id < partnerProfile.id ? userProfile : partnerProfile;
             const secondaryUser = userProfile.id < partnerProfile.id ? partnerProfile : userProfile;
-            determinedLocationKey = primaryUser.location || secondaryUser.location || "Default";
+            determinedLocationKey = primaryUser.location || secondaryUser.location || "Vienna, Austria";
             statusMsg = `Viewing shared date ideas for ${determinedLocationKey}.`;
         } else {
+             determinedLocationKey = userProfile.location || "Vienna, Austria";
              statusMsg = userProfile.location
                 ? `Using your profile location for activities: ${determinedLocationKey}.`
-                : "No profile location set. Using default activities.";
+                : "No profile location set. Using default activities from Vienna.";
         }
 
         setCurrentLocationKey(determinedLocationKey);
@@ -73,10 +74,10 @@ export function useLocalActivities(
         setActivities(activitiesToShow);
         setIsLoading(false);
         
-        if (activitiesToShow.length === 0 && previouslyVotedIds.size > 0 && customActivities.length > 0) {
+        if (activitiesToShow.length === 0 && customActivities.length > 0) {
              toast({ 
                 title: "All Activities Voted On", 
-                description: "You've already seen all available activities for your area!",
+                description: `You've already seen all available activities for ${determinedLocationKey}!`,
             });
         }
 
