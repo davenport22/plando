@@ -2,6 +2,7 @@
 'use server';
 
 import type { Activity } from '@/types';
+// We will get the initialized firestore instance from the runner
 import { firestore } from '@/lib/firebase';
 import { generateActivityImage } from '@/ai/flows/generate-activity-image-flow';
 
