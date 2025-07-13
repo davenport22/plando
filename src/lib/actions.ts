@@ -836,15 +836,10 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
         
         const locationToQuery = location || "Vienna, Austria";
 
-        const userIdsToQuery: string[] = ['system'];
-        if (module === 'couples' && userId) userIdsToQuery.push(userId);
-        if (module === 'couples' && partnerId) userIdsToQuery.push(partnerId);
-
         const q = firestore.collection('activities')
             .where('modules', 'array-contains', module)
-            .where('location', '==', locationToQuery)
-            .where('createdBy', 'in', userIdsToQuery);
-
+            .where('location', '==', locationToQuery);
+        
         const querySnapshot = await q.get();
 
         querySnapshot.docs.forEach(doc => {
