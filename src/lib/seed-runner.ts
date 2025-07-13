@@ -1,6 +1,8 @@
-
 // This script is designed to be run manually from the command line
 // to seed the Firestore database with initial data.
+import { config } from 'dotenv';
+config(); // Load environment variables from .env file
+
 import { seedViennaActivities } from './seed';
 
 async function runSeed() {
