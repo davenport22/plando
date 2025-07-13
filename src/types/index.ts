@@ -55,6 +55,7 @@ export interface Activity {
   dataAiHint?: string; 
   createdBy?: string;
   votes?: { [userId: string]: boolean }; // Stored in DB, used to calculate likes/dislikes
+  module?: 'couples' | 'friends' | 'meet' | 'travel';
 }
 
 // For AI Flow input

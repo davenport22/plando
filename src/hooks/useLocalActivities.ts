@@ -29,20 +29,10 @@ export function useLocalActivities(
             return [];
         }
 
-        let determinedLocationKey: string;
-        let statusMsg: string;
-
-        if (moduleType === 'couples' && partnerProfile) {
-            const primaryUser = userProfile.id < partnerProfile.id ? userProfile : partnerProfile;
-            const secondaryUser = userProfile.id < partnerProfile.id ? partnerProfile : userProfile;
-            determinedLocationKey = primaryUser.location || secondaryUser.location || "Vienna, Austria";
-            statusMsg = `Viewing shared date ideas for ${determinedLocationKey}.`;
-        } else {
-             determinedLocationKey = userProfile.location || "Vienna, Austria";
-             statusMsg = userProfile.location
-                ? `Using your profile location for activities: ${determinedLocationKey}.`
-                : "No profile location set. Using default activities from Vienna.";
-        }
+        const determinedLocationKey = userProfile.location || "Vienna, Austria";
+        const statusMsg = userProfile.location
+            ? `Using your profile location for activities: ${determinedLocationKey}.`
+            : "No profile location set. Using default activities from Vienna.";
 
         setCurrentLocationKey(determinedLocationKey);
         setLocationStatusMessage(statusMsg);
