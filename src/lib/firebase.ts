@@ -26,7 +26,7 @@ if (!admin.apps.length) {
                 ...serviceAccount,
                 // The private key should be a multi-line string.
                 // It is read directly from the environment variable.
-                privateKey: serviceAccount.privateKey,
+                privateKey: serviceAccount.privateKey.replace(/\\n/g, '\n'),
             }),
             storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         });

@@ -6,12 +6,15 @@ config(); // Load environment variables from .env file
 import { seedViennaActivities } from './seed';
 
 async function runSeed() {
-  console.log('Starting database seed...');
-  await seedViennaActivities();
-  console.log('Database seeding complete.');
+  try {
+    console.log('Starting database seed...');
+    await seedViennaActivities();
+    console.log('Database seeding complete.');
+    process.exit(0);
+  } catch (error) {
+    console.error('\nSeeding failed. See error details above.');
+    process.exit(1);
+  }
 }
 
-runSeed().catch(error => {
-  console.error('Seeding failed:', error);
-  process.exit(1);
-});
+runSeed();

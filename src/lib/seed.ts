@@ -132,6 +132,19 @@ const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes'
 // This function seeds the single 'activities' collection with predefined data.
 // It creates an entry for each module (couples, friends, meet) for each activity.
 export async function seedViennaActivities() {
+  console.log("Checking Firestore connection...");
+  try {
+    // Perform a simple read operation to confirm the database is accessible.
+    await firestore.listCollections();
+    console.log("Firestore connection successful.");
+  } catch (error: any) {
+    console.error("\nCRITICAL ERROR: Could not connect to Firestore.");
+    console.error("This usually means your .env file is not configured correctly with the Firebase Admin credentials.");
+    console.error("Please ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set.");
+    console.error("Also, ensure the Firestore database is created in your Firebase project.\n");
+    throw new Error(`Firestore connection failed: ${error.message}`);
+  }
+
   if (viennaActivities.length === 0) {
     console.log("No activities to seed for Vienna.");
     return;
