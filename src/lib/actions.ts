@@ -448,7 +448,7 @@ export async function importLocalActivitiesToTrip(tripId: string): Promise<{ suc
             return { success: false, error: 'Trip has no destination set.', count: 0 };
         }
         
-        const localActivities = await internal_getCustomLocalActivities('couples', trip.destination);
+        const localActivities = await getCustomCouplesActivities(trip.destination);
         const tripActivities = await getTripActivities(tripId, trip.ownerId);
 
         const existingActivityNames = new Set(tripActivities.map(a => a.name));
@@ -769,14 +769,13 @@ export async function addCustomCoupleActivity(userId: string, data: any) { retur
 export async function addCustomFriendActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'friends', data); }
 export async function addCustomMeetActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'meet', data); }
 
-async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location?: string): Promise<Activity[]> {
+async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const locationToQuery = location || "Vienna, Austria";
-
+        
         const q = firestore.collection('activities')
             .where('modules', 'array-contains', module)
-            .where('location', '==', locationToQuery);
+            .where('location', '==', location);
         
         const querySnapshot = await q.get();
 
@@ -788,9 +787,9 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
     }
 }
 
-export async function getCustomCouplesActivities(location?: string) { return internal_getCustomLocalActivities('couples', location); }
-export async function getCustomFriendActivities(location?: string) { return internal_getCustomLocalActivities('friends', location); }
-export async function getCustomMeetActivities(location?: string) { return internal_getCustomLocalActivities('meet', location); }
+export async function getCustomCouplesActivities(location?: string) { return internal_getCustomLocalActivities('couples', location || 'Vienna, Austria'); }
+export async function getCustomFriendActivities(location?: string) { return internal_getCustomLocalActivities('friends', location || 'Vienna, Austria'); }
+export async function getCustomMeetActivities(location?: string) { return internal_getCustomLocalActivities('meet', location || 'Vienna, Austria'); }
 
 export async function markCoupleActivityAsCompleted(
   userId: string,
@@ -951,38 +950,35 @@ export async function voteOnTripActivity(
     userId: string, 
     vote: boolean
 ): Promise<{ success: boolean; error?: string; updatedActivity?: Activity }> {
-    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
-    
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+
     const activityRef = firestore.collection('trips').doc(tripId).collection('activities').doc(activityId);
 
     try {
+        let activityDoc = await activityRef.get();
+
+        if (!activityDoc.exists) {
+            const localActivityDoc = await firestore.collection('activities').doc(activityId).get();
+            if (!localActivityDoc.exists) throw new Error("Activity not found in any local collection.");
+            const activityToCreate = localActivityDoc.data() as Activity;
+            const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
+            await activityRef.set(newActivityData);
+        }
+
         await firestore.runTransaction(async (transaction) => {
-            let activityDoc = await transaction.get(activityRef);
-            let isNewInTrip = false;
-            if (!activityDoc.exists) {
-                const localActivityDoc = await firestore.collection('activities').doc(activityId).get();
-                
-                if (!localActivityDoc.exists) throw new Error("Activity not found in any local collection.");
+            const docForUpdate = await transaction.get(activityRef);
+            if (!docForUpdate.exists) throw new Error("Activity does not exist in trip collection.");
 
-                const activityToCreate = localActivityDoc.data() as Activity;
-
-                const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
-                transaction.set(activityRef, newActivityData);
-                activityDoc = await transaction.get(activityRef); 
-                isNewInTrip = true;
-            }
-
-            const docForUpdate = activityDoc;
             const data = docForUpdate.data()!;
             const votes = data.votes || {};
             const previousVote = votes[userId];
 
+            if (previousVote === vote) {
+                return; // No change in vote
+            }
+
             let likesIncrement = 0;
             let dislikesIncrement = 0;
-
-            if (previousVote === vote) {
-                return; 
-            }
 
             if (previousVote === undefined) {
                 if (vote) likesIncrement = 1; else dislikesIncrement = 1;
@@ -995,7 +991,7 @@ export async function voteOnTripActivity(
                     dislikesIncrement = 1;
                 }
             }
-            
+
             transaction.update(activityRef, {
                 [`votes.${userId}`]: vote,
                 likes: FieldValue.increment(likesIncrement),
@@ -1201,3 +1197,5 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
+
+    
