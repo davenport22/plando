@@ -10,8 +10,7 @@ type ActivityModuleType = 'friends' | 'meet' | 'couples';
 
 export function useLocalActivities(
     moduleType: ActivityModuleType, 
-    userProfile: UserProfile | null,
-    partnerProfile?: UserProfile | null // Not currently used, but kept for potential future logic
+    userProfile: UserProfile | null
 ) {
     const { toast } = useToast();
 
