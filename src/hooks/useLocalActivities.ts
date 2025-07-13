@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Activity, UserProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getVotedOnCouplesActivityIds, getCustomCouplesActivities, getCustomFriendActivities, getCustomMeetActivities } from '@/lib/actions';
+import { getCustomCouplesActivities, getVotedOnCouplesActivityIds, getCustomFriendActivities, getCustomMeetActivities } from '@/lib/actions';
 
 type ActivityModuleType = 'friends' | 'meet' | 'couples';
 
@@ -39,9 +39,14 @@ export function useLocalActivities(
         setLocationStatusMessage(statusMsg);
         
         let allActivitiesForLocation: Activity[] = [];
+        let previouslyVotedIds = new Set<string>();
+
         switch(moduleType) {
             case 'couples':
-                allActivitiesForLocation = await getCustomCouplesActivities(determinedLocationKey);
+                [allActivitiesForLocation, previouslyVotedIds] = await Promise.all([
+                    getCustomCouplesActivities(determinedLocationKey, userProfile.id, userProfile.partnerId),
+                    getVotedOnCouplesActivityIds(userProfile.id).then(ids => new Set(ids))
+                ]);
                 break;
             case 'friends':
                 allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey);
@@ -51,10 +56,6 @@ export function useLocalActivities(
                 break;
         }
         
-        const previouslyVotedIds = moduleType === 'couples' 
-            ? new Set(await getVotedOnCouplesActivityIds(userProfile.id))
-            : new Set<string>();
-
         const activitiesToShow = allActivitiesForLocation
                                   .filter(act => !previouslyVotedIds.has(act.id))
                                   .map(act => ({ ...act, isLiked: undefined }));
@@ -73,6 +74,7 @@ export function useLocalActivities(
     }, [moduleType, toast, userProfile]);
     
     useEffect(() => {
+        // This effect ensures fetchActivities is only called when userProfile is definitively loaded.
         if (userProfile !== undefined) {
             fetchActivities();
         }
