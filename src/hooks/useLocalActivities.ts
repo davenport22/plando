@@ -11,14 +11,14 @@ type ActivityModuleType = 'friends' | 'meet' | 'couples';
 export function useLocalActivities(
     moduleType: ActivityModuleType, 
     userProfile: UserProfile | null,
-    partnerProfile?: UserProfile | null
+    partnerProfile?: UserProfile | null // Not currently used, but kept for potential future logic
 ) {
     const { toast } = useToast();
 
     const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [locationStatusMessage, setLocationStatusMessage] = useState<string | null>(null);
-    const [currentLocationKey, setCurrentLocationKey] = useState<string>("Vienna, Austria");
+    const [currentLocationKey, setCurrentLocationKey] = useState<string>("");
     const [votedActivityIds, setVotedActivityIds] = useState<Set<string>>(new Set());
 
     const fetchActivities = useCallback(async () => {
@@ -44,15 +44,17 @@ export function useLocalActivities(
         switch(moduleType) {
             case 'couples':
                 [allActivitiesForLocation, previouslyVotedIds] = await Promise.all([
-                    getCustomCouplesActivities(determinedLocationKey, userProfile.id, userProfile.partnerId),
+                    getCustomCouplesActivities(determinedLocationKey),
                     getVotedOnCouplesActivityIds(userProfile.id).then(ids => new Set(ids))
                 ]);
                 break;
             case 'friends':
                 allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey);
+                // Friends module might have a different voting system, for now we don't filter
                 break;
             case 'meet':
                 allActivitiesForLocation = await getCustomMeetActivities(determinedLocationKey);
+                 // Meet module might have a different voting system, for now we don't filter
                 break;
         }
         

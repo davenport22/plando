@@ -848,7 +848,7 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
     }
 }
 
-export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) { return internal_getCustomLocalActivities('couples', location); }
+export async function getCustomCouplesActivities(location?: string) { return internal_getCustomLocalActivities('couples', location); }
 export async function getCustomFriendActivities(location?: string) { return internal_getCustomLocalActivities('friends', location); }
 export async function getCustomMeetActivities(location?: string) { return internal_getCustomLocalActivities('meet', location); }
 
