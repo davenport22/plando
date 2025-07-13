@@ -10,13 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { UserProfile } from "@/types";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/actions";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { CitySelect } from "@/components/common/CitySelect";
+import { CITIES } from "@/lib/cities";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -120,8 +123,19 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
     }
 }
 
+  const isLocationInvalid = initialData.location && !CITIES.includes(initialData.location);
+
   return (
     <Form {...form}>
+       {isLocationInvalid && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Action Required: Update Your Location</AlertTitle>
+          <AlertDescription>
+            Your currently saved location ('{initialData.location}') is no longer valid. Please select a city from the list below to continue seeing relevant activities.
+          </AlertDescription>
+        </Alert>
+      )}
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
         
         <div className="flex items-center gap-6">
