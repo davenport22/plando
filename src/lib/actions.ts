@@ -958,6 +958,7 @@ export async function voteOnTripActivity(
     try {
         await firestore.runTransaction(async (transaction) => {
             let activityDoc = await transaction.get(activityRef);
+            let isNewInTrip = false;
             if (!activityDoc.exists) {
                 const localActivityDoc = await firestore.collection('activities').doc(activityId).get();
                 
@@ -968,6 +969,7 @@ export async function voteOnTripActivity(
                 const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
                 transaction.set(activityRef, newActivityData);
                 activityDoc = await transaction.get(activityRef); 
+                isNewInTrip = true;
             }
 
             const docForUpdate = activityDoc;
