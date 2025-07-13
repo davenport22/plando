@@ -37,34 +37,32 @@ export function useLocalActivities(
         setCurrentLocationKey(determinedLocationKey);
         setLocationStatusMessage(statusMsg);
         
-        let previouslyVotedIds = new Set<string>();
-        if (moduleType === 'couples') {
-            const ids = await getVotedOnCouplesActivityIds(userProfile.id);
-            previouslyVotedIds = new Set(ids);
-            setVotedActivityIds(previouslyVotedIds);
-        }
-
-        let customActivities: Activity[] = [];
+        let allActivitiesForLocation: Activity[] = [];
         switch(moduleType) {
             case 'couples':
-                customActivities = await getCustomCouplesActivities(determinedLocationKey, userProfile.id, partnerProfile?.id);
+                allActivitiesForLocation = await getCustomCouplesActivities(determinedLocationKey, userProfile.id, partnerProfile?.id);
                 break;
             case 'friends':
-                customActivities = await getCustomFriendActivities(determinedLocationKey);
+                allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey);
                 break;
             case 'meet':
-                customActivities = await getCustomMeetActivities(determinedLocationKey);
+                allActivitiesForLocation = await getCustomMeetActivities(determinedLocationKey);
                 break;
         }
 
-        const activitiesToShow = customActivities
+        const previouslyVotedIds = moduleType === 'couples' 
+            ? new Set(await getVotedOnCouplesActivityIds(userProfile.id))
+            : new Set<string>();
+
+        const activitiesToShow = allActivitiesForLocation
                                   .filter(act => !previouslyVotedIds.has(act.id))
                                   .map(act => ({ ...act, isLiked: undefined }));
 
         setActivities(activitiesToShow);
+        setVotedActivityIds(previouslyVotedIds);
         setIsLoading(false);
         
-        if (activitiesToShow.length === 0 && customActivities.length > 0) {
+        if (activitiesToShow.length === 0 && allActivitiesForLocation.length > 0) {
              toast({ 
                 title: "All Activities Voted On", 
                 description: `You've already seen all available activities for ${determinedLocationKey}!`,
