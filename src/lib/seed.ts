@@ -131,7 +131,7 @@ const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes'
 
 // This function seeds the single 'activities' collection with predefined data.
 // It creates an entry for each module (couples, friends, meet) for each activity.
-async function seedViennaActivities() {
+export async function seedViennaActivities() {
   if (viennaActivities.length === 0) {
     console.log("No activities to seed for Vienna.");
     return;
@@ -188,29 +188,4 @@ async function seedViennaActivities() {
     }
   }
   console.log("Finished seeding Vienna activities.");
-}
-
-// This function checks if the database has been seeded and runs the seed if not.
-// It uses a document in a '_meta' collection as a flag.
-export async function runSeedOnce() {
-  try {
-    const metaRef = firestore.collection('_meta').doc('seedStatus');
-    const doc = await metaRef.get();
-
-    if (!doc.exists) {
-      console.log('Database has not been seeded. Running seed process...');
-      await seedViennaActivities();
-      await metaRef.set({
-        seededOn: new Date().toISOString(),
-        version: '1.0.0'
-      });
-      console.log('Database seeding complete. Flag set.');
-    } else {
-      console.log('Database already seeded. Skipping.');
-    }
-  } catch (error) {
-    // We log the error but don't re-throw it to prevent crashing the server on startup
-    // if there's a transient issue connecting to Firestore.
-    console.error('Could not run or check for database seed:', error);
-  }
 }
