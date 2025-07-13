@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx src/lib/seed-runner.ts"
+    "seed": "tsx --require dotenv/config src/lib/seed.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
