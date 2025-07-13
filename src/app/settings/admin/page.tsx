@@ -21,7 +21,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CityAutocompleteInput } from '@/components/common/CityAutocompleteInput';
+import { CitySelect } from "@/components/common/CitySelect";
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
@@ -129,11 +129,12 @@ export default function AdminSettingsPage() {
                 <div className="p-4 border rounded-lg space-y-4">
                     <Label htmlFor="city-to-clear" className="font-semibold text-base">Clear by Specific City</Label>
                     <div className="flex items-center gap-2">
-                        <CityAutocompleteInput
-                            value={cityToClear}
-                            onChange={setCityToClear}
-                            placeholder="e.g., Vienna, Austria"
-                        />
+                        <div className="flex-grow">
+                          <CitySelect
+                              onValueChange={setCityToClear}
+                              defaultValue={cityToClear}
+                          />
+                        </div>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="destructive" disabled={!cityToClear.trim()}>
