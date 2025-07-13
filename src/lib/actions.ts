@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
@@ -765,37 +766,43 @@ async function internal_addCustomLocalActivity(
   }
 }
 
-export const addCustomCoupleActivity = async (userId: string, data: any) => internal_addCustomLocalActivity(userId, 'couples', data);
-export const addCustomFriendActivity = async (userId: string, data: any) => internal_addCustomLocalActivity(userId, 'friends', data);
-export const addCustomMeetActivity = async (userId: string, data: any) => internal_addCustomLocalActivity(userId, 'meet', data);
+export async function addCustomCoupleActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'couples', data) };
+export async function addCustomFriendActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'friends', data) };
+export async function addCustomMeetActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'meet', data) };
 
 async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location?: string, userId?: string, partnerId?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
         const activitiesMap = new Map<string, Activity>();
-        const activitiesCollection = firestore.collection('activities');
         
-        // Base query for the specific module
-        let baseQuery = activitiesCollection.where('module', '==', module);
-
         // Fetch system-default activities for the location
         const locationToQuery = location || "Vienna, Austria";
-        const locationQuery = baseQuery.where('location', '==', locationToQuery);
+        const locationQuery = firestore.collection('activities')
+            .where('module', '==', module)
+            .where('createdBy', '==', 'system')
+            .where('location', '==', locationToQuery);
+            
         const locationSnapshot = await locationQuery.get();
         locationSnapshot.docs.forEach(doc => {
             activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
         });
 
-        // For couples, also fetch activities created by the user or their partner
-        if (module === 'couples') {
-            const userIdsToQuery = [userId, partnerId].filter(id => !!id) as string[];
-            if (userIdsToQuery.length > 0) {
-                const usersQuery = baseQuery.where('createdBy', 'in', userIdsToQuery);
-                const usersSnapshot = await usersQuery.get();
-                usersSnapshot.docs.forEach(doc => {
-                    activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
-                });
-            }
+        // For couples, also fetch activities created by the user or their partner.
+        if (module === 'couples' && (userId || partnerId)) {
+            const userIdsToQuery = [userId, partnerId, 'system'].filter(id => !!id) as string[];
+            
+            const usersQuery = firestore.collection('activities')
+                .where('module', '==', 'couples')
+                .where('createdBy', 'in', userIdsToQuery);
+
+            const usersSnapshot = await usersQuery.get();
+            usersSnapshot.docs.forEach(doc => {
+                 // Only add if it's for the correct location, if one is specified
+                const activity = { id: doc.id, ...doc.data() } as Activity;
+                if (!location || activity.location === location) {
+                    activitiesMap.set(doc.id, activity);
+                }
+            });
         }
         
         return Array.from(activitiesMap.values());
@@ -806,9 +813,9 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
     }
 }
 
-export const getCustomCouplesActivities = async (location?: string, userId?: string, partnerId?: string) => internal_getCustomLocalActivities('couples', location, userId, partnerId);
-export const getCustomFriendActivities = async (location?: string) => internal_getCustomLocalActivities('friends', location);
-export const getCustomMeetActivities = async (location?: string) => internal_getCustomLocalActivities('meet', location);
+export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) { return internal_getCustomLocalActivities('couples', location, userId, partnerId) };
+export async function getCustomFriendActivities(location?: string) { return internal_getCustomLocalActivities('friends', location) };
+export async function getCustomMeetActivities(location?: string) { return internal_getCustomLocalActivities('meet', location) };
 
 export async function markCoupleActivityAsCompleted(
   userId: string,
@@ -1239,3 +1246,4 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
+
