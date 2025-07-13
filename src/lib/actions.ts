@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
@@ -40,7 +39,7 @@ async function runSeed() {
     console.log("Skipping seed: Firebase not initialized.");
     return;
   }
-  const flagRef = firestore.collection('_internal').doc('seed_flag_v3');
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v4');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
@@ -57,11 +56,12 @@ async function runSeed() {
     const newActivity: Activity = {
         ...activityData,
         id: docRef.id,
-        modules: ['couples', 'friends', 'meet'], // Assign to all local discovery modules
+        modules: ['couples', 'friends', 'meet'],
         imageUrls: [imageUrl],
         createdBy: 'system',
         likes: 0,
         dislikes: 0,
+        location: "Vienna, Austria", // Ensure the location string is exact
     };
     batch.set(docRef, newActivity);
   }
