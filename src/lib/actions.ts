@@ -16,6 +16,72 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
 
+// --- ONE-TIME DATABASE SEEDING LOGIC ---
+// This will run once to populate the database with starter activities.
+const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'module'>[] = [
+    { name: "Explore the Naschmarkt", description: "Vienna's largest market offers a vibrant mix of international foods, local delicacies, and lively restaurants.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "vienna market", createdBy: 'system' },
+    { name: "Classical Concert at St. Anne's Church", description: "Experience the magic of Mozart and Beethoven in the stunning baroque ambiance of St. Anne's Church.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna church concert", createdBy: 'system' },
+    { name: "Visit the Spanish Riding School", description: "Witness the famous Lipizzaner stallions perform their elegant ballet. A truly unique Viennese tradition.", location: "Vienna, Austria", duration: 2, dataAiHint: "vienna horses", createdBy: 'system' },
+    { name: "Coffee and Cake at a Traditional Viennese Coffee House", description: "Indulge in classic pastries like Sachertorte or Apfelstrudel in a historic setting.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna coffee cake", createdBy: 'system' },
+    { name: "Explore the MuseumsQuartier", description: "A vibrant cultural complex featuring modern art, architecture, and trendy cafes.", location: "Vienna, Austria", duration: 3, dataAiHint: "vienna museum art", createdBy: 'system' },
+    { name: "Hike in the Vienna Woods (Wienerwald)", description: "Escape the city and enjoy a scenic hike through the beautiful Vienna Woods, offering great views and fresh air.", location: "Vienna, Austria", duration: 4, dataAiHint: "vienna woods forest", createdBy: 'system' },
+    { name: "Wine Tasting at a Heurige (Wine Tavern)", description: "Sample local wines and traditional Austrian food at a cozy wine tavern on the outskirts of the city.", location: "Vienna, Austria", duration: 3.5, dataAiHint: "vienna vineyard wine", createdBy: 'system' },
+    { name: "Attend the Vienna State Opera", description: "Experience a world-class opera or ballet performance in one of the world's leading opera houses.", location: "Vienna, Austria", duration: 3, dataAiHint: "vienna opera house", createdBy: 'system' },
+    { name: "Date at Haus des Meeres", description: "Explore the Aqua Terra Zoo with its impressive shark tank and tropical house, followed by a drink at the stunning rooftop bar.", location: "Vienna, Austria", duration: 3, dataAiHint: "vienna aquarium", createdBy: 'system' },
+    { name: "Dinner in the Dark", description: "A unique culinary journey where you dine in complete darkness, heightening your senses of taste and smell.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "dark dining", createdBy: 'system' },
+    { name: "Relaxing Day at Therme Wien", description: "Unwind together in one of Europe's most modern city thermal baths, offering various pools, saunas, and relaxation areas.", location: "Vienna, Austria", duration: 5, dataAiHint: "thermal spa", createdBy: 'system' },
+    { name: "Goldsmith Workshop for Couples", description: "A creative and romantic experience where you can design and craft your own unique pieces of jewelry together.", location: "Vienna, Austria", duration: 4, dataAiHint: "jewelry making", createdBy: 'system' },
+    { name: "Fun at the Prater Amusement Park", description: "Enjoy a nostalgic day out with thrilling rides, games, and a romantic trip on the famous Wiener Riesenrad (Ferris Wheel).", location: "Vienna, Austria", duration: 3.5, dataAiHint: "amusement park", createdBy: 'system' },
+    { name: "Stroll through Schönbrunn Gardens", description: "A romantic walk through the magnificent gardens of the former imperial summer residence, with beautiful fountains and the Gloriette.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "vienna palace garden", createdBy: 'system' },
+    { name: "View from the Donauturm (Danube Tower)", description: "Enjoy breathtaking 360° panoramic views of Vienna from the observation deck or the rotating restaurant.", location: "Vienna, Austria", duration: 2, dataAiHint: "vienna city view", createdBy: 'system' }
+];
+
+async function runSeed() {
+  if (!isFirebaseInitialized) {
+    console.log("Skipping seed: Firebase not initialized.");
+    return;
+  }
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v2');
+  const flagDoc = await flagRef.get();
+
+  if (flagDoc.exists) {
+    console.log("Skipping seed: Database has already been seeded.");
+    return;
+  }
+
+  console.log("Starting one-time database seed...");
+  const activitiesCollection = firestore.collection('activities');
+  const modulesToSeed: ('couples' | 'friends' | 'meet')[] = ['couples', 'friends', 'meet'];
+  const batch = firestore.batch();
+
+  for (const activityData of viennaActivities) {
+    for (const module of modulesToSeed) {
+        const docRef = activitiesCollection.doc();
+        let imageUrl = `https://placehold.co/400x250.png`; // Fallback image
+        const newActivity: Activity = {
+            ...activityData,
+            id: docRef.id,
+            module: module,
+            imageUrls: [imageUrl],
+            createdBy: 'system',
+            likes: 0,
+            dislikes: 0,
+        };
+        batch.set(docRef, newActivity);
+    }
+  }
+
+  // Set the flag to prevent re-seeding
+  batch.set(flagRef, { seededAt: new Date().toISOString() });
+  
+  await batch.commit();
+  console.log("Database seeded successfully with Vienna activities.");
+
+  // Note: We don't generate images here to keep the one-time seed fast and reliable.
+  // Images will be generated on-demand when activities are used.
+}
+// --- END OF SEEDING LOGIC ---
+
 const handleAIError = (error: unknown, defaultMessage: string): { error: string } => {
     console.error(defaultMessage, error);
     if (error instanceof Error) {
@@ -283,6 +349,9 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
 }
 
 export async function getTripsForUser(userId: string): Promise<{ success: boolean; trips?: Trip[]; error?: string }> {
+    // Trigger the one-time seed check. This is a safe and stable place to do it.
+    await runSeed().catch(console.error);
+
     if (!isFirebaseInitialized) {
         try {
             const { firestore } = await import('@/lib/firebase');
@@ -741,7 +810,7 @@ async function internal_addCustomLocalActivity(
     }
 
     const newActivity: Activity = {
-      ...activityData,
+      ...(activityData as Omit<Activity, 'id'>),
       id: newActivityRef.id,
       module: module,
       imageUrls: [imageUrl],
@@ -766,56 +835,43 @@ async function internal_addCustomLocalActivity(
   }
 }
 
-export async function addCustomCoupleActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'couples', data) };
-export async function addCustomFriendActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'friends', data) };
-export async function addCustomMeetActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'meet', data) };
+export async function addCustomCoupleActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'couples', data); }
+export async function addCustomFriendActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'friends', data); }
+export async function addCustomMeetActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'meet', data); }
 
 async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location?: string, userId?: string, partnerId?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
         const activitiesMap = new Map<string, Activity>();
         
-        // Fetch system-default activities for the location
         const locationToQuery = location || "Vienna, Austria";
-        const locationQuery = firestore.collection('activities')
+
+        const userIdsToQuery: string[] = ['system'];
+        if (module === 'couples' && userId) userIdsToQuery.push(userId);
+        if (module === 'couples' && partnerId) userIdsToQuery.push(partnerId);
+
+        const q = firestore.collection('activities')
             .where('module', '==', module)
-            .where('createdBy', '==', 'system')
-            .where('location', '==', locationToQuery);
-            
-        const locationSnapshot = await locationQuery.get();
-        locationSnapshot.docs.forEach(doc => {
+            .where('location', '==', locationToQuery)
+            .where('createdBy', 'in', userIdsToQuery);
+
+        const querySnapshot = await q.get();
+
+        querySnapshot.docs.forEach(doc => {
             activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
         });
-
-        // For couples, also fetch activities created by the user or their partner.
-        if (module === 'couples' && (userId || partnerId)) {
-            const userIdsToQuery = [userId, partnerId, 'system'].filter(id => !!id) as string[];
-            
-            const usersQuery = firestore.collection('activities')
-                .where('module', '==', 'couples')
-                .where('createdBy', 'in', userIdsToQuery);
-
-            const usersSnapshot = await usersQuery.get();
-            usersSnapshot.docs.forEach(doc => {
-                 // Only add if it's for the correct location, if one is specified
-                const activity = { id: doc.id, ...doc.data() } as Activity;
-                if (!location || activity.location === location) {
-                    activitiesMap.set(doc.id, activity);
-                }
-            });
-        }
         
         return Array.from(activitiesMap.values());
 
     } catch (error) {
-        console.error(`Error fetching custom activities for module ${module}:`, error);
+        console.error(`Error fetching custom activities for module ${module} with location ${location}:`, error);
         return [];
     }
 }
 
-export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) { return internal_getCustomLocalActivities('couples', location, userId, partnerId) };
-export async function getCustomFriendActivities(location?: string) { return internal_getCustomLocalActivities('friends', location) };
-export async function getCustomMeetActivities(location?: string) { return internal_getCustomLocalActivities('meet', location) };
+export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) { return internal_getCustomLocalActivities('couples', location, userId, partnerId); }
+export async function getCustomFriendActivities(location?: string) { return internal_getCustomLocalActivities('friends', location); }
+export async function getCustomMeetActivities(location?: string) { return internal_getCustomLocalActivities('meet', location); }
 
 export async function markCoupleActivityAsCompleted(
   userId: string,
@@ -1246,4 +1302,3 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
-
