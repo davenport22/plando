@@ -135,13 +135,6 @@ export default function LoginPage() {
             </p>
         </CardFooter>
       </Card>
-      <Alert variant="default" className="max-w-md mt-6 shadow-md border-primary/20 bg-primary/5">
-        <ShieldCheck className="h-4 w-4 text-primary" />
-        <AlertTitle className="font-semibold text-primary/90">Admin Access</AlertTitle>
-        <AlertDescription>
-            To use admin features, you can log in with the email `admin@admin.com` and the password `admin`.
-        </AlertDescription>
-    </Alert>
     </div>
   );
 }
