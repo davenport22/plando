@@ -1,5 +1,6 @@
 
 import admin from 'firebase-admin';
+import { runSeedOnce } from './seed';
 
 // This flag tracks whether the Firebase Admin SDK has been successfully initialized.
 let isFirebaseInitialized = false;
@@ -31,6 +32,10 @@ if (!admin.apps.length) {
             storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         });
         isFirebaseInitialized = true;
+
+        // Run the seed check after successful initialization
+        runSeedOnce();
+
     } else {
         // This is a helpful warning for developers during setup to let them know the backend is not connected.
         const missingKeys = [
