@@ -1,10 +1,43 @@
 
 'use server';
 
+import admin from 'firebase-admin';
 import type { Activity } from '@/types';
-// We will get the initialized firestore instance from the runner
-import { firestore } from '@/lib/firebase';
 import { generateActivityImage } from '@/ai/flows/generate-activity-image-flow';
+
+
+// --- Standalone Firebase Initialization for Seeding Script ---
+// This section ensures the script has its own connection to Firebase,
+// using the credentials loaded by 'dotenv/config' from the 'npm run seed' command.
+
+if (!admin.apps.length) {
+  try {
+    const serviceAccount = {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    };
+
+    if (serviceAccount.projectId && serviceAccount.clientEmail && serviceAccount.privateKey) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        });
+        console.log("Firebase Admin SDK initialized successfully for seeding.");
+    } else {
+        throw new Error("Firebase Admin credentials are not fully set in .env file.");
+    }
+  } catch (error) {
+    console.error('Firebase admin initialization error for seeding:', error);
+    // Exit the script with an error code if initialization fails.
+    process.exit(1);
+  }
+}
+
+const firestore = admin.firestore();
+
+// --- End of Initialization ---
+
 
 // A list of predefined activities to seed into the database.
 const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'module'>[] = [
@@ -132,7 +165,7 @@ const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes'
 
 // This function seeds the single 'activities' collection with predefined data.
 // It creates an entry for each module (couples, friends, meet) for each activity.
-export async function seedViennaActivities() {
+async function seedViennaActivities() {
   console.log("Checking Firestore connection...");
   try {
     // Perform a simple read operation to confirm the database is accessible.
@@ -203,3 +236,15 @@ export async function seedViennaActivities() {
   }
   console.log("Finished seeding Vienna activities.");
 }
+
+// Invoke the seed function and handle its completion.
+seedViennaActivities()
+  .then(() => {
+    console.log("\nDatabase seeding script completed successfully.");
+    process.exit(0);
+  })
+  .catch(error => {
+    console.error("\nSeeding failed. See error details above.");
+    console.error(error);
+    process.exit(1);
+  });
