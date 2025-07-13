@@ -829,11 +829,9 @@ export async function addCustomCoupleActivity(userId: string, data: any) { retur
 export async function addCustomFriendActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'friends', data); }
 export async function addCustomMeetActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'meet', data); }
 
-async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location?: string, userId?: string, partnerId?: string): Promise<Activity[]> {
+async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const activitiesMap = new Map<string, Activity>();
-        
         const locationToQuery = location || "Vienna, Austria";
 
         const q = firestore.collection('activities')
@@ -842,11 +840,7 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
         
         const querySnapshot = await q.get();
 
-        querySnapshot.docs.forEach(doc => {
-            activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
-        });
-        
-        return Array.from(activitiesMap.values());
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
 
     } catch (error) {
         console.error(`Error fetching custom activities for module ${module} with location ${location}:`, error);
@@ -854,7 +848,7 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
     }
 }
 
-export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) { return internal_getCustomLocalActivities('couples', location, userId, partnerId); }
+export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) { return internal_getCustomLocalActivities('couples', location); }
 export async function getCustomFriendActivities(location?: string) { return internal_getCustomLocalActivities('friends', location); }
 export async function getCustomMeetActivities(location?: string) { return internal_getCustomLocalActivities('meet', location); }
 
