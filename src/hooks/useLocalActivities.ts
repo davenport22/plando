@@ -23,10 +23,11 @@ export function useLocalActivities(
 
     const fetchActivities = useCallback(async () => {
         setIsLoading(true);
+        setActivities([]);
         
         if (!userProfile) {
             setIsLoading(false);
-            return [];
+            return;
         }
 
         const determinedLocationKey = userProfile.location || "Vienna, Austria";
@@ -40,7 +41,7 @@ export function useLocalActivities(
         let allActivitiesForLocation: Activity[] = [];
         switch(moduleType) {
             case 'couples':
-                allActivitiesForLocation = await getCustomCouplesActivities(determinedLocationKey, userProfile.id, partnerProfile?.id);
+                allActivitiesForLocation = await getCustomCouplesActivities(determinedLocationKey);
                 break;
             case 'friends':
                 allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey);
@@ -49,7 +50,7 @@ export function useLocalActivities(
                 allActivitiesForLocation = await getCustomMeetActivities(determinedLocationKey);
                 break;
         }
-
+        
         const previouslyVotedIds = moduleType === 'couples' 
             ? new Set(await getVotedOnCouplesActivityIds(userProfile.id))
             : new Set<string>();
@@ -57,7 +58,7 @@ export function useLocalActivities(
         const activitiesToShow = allActivitiesForLocation
                                   .filter(act => !previouslyVotedIds.has(act.id))
                                   .map(act => ({ ...act, isLiked: undefined }));
-
+        
         setActivities(activitiesToShow);
         setVotedActivityIds(previouslyVotedIds);
         setIsLoading(false);
@@ -69,12 +70,10 @@ export function useLocalActivities(
             });
         }
 
-        return activitiesToShow;
-
-    }, [moduleType, toast, userProfile, partnerProfile]);
+    }, [moduleType, toast, userProfile]);
     
     useEffect(() => {
-        if (userProfile !== undefined) { // To prevent fetching when auth is still loading
+        if (userProfile !== undefined) {
             fetchActivities();
         }
     }, [fetchActivities, userProfile]);
