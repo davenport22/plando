@@ -14,9 +14,9 @@ import { Loader2, Save } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/actions";
-import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { CitySelect } from "@/components/common/CitySelect";
 
 const AVAILABLE_INTERESTS = [
   'Adventure', 'Art & Culture', 'Beaches', 'City Trips', 'Cuisine', 'History', 
@@ -28,7 +28,7 @@ const profileEditSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").max(50, "Name is too long."),
   avatarUrl: z.string().url("Please enter a valid URL for the avatar.").or(z.literal("")).optional(),
   bio: z.string().max(500, "Bio is too long.").optional().default(""),
-  location: z.string().max(100, "Location is too long.").optional().default(""),
+  location: z.string().min(1, "Please select your home city."),
   interests: z.string(), // We send interests as a JSON string
 });
 
@@ -188,14 +188,8 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
           name="location"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Location</FormLabel>
-              <FormControl>
-                <CityAutocompleteInput
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  placeholder="e.g., City, Country"
-                />
-              </FormControl>
+              <FormLabel>Home City</FormLabel>
+              <CitySelect onValueChange={field.onChange} defaultValue={field.value} />
               <FormDescription>
                 Your home city. This helps us suggest local activities in other Plando modules.
               </FormDescription>

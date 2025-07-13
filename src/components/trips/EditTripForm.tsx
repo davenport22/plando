@@ -15,16 +15,15 @@ import { format, parseISO } from "date-fns";
 import { CalendarIcon, Loader2, Save, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Trip } from "@/types";
-import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 import { Separator } from "@/components/ui/separator";
 import { ParticipantManager } from "./ParticipantManager";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { CitySelect } from "@/components/common/CitySelect";
 
 const editTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
-  destination: z.string().min(2, "Destination must be at least 2 characters.").max(100, "Destination must be at most 100 characters."),
+  destination: z.string().min(1, "Please select a destination city."),
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
   itineraryGenerationRule: z.enum(['majority', 'all']).default('majority'),
@@ -138,13 +137,7 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Destination</FormLabel>
-                    <FormControl>
-                        <CityAutocompleteInput
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="e.g., Rome, Italy"
-                        />
-                    </FormControl>
+                    <CitySelect onValueChange={field.onChange} defaultValue={field.value} />
                     <FormMessage />
                     </FormItem>
                 )}

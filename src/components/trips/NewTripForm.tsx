@@ -16,16 +16,16 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { createTrip } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CityAutocompleteInput } from "@/components/common/CityAutocompleteInput";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
+import { CitySelect } from "@/components/common/CitySelect";
 
 const newTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
-  destination: z.string().min(2, "Destination must be at least 2 characters.").max(100, "Destination must be at most 100 characters."),
+  destination: z.string().min(1, "Please select a destination city."),
   startDate: z.date({ required_error: "Start date is required." }),
   endDate: z.date({ required_error: "End date is required." }),
   itineraryGenerationRule: z.enum(['majority', 'all']).default('majority'),
@@ -177,13 +177,7 @@ export function NewTripForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Destination</FormLabel>
-              <FormControl>
-                <CityAutocompleteInput
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="e.g., Rome, Italy"
-                />
-              </FormControl>
+                <CitySelect onValueChange={field.onChange} defaultValue={field.value} />
               <FormDescription>
                 Where are you planning to go?
               </FormDescription>
@@ -191,14 +185,6 @@ export function NewTripForm() {
             </FormItem>
           )}
         />
-
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>City Trips Focus</AlertTitle>
-          <AlertDescription>
-            Plando is currently optimized for city-based trips. Please enter a major city as your destination.
-          </AlertDescription>
-        </Alert>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <FormField

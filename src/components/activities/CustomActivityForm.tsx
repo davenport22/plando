@@ -14,10 +14,11 @@ import { useState } from "react";
 import { DialogClose } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { extractActivityDetailsFromUrlAction } from "@/lib/actions";
+import { CitySelect } from "@/components/common/CitySelect";
 
 const customActivitySchema = z.object({
   name: z.string().min(2, "Activity name is too short.").max(100, "Activity name is too long."),
-  location: z.string().min(2, "Location is too short.").max(100, "Location is too long."),
+  location: z.string().min(1, "Please select a city."),
   duration: z.coerce.number().min(0.5, "Duration must be at least 0.5 hours.").max(24, "Duration cannot exceed 24 hours."),
   description: z.string().max(200, "Description is too long.").optional(),
 });
@@ -134,9 +135,7 @@ export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Location</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Grand Bazaar" {...field} />
-              </FormControl>
+              <CitySelect onValueChange={field.onChange} defaultValue={field.value} />
               <FormMessage />
             </FormItem>
           )}
