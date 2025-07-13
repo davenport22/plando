@@ -16,6 +16,71 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
 
+// --- ONE-TIME DATABASE SEEDING LOGIC ---
+// This will run once to populate the database with starter activities.
+const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'module'>[] = [
+    { name: "Explore the Naschmarkt", description: "Vienna's largest market offers a vibrant mix of international foods, local delicacies, and lively restaurants.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "vienna market", createdBy: 'system' },
+    { name: "Classical Concert at St. Anne's Church", description: "Experience the magic of Mozart and Beethoven in the stunning baroque ambiance of St. Anne's Church.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna church concert", createdBy: 'system' },
+    { name: "Visit the Spanish Riding School", description: "Witness the famous Lipizzaner stallions perform their elegant ballet. A truly unique Viennese tradition.", location: "Vienna, Austria", duration: 2, dataAiHint: "vienna horses", createdBy: 'system' },
+    { name: "Coffee and Cake at a Traditional Viennese Coffee House", description: "Indulge in classic pastries like Sachertorte or Apfelstrudel in a historic setting.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna coffee cake", createdBy: 'system' },
+    { name: "Explore the MuseumsQuartier", description: "A vibrant cultural complex featuring modern art, architecture, and trendy cafes.", location: "Vienna, Austria", duration: 3, dataAiHint: "vienna museum art", createdBy: 'system' },
+    { name: "Hike in the Vienna Woods (Wienerwald)", description: "Escape the city and enjoy a scenic hike through the beautiful Vienna Woods, offering great views and fresh air.", location: "Vienna, Austria", duration: 4, dataAiHint: "vienna woods forest", createdBy: 'system' },
+    { name: "Wine Tasting at a Heurige (Wine Tavern)", description: "Sample local wines and traditional Austrian food at a cozy wine tavern on the outskirts of the city.", location: "Vienna, Austria", duration: 3.5, dataAiHint: "vienna vineyard wine", createdBy: 'system' },
+    { name: "Attend the Vienna State Opera", description: "Experience a world-class opera or ballet performance in one of the world's leading opera houses.", location: "Vienna, Austria", duration: 3, dataAiHint: "vienna opera house", createdBy: 'system' },
+    { name: "Date at Haus des Meeres", description: "Explore the Aqua Terra Zoo with its impressive shark tank and tropical house, followed by a drink at the stunning rooftop bar.", location: "Vienna, Austria", duration: 3, dataAiHint: "vienna aquarium", createdBy: 'system' },
+    { name: "Dinner in the Dark", description: "A unique culinary journey where you dine in complete darkness, heightening your senses of taste and smell.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "dark dining", createdBy: 'system' },
+    { name: "Relaxing Day at Therme Wien", description: "Unwind together in one of Europe's most modern city thermal baths, offering various pools, saunas, and relaxation areas.", location: "Vienna, Austria", duration: 5, dataAiHint: "thermal spa", createdBy: 'system' },
+    { name: "Goldsmith Workshop for Couples", description: "A creative and romantic experience where you can design and craft your own unique pieces of jewelry together.", location: "Vienna, Austria", duration: 4, dataAiHint: "jewelry making", createdBy: 'system' },
+    { name: "Fun at the Prater Amusement Park", description: "Enjoy a nostalgic day out with thrilling rides, games, and a romantic trip on the famous Wiener Riesenrad (Ferris Wheel).", location: "Vienna, Austria", duration: 3.5, dataAiHint: "amusement park", createdBy: 'system' },
+    { name: "Stroll through Schönbrunn Gardens", description: "A romantic walk through the magnificent gardens of the former imperial summer residence, with beautiful fountains and the Gloriette.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "vienna palace garden", createdBy: 'system' },
+    { name: "View from the Donauturm (Danube Tower)", description: "Enjoy breathtaking 360° panoramic views of Vienna from the observation deck or the rotating restaurant.", location: "Vienna, Austria", duration: 2, dataAiHint: "vienna city view", createdBy: 'system' }
+];
+
+async function runSeed() {
+  if (!isFirebaseInitialized) {
+    console.log("Skipping seed: Firebase not initialized.");
+    return;
+  }
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v2');
+  const flagDoc = await flagRef.get();
+
+  if (flagDoc.exists) {
+    // console.log("Skipping seed: Database has already been seeded.");
+    return;
+  }
+
+  console.log("Starting one-time database seed...");
+  const activitiesCollection = firestore.collection('activities');
+  const modulesToSeed: ('couples' | 'friends' | 'meet')[] = ['couples', 'friends', 'meet'];
+  const batch = firestore.batch();
+
+  for (const activityData of viennaActivities) {
+    for (const module of modulesToSeed) {
+        const docRef = activitiesCollection.doc();
+        // Fallback image generation is handled inside addCustomLocalActivity, 
+        // but for seeding we can just use a placeholder to speed it up.
+        let imageUrl = `https://placehold.co/400x250.png`; 
+        const newActivity: Activity = {
+            ...activityData,
+            id: docRef.id,
+            module: module,
+            imageUrls: [imageUrl],
+            createdBy: 'system',
+            likes: 0,
+            dislikes: 0,
+        };
+        batch.set(docRef, newActivity);
+    }
+  }
+
+  // Set the flag to prevent re-seeding
+  batch.set(flagRef, { seededAt: new Date().toISOString() });
+  
+  await batch.commit();
+  console.log("Database seeded successfully with Vienna activities for all modules.");
+}
+// --- END OF SEEDING LOGIC ---
+
 const handleAIError = (error: unknown, defaultMessage: string): { error: string } => {
     console.error(defaultMessage, error);
     if (error instanceof Error) {
@@ -170,6 +235,7 @@ const NewTripDataSchema = z.object({
     endDate: z.string(),   // YYYY-MM-DD format
     itineraryGenerationRule: z.enum(['majority', 'all']),
     participantEmails: z.array(z.string().email()).optional(),
+    syncLocalActivities: z.boolean().optional(),
 });
 
 
@@ -202,27 +268,21 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
+        const imageUrl = `https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=${encodeURIComponent(
+          tripDetails.destination
+        )}`;
+
         const newTripData = {
             ...tripDetails,
             ownerId: ownerId, 
             participantIds: Array.from(participantIds),
-            imageUrl: `https://placehold.co/600x400.png`, // Start with placeholder
+            imageUrl: imageUrl,
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
         const tripId = docRef.id;
 
-        // Fire-and-forget image generation and invitations
-        generateDestinationImage({ destination: tripDetails.destination })
-            .then(generatedImageUrl => {
-                if (generatedImageUrl) {
-                    firestore.collection('trips').doc(tripId).update({ imageUrl: generatedImageUrl });
-                }
-            })
-            .catch(aiError => {
-                console.warn(`Background AI Image generation failed for trip ${tripId}, but proceeding.`, aiError);
-            });
-
+        // Fire-and-forget invitations after trip is created
         if (emailsToInvite.length > 0) {
             emailsToInvite.forEach(email => {
                 generateInvitationEmail({
@@ -240,6 +300,7 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
         }
 
         revalidatePath('/trips');
+        revalidatePath(`/trips/${tripId}`);
         return { success: true, tripId: tripId };
 
     } catch (e) {
@@ -275,6 +336,7 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
             participants: participants,
             imageUrl: data.imageUrl,
             itineraryGenerationRule: data.itineraryGenerationRule || 'majority',
+            syncLocalActivities: data.syncLocalActivities ?? true,
             latitude: data.latitude,
             longitude: data.longitude,
             placeId: data.placeId,
@@ -286,6 +348,9 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
 }
 
 export async function getTripsForUser(userId: string): Promise<{ success: boolean; trips?: Trip[]; error?: string }> {
+    // Trigger the one-time seed check. This is a safe and stable place to do it.
+    await runSeed().catch(console.error);
+
     if (!isFirebaseInitialized) {
         try {
             const { firestore } = await import('@/lib/firebase');
@@ -338,18 +403,13 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const imageUrlMissingOrPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
+        const imageUrlMissingOrPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co') || !currentTripData.imageUrl.includes('unsplash');
 
         if (destinationChanged || imageUrlMissingOrPlaceholder) {
-            const destinationForImage = data.destination || currentTripData.destination;
-            try {
-                const generatedImageUrl = await generateDestinationImage({ destination: destinationForImage });
-                if (generatedImageUrl) {
-                    updatedData.imageUrl = generatedImageUrl;
-                }
-            } catch (aiError) {
-                console.warn("AI Image generation failed during trip update, but other data will be saved.", aiError);
-            }
+             const destinationForImage = data.destination || currentTripData.destination;
+            updatedData.imageUrl = `https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=${encodeURIComponent(
+              destinationForImage
+            )}`;
         }
 
         await tripRef.update(updatedData);
@@ -441,6 +501,56 @@ export async function removeParticipantFromTrip(tripId: string, participantId: s
         return { success: false, error: errorMessage };
     }
 }
+
+export async function importLocalActivitiesToTrip(tripId: string): Promise<{ success: boolean; error?: string; count: number; }> {
+    if (!isFirebaseInitialized) {
+        return { success: false, error: 'Firebase is not initialized. Cannot import activities.', count: 0 };
+    }
+
+    try {
+        const trip = await getTrip(tripId);
+        if (!trip) {
+            return { success: false, error: 'Trip not found.', count: 0 };
+        }
+        if (!trip.destination) {
+            return { success: false, error: 'Trip has no destination set.', count: 0 };
+        }
+        
+        const localActivities = await internal_getCustomLocalActivities('couples', trip.destination);
+        const tripActivities = await getTripActivities(tripId, trip.ownerId);
+
+        const existingActivityNames = new Set(tripActivities.map(a => a.name));
+        const newActivitiesToImport = localActivities.filter(a => !existingActivityNames.has(a.name));
+
+        if (newActivitiesToImport.length === 0) {
+            return { success: true, count: 0 };
+        }
+        
+        const batch = firestore.batch();
+        
+        newActivitiesToImport.forEach(activity => {
+            const newActivityRef = firestore.collection('trips').doc(tripId).collection('activities').doc();
+            const { id, isLiked, ...activityData } = activity;
+            const newTripActivity: Omit<Activity, 'id' | 'isLiked'> = {
+                ...activityData,
+                likes: 0,
+                dislikes: 0,
+                votes: {},
+            };
+            batch.set(newActivityRef, newTripActivity);
+        });
+
+        await batch.commit();
+
+        revalidatePath(`/trips/${tripId}`);
+        return { success: true, count: newActivitiesToImport.length };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage, count: 0 };
+    }
+}
+
 
 export async function getOrCreateUserProfile(user: {
   uid: string;
@@ -673,15 +783,16 @@ export async function getVotedOnCouplesActivityIds(userId: string): Promise<stri
     }
 }
 
-export async function addCustomCoupleActivity(
+async function internal_addCustomLocalActivity(
   userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants'>
+  module: 'couples' | 'friends' | 'meet',
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants' | 'module'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
 
   try {
-    const newActivityRef = firestore.collection('couplesActivities').doc();
+    const newActivityRef = firestore.collection('activities').doc();
     
     let imageUrl = customActivityFallbackImageUrl;
     try {
@@ -698,191 +809,79 @@ export async function addCustomCoupleActivity(
     }
 
     const newActivity: Activity = {
-      ...activityData,
+      ...(activityData as Omit<Activity, 'id'>),
       id: newActivityRef.id,
+      module: module,
       imageUrls: [imageUrl],
       createdBy: userId,
-      likes: 0,
+      likes: 0, // Likes/dislikes are handled per-trip or per-module context, not on the base activity
       dislikes: 0,
     };
 
     await newActivityRef.set(newActivity);
 
-    // Automatically "like" the activity for the creator
-    await saveCoupleVote(userId, newActivity.id, true);
-
-    revalidatePath('/plando-couples');
+    // If it's for the couples module, also add an automatic "like" for the creator
+    if (module === 'couples') {
+      await saveCoupleVote(userId, newActivity.id, true);
+    }
+    
+    revalidatePath(`/plando-${module}`);
 
     return { success: true, activity: newActivity };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    return { success: false, error: `Failed to add custom date idea: ${errorMessage}` };
+    return { success: false, error: `Failed to add custom activity: ${errorMessage}` };
   }
 }
 
-export async function getCustomCouplesActivities(userId?: string, partnerId?: string, location?: string): Promise<Activity[]> {
+export async function addCustomCoupleActivity(userId: string, data: any) {
+    return internal_addCustomLocalActivity(userId, 'couples', data);
+}
+export async function addCustomFriendActivity(userId: string, data: any) {
+    return internal_addCustomLocalActivity(userId, 'friends', data);
+}
+export async function addCustomMeetActivity(userId: string, data: any) {
+    return internal_addCustomLocalActivity(userId, 'meet', data);
+}
+
+async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location?: string, userId?: string, partnerId?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        let query: FirebaseFirestore.Query = firestore.collection('couplesActivities');
-
-        // This query fetches activities created by the current user OR their partner, AND public activities for their location.
-        const userIdsToQuery = [userId, partnerId].filter(id => !!id) as string[];
-
-        // If a location is provided, we fetch activities for that location OR created by the users.
-        if (location && location !== "Default") {
-            // This requires a composite query in Firestore. Since we can't do (location == X OR createdBy in [Y, Z]),
-            // we will fetch in two parts and combine.
-            const locationQuery = firestore.collection('couplesActivities').where('location', '==', location);
-            const usersQuery = userIdsToQuery.length > 0 ? firestore.collection('couplesActivities').where('createdBy', 'in', userIdsToQuery) : null;
-            
-            const [locationSnapshot, usersSnapshot] = await Promise.all([
-                locationQuery.get(),
-                usersQuery ? usersQuery.get() : Promise.resolve({ docs: [] as FirebaseFirestore.QueryDocumentSnapshot[] })
-            ]);
-
-            const activitiesMap = new Map<string, Activity>();
-            
-            locationSnapshot.docs.forEach(doc => {
-                activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
-            });
-            usersSnapshot.docs.forEach(doc => {
-                activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
-            });
-
-            return Array.from(activitiesMap.values());
-        } else if (userIdsToQuery.length > 0) {
-            // If no location, just fetch activities created by the couple.
-            query = firestore.collection('couplesActivities').where('createdBy', 'in', userIdsToQuery);
-        } else {
-             // Fallback for default activities if no user/location context
-            query = firestore.collection('couplesActivities').where('createdBy', '==', 'system');
-        }
+        const activitiesMap = new Map<string, Activity>();
         
-        const snapshot = await query.get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+        const locationToQuery = location || "Vienna, Austria";
 
-    } catch (error) {
-        console.error('Error fetching custom couples activities:', error);
-        return [];
-    }
-}
+        const userIdsToQuery: string[] = ['system'];
+        if (module === 'couples' && userId) userIdsToQuery.push(userId);
+        if (module === 'couples' && partnerId) userIdsToQuery.push(partnerId);
 
-export async function addCustomFriendActivity(
-  userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants'>
-): Promise<{ success: boolean; error?: string; activity?: Activity }> {
-  if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-  if (!userId) return { success: false, error: 'User ID is required.' };
+        const q = firestore.collection('activities')
+            .where('module', '==', module)
+            .where('location', '==', locationToQuery)
+            .where('createdBy', 'in', userIdsToQuery);
 
-  try {
-    const newActivityRef = firestore.collection('friendsActivities').doc();
+        const querySnapshot = await q.get();
 
-    let imageUrl = customActivityFallbackImageUrl;
-    try {
-        const generatedImage = await generateActivityImage({
-            activityName: activityData.name,
-            location: activityData.location,
-            dataAiHint: activityData.dataAiHint,
+        querySnapshot.docs.forEach(doc => {
+            activitiesMap.set(doc.id, { id: doc.id, ...doc.data() } as Activity);
         });
-        if (generatedImage) {
-            imageUrl = generatedImage;
-        }
-    } catch (aiError) {
-        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to placeholder.`, aiError);
-    }
-
-    const newActivity: Activity = {
-      ...activityData,
-      id: newActivityRef.id,
-      imageUrls: [imageUrl],
-      createdBy: userId,
-      likes: 0,
-      dislikes: 0,
-    };
-
-    await newActivityRef.set(newActivity);
-    
-    revalidatePath('/plando-friends');
-
-    return { success: true, activity: newActivity };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    return { success: false, error: `Failed to add custom friend activity: ${errorMessage}` };
-  }
-}
-
-export async function getCustomFriendActivities(location?: string): Promise<Activity[]> {
-    if (!isFirebaseInitialized) return [];
-    try {
-        const query = location && location !== "Default" 
-            ? firestore.collection('friendsActivities').where('location', '==', location)
-            : firestore.collection('friendsActivities');
         
-        const snapshot = await query.get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+        return Array.from(activitiesMap.values());
+
     } catch (error) {
-        console.error('Error fetching custom friend activities:', error);
+        console.error(`Error fetching custom activities for module ${module} with location ${location}:`, error);
         return [];
     }
 }
 
-export async function addCustomMeetActivity(
-  userId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants'>
-): Promise<{ success: boolean; error?: string; activity?: Activity }> {
-  if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-  if (!userId) return { success: false, error: 'User ID is required.' };
-
-  try {
-    const newActivityRef = firestore.collection('meetActivities').doc();
-    
-    let imageUrl = customActivityFallbackImageUrl;
-    try {
-        const generatedImage = await generateActivityImage({
-            activityName: activityData.name,
-            location: activityData.location,
-            dataAiHint: activityData.dataAiHint,
-        });
-        if (generatedImage) {
-            imageUrl = generatedImage;
-        }
-    } catch (aiError) {
-        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to placeholder.`, aiError);
-    }
-
-    const newActivity: Activity = {
-      ...activityData,
-      id: newActivityRef.id,
-      imageUrls: [imageUrl],
-      createdBy: userId,
-      likes: 0,
-      dislikes: 0,
-    };
-
-    await newActivityRef.set(newActivity);
-    
-    revalidatePath('/plando-meet');
-
-    return { success: true, activity: newActivity };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    return { success: false, error: `Failed to add custom meet activity: ${errorMessage}` };
-  }
+export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) {
+    return internal_getCustomLocalActivities('couples', location, userId, partnerId);
 }
-
-export async function getCustomMeetActivities(location?: string): Promise<Activity[]> {
-    if (!isFirebaseInitialized) return [];
-    try {
-        const query = location && location !== "Default" 
-            ? firestore.collection('meetActivities').where('location', '==', location)
-            : firestore.collection('meetActivities');
-            
-        const snapshot = await query.get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-    } catch (error) {
-        console.error('Error fetching custom meet activities:', error);
-        return [];
-    }
+export async function getCustomFriendActivities(location?: string) {
+    return internal_getCustomLocalActivities('friends', location);
+}
+export async function getCustomMeetActivities(location?: string) {
+    return internal_getCustomLocalActivities('meet', location);
 }
 
 export async function markCoupleActivityAsCompleted(
@@ -953,20 +952,52 @@ export async function getCompletedCouplesActivities(userId: string): Promise<Com
 export async function getTripActivities(tripId: string, userId: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        const activitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
-        const activities = activitiesSnapshot.docs.map(doc => {
+        // First, get the main trip data to check the sync flag.
+        const tripDoc = await firestore.collection('trips').doc(tripId).get();
+        if (!tripDoc.exists) {
+            console.error(`Trip with ID ${tripId} not found.`);
+            return [];
+        }
+        const tripData = tripDoc.data() as Trip;
+
+        const activitiesMap = new Map<string, Activity>();
+
+        // Fetch activities specifically created for this trip.
+        const tripActivitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
+        
+        tripActivitiesSnapshot.docs.forEach(doc => {
             const data = doc.data();
             const votes = data.votes || {};
-            
-            return { 
+            activitiesMap.set(doc.id, { 
                 ...data, 
                 id: doc.id,
                 likes: data.likes || 0,
                 dislikes: data.dislikes || 0,
-                isLiked: votes[userId], // isLiked can be true, false, or undefined
-            } as Activity;
+                isLiked: votes[userId],
+            } as Activity);
         });
-        return activities;
+
+        // If the sync flag is true, fetch relevant local activities.
+        if (tripData.syncLocalActivities && tripData.destination) {
+            const localActivitiesSnapshot = await firestore.collection('activities').where('location', '==', tripData.destination).get();
+            
+            localActivitiesSnapshot.docs.forEach(doc => {
+                // Avoid adding duplicates if an activity with the same ID already exists (e.g., it was voted on and thus copied to the trip)
+                if (!activitiesMap.has(doc.id)) {
+                     const localActivity = doc.data() as Activity;
+                     activitiesMap.set(doc.id, {
+                        ...localActivity,
+                        tripId: tripId, // Assign tripId for context
+                        isLiked: undefined, // User has not voted on this in the context of the trip
+                        likes: 0,
+                        dislikes: 0,
+                        votes: {},
+                    });
+                }
+            });
+        }
+
+        return Array.from(activitiesMap.values());
     } catch (error) {
         console.error(`Error getting trip activities for trip ${tripId}:`, error)
         return [];
@@ -975,7 +1006,7 @@ export async function getTripActivities(tripId: string, userId: string): Promise
 
 export async function addTripActivity(
   tripId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'votes' | 'category' | 'startTime' | 'participants'>,
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'votes' | 'category' | 'startTime' | 'participants' | 'module'>,
   creatorId: string
 ): Promise<{ success: boolean; newActivity?: Activity; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
@@ -1030,12 +1061,25 @@ export async function voteOnTripActivity(
 
     try {
         await firestore.runTransaction(async (transaction) => {
-            const activityDoc = await transaction.get(activityRef);
+            let activityDoc = await transaction.get(activityRef);
             if (!activityDoc.exists) {
-                throw new Error("Activity not found.");
+                // It's a synced local activity, not a trip-specific one yet.
+                // We need to find its data in the root 'activities' collection and create it here.
+                const localActivityDoc = await firestore.collection('activities').doc(activityId).get();
+                
+                if (!localActivityDoc.exists) throw new Error("Activity not found in any local collection.");
+
+                const activityToCreate = localActivityDoc.data() as Activity;
+
+                // Create a new document in the trip's activities subcollection with default votes
+                const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
+                transaction.set(activityRef, newActivityData);
+                activityDoc = await transaction.get(activityRef); // Reread the doc we just created
             }
 
-            const data = activityDoc.data()!;
+            // Now, get the document again (it's either the original or the one we just created)
+            const docForUpdate = activityDoc;
+            const data = docForUpdate.data()!;
             const votes = data.votes || {};
             const previousVote = votes[userId];
 
@@ -1197,21 +1241,19 @@ export async function clearLocalActivities(city?: string): Promise<{ success: bo
     }
 
     try {
-        const collectionsToDelete = ['couplesActivities', 'friendsActivities', 'meetActivities'];
         let totalDeleted = 0;
 
-        for (const collectionName of collectionsToDelete) {
-            let query = firestore.collection(collectionName).limit(50);
-            if (city) {
-                query = query.where('location', '==', city);
-            }
-            const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query, resolve, reject));
-            totalDeleted += count;
-            console.log(`Cleared ${count} documents from ${collectionName} for city: ${city || 'all'}.`);
+        let query: FirebaseFirestore.Query = firestore.collection('activities');
+        if (city) {
+            query = query.where('location', '==', city);
         }
         
+        const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query.limit(50), resolve, reject));
+        totalDeleted += count;
+        console.log(`Cleared ${count} documents from the activities collection for city: ${city || 'all'}.`);
+        
         if (!city) {
-            // If clearing all cities, also clear all votes and completed activities.
+            // If clearing all cities, also clear all user-specific votes and completed activities.
             const usersSnapshot = await firestore.collection('users').get();
             for (const userDoc of usersSnapshot.docs) {
                 const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
@@ -1271,4 +1313,3 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
-
