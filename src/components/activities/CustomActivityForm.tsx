@@ -25,7 +25,7 @@ const customActivitySchema = z.object({
 type CustomActivityFormValues = z.infer<typeof customActivitySchema>;
 
 interface CustomActivityFormProps {
-  onAddActivity: (activity: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'module'>) => Promise<void>;
+  onAddActivity: (activity: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants' | 'modules'>) => Promise<void>;
 }
 
 export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {

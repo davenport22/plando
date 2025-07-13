@@ -17,8 +17,7 @@ import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
 
 // --- ONE-TIME DATABASE SEEDING LOGIC ---
-// This will run once to populate the database with starter activities.
-const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'module'>[] = [
+const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'modules'>[] = [
     { name: "Explore the Naschmarkt", description: "Vienna's largest market offers a vibrant mix of international foods, local delicacies, and lively restaurants.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "vienna market", createdBy: 'system' },
     { name: "Classical Concert at St. Anne's Church", description: "Experience the magic of Mozart and Beethoven in the stunning baroque ambiance of St. Anne's Church.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna church concert", createdBy: 'system' },
     { name: "Visit the Spanish Riding School", description: "Witness the famous Lipizzaner stallions perform their elegant ballet. A truly unique Viennese tradition.", location: "Vienna, Austria", duration: 2, dataAiHint: "vienna horses", createdBy: 'system' },
@@ -41,44 +40,36 @@ async function runSeed() {
     console.log("Skipping seed: Firebase not initialized.");
     return;
   }
-  const flagRef = firestore.collection('_internal').doc('seed_flag_v2');
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v3');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
-    console.log("Skipping seed: Database has already been seeded.");
     return;
   }
 
   console.log("Starting one-time database seed...");
   const activitiesCollection = firestore.collection('activities');
-  const modulesToSeed: ('couples' | 'friends' | 'meet')[] = ['couples', 'friends', 'meet'];
   const batch = firestore.batch();
 
   for (const activityData of viennaActivities) {
-    for (const module of modulesToSeed) {
-        const docRef = activitiesCollection.doc();
-        let imageUrl = `https://placehold.co/400x250.png`; // Fallback image
-        const newActivity: Activity = {
-            ...activityData,
-            id: docRef.id,
-            module: module,
-            imageUrls: [imageUrl],
-            createdBy: 'system',
-            likes: 0,
-            dislikes: 0,
-        };
-        batch.set(docRef, newActivity);
-    }
+    const docRef = activitiesCollection.doc();
+    let imageUrl = `https://placehold.co/400x250.png`;
+    const newActivity: Activity = {
+        ...activityData,
+        id: docRef.id,
+        modules: ['couples', 'friends', 'meet'], // Assign to all local discovery modules
+        imageUrls: [imageUrl],
+        createdBy: 'system',
+        likes: 0,
+        dislikes: 0,
+    };
+    batch.set(docRef, newActivity);
   }
 
-  // Set the flag to prevent re-seeding
   batch.set(flagRef, { seededAt: new Date().toISOString() });
   
   await batch.commit();
-  console.log("Database seeded successfully with Vienna activities.");
-
-  // Note: We don't generate images here to keep the one-time seed fast and reliable.
-  // Images will be generated on-demand when activities are used.
+  console.log("Database seeded successfully with Vienna activities for all modules.");
 }
 // --- END OF SEEDING LOGIC ---
 
@@ -787,7 +778,7 @@ export async function getVotedOnCouplesActivityIds(userId: string): Promise<stri
 async function internal_addCustomLocalActivity(
   userId: string,
   module: 'couples' | 'friends' | 'meet',
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants' | 'module'>
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'category' | 'startTime' | 'votes' | 'participants' | 'modules'>
 ): Promise<{ success: boolean; error?: string; activity?: Activity }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
   if (!userId) return { success: false, error: 'User ID is required.' };
@@ -812,16 +803,15 @@ async function internal_addCustomLocalActivity(
     const newActivity: Activity = {
       ...(activityData as Omit<Activity, 'id'>),
       id: newActivityRef.id,
-      module: module,
+      modules: [module],
       imageUrls: [imageUrl],
       createdBy: userId,
-      likes: 0, // Likes/dislikes are handled per-trip or per-module context, not on the base activity
+      likes: 0, 
       dislikes: 0,
     };
 
     await newActivityRef.set(newActivity);
 
-    // If it's for the couples module, also add an automatic "like" for the creator
     if (module === 'couples') {
       await saveCoupleVote(userId, newActivity.id, true);
     }
@@ -851,7 +841,7 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
         if (module === 'couples' && partnerId) userIdsToQuery.push(partnerId);
 
         const q = firestore.collection('activities')
-            .where('module', '==', module)
+            .where('modules', 'array-contains', module)
             .where('location', '==', locationToQuery)
             .where('createdBy', 'in', userIdsToQuery);
 
@@ -898,9 +888,6 @@ export async function markCoupleActivityAsCompleted(
     batch.set(userCompletedRef, completedActivityData);
     batch.set(partnerCompletedRef, completedActivityData);
     
-    // If the couple wants to see this activity again in the future,
-    // we delete their 'like' votes. This makes the activity eligible
-    // to reappear in their swiping deck.
     if (wouldDoAgain) {
       const userVoteRef = firestore.collection('users').doc(userId).collection('couplesVotes').doc(activity.id);
       const partnerVoteRef = firestore.collection('users').doc(partnerId).collection('couplesVotes').doc(activity.id);
@@ -908,13 +895,8 @@ export async function markCoupleActivityAsCompleted(
       batch.delete(partnerVoteRef);
     }
     
-    // If wouldDoAgain is false, we do nothing with the votes.
-    // The client will remove it from the matched list, but the 'like' votes
-    // remain in the database, preventing it from being shown in the swiping deck again.
-
     await batch.commit();
 
-    // Revalidate the matches page path
     revalidatePath('/plando-couples/matches');
 
     return { success: true };
@@ -941,7 +923,6 @@ export async function getCompletedCouplesActivities(userId: string): Promise<Com
 export async function getTripActivities(tripId: string, userId: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        // First, get the main trip data to check the sync flag.
         const tripDoc = await firestore.collection('trips').doc(tripId).get();
         if (!tripDoc.exists) {
             console.error(`Trip with ID ${tripId} not found.`);
@@ -951,7 +932,6 @@ export async function getTripActivities(tripId: string, userId: string): Promise
 
         const activitiesMap = new Map<string, Activity>();
 
-        // Fetch activities specifically created for this trip.
         const tripActivitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
         
         tripActivitiesSnapshot.docs.forEach(doc => {
@@ -966,18 +946,16 @@ export async function getTripActivities(tripId: string, userId: string): Promise
             } as Activity);
         });
 
-        // If the sync flag is true, fetch relevant local activities.
         if (tripData.syncLocalActivities && tripData.destination) {
             const localActivitiesSnapshot = await firestore.collection('activities').where('location', '==', tripData.destination).get();
             
             localActivitiesSnapshot.docs.forEach(doc => {
-                // Avoid adding duplicates if an activity with the same ID already exists (e.g., it was voted on and thus copied to the trip)
                 if (!activitiesMap.has(doc.id)) {
                      const localActivity = doc.data() as Activity;
                      activitiesMap.set(doc.id, {
                         ...localActivity,
-                        tripId: tripId, // Assign tripId for context
-                        isLiked: undefined, // User has not voted on this in the context of the trip
+                        tripId: tripId, 
+                        isLiked: undefined, 
                         likes: 0,
                         dislikes: 0,
                         votes: {},
@@ -995,7 +973,7 @@ export async function getTripActivities(tripId: string, userId: string): Promise
 
 export async function addTripActivity(
   tripId: string,
-  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'votes' | 'category' | 'startTime' | 'participants' | 'module'>,
+  activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'votes' | 'category' | 'startTime' | 'participants' | 'modules'>,
   creatorId: string
 ): Promise<{ success: boolean; newActivity?: Activity; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
@@ -1022,9 +1000,9 @@ export async function addTripActivity(
             ...(data as Omit<Activity, 'id'>),
             id: docRef.id,
             imageUrls: [imageUrl],
-            likes: 1, // The creator automatically likes the activity
+            likes: 1, 
             dislikes: 0,
-            isLiked: true, // For the creator's view
+            isLiked: true, 
             votes: { [creatorId]: true }
         };
 
@@ -1052,21 +1030,17 @@ export async function voteOnTripActivity(
         await firestore.runTransaction(async (transaction) => {
             let activityDoc = await transaction.get(activityRef);
             if (!activityDoc.exists) {
-                // It's a synced local activity, not a trip-specific one yet.
-                // We need to find its data in the root 'activities' collection and create it here.
                 const localActivityDoc = await firestore.collection('activities').doc(activityId).get();
                 
                 if (!localActivityDoc.exists) throw new Error("Activity not found in any local collection.");
 
                 const activityToCreate = localActivityDoc.data() as Activity;
 
-                // Create a new document in the trip's activities subcollection with default votes
                 const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
                 transaction.set(activityRef, newActivityData);
-                activityDoc = await transaction.get(activityRef); // Reread the doc we just created
+                activityDoc = await transaction.get(activityRef); 
             }
 
-            // Now, get the document again (it's either the original or the one we just created)
             const docForUpdate = activityDoc;
             const data = docForUpdate.data()!;
             const votes = data.votes || {};
@@ -1076,24 +1050,21 @@ export async function voteOnTripActivity(
             let dislikesIncrement = 0;
 
             if (previousVote === vote) {
-                return; // No change in vote
+                return; 
             }
 
             if (previousVote === undefined) {
-                // New vote
                 if (vote) likesIncrement = 1; else dislikesIncrement = 1;
             } else {
-                // Flipped vote
-                if (vote) { // was false, now true
+                if (vote) { 
                     likesIncrement = 1;
                     dislikesIncrement = -1;
-                } else { // was true, now false
+                } else { 
                     likesIncrement = -1;
                     dislikesIncrement = 1;
                 }
             }
             
-            // Atomically update vote counts and the voter map
             transaction.update(activityRef, {
                 [`votes.${userId}`]: vote,
                 likes: FieldValue.increment(likesIncrement),
@@ -1173,8 +1144,6 @@ export async function addActivityToItineraryDay(tripId: string, activity: Activi
             return { success: false, error: "The selected day does not exist in the itinerary." };
         }
         
-        // This is the corrected logic.
-        // We push the activity to the itinerary without changing its original vote status.
         newItinerary.days[dayIndex].activities.push(activity);
         
         await saveItinerary(tripId, newItinerary);
@@ -1242,7 +1211,6 @@ export async function clearLocalActivities(city?: string): Promise<{ success: bo
         console.log(`Cleared ${count} documents from the activities collection for city: ${city || 'all'}.`);
         
         if (!city) {
-            // If clearing all cities, also clear all user-specific votes and completed activities.
             const usersSnapshot = await firestore.collection('users').get();
             for (const userDoc of usersSnapshot.docs) {
                 const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
