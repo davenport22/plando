@@ -1,4 +1,6 @@
 
+'use server';
+
 // This script is designed to be run manually from the command line
 // to seed the Firestore database with initial data.
 import { firestore, isFirebaseInitialized } from './firebase';
@@ -47,18 +49,17 @@ async function seedDatabase() {
     return;
   }
   
-  const flagRef = firestore.collection('_internal').doc('seed_flag_v9_images');
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v10_images_all_modules');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
-    console.log("Database has already been seeded with AI-generated images. Skipping.");
+    console.log("Database has already been seeded with the latest activities and images. Skipping.");
     return;
   }
 
   console.log("Starting database seed with AI image generation. This may take a few minutes...");
   const activitiesCollection = firestore.collection('activities');
   
-  // First, delete any old system-generated activities to ensure a clean slate.
   const querySnapshot = await activitiesCollection.where('createdBy', '==', 'system').get();
   if (!querySnapshot.empty) {
     console.log(`Deleting ${querySnapshot.size} existing system-generated activities...`);
@@ -100,10 +101,9 @@ async function seedDatabase() {
   console.log("Committing all new activities with generated images to the database...");
   await writeBatch.commit();
   
-  // Set the flag to prevent re-seeding
-  await flagRef.set({ seededAt: new Date().toISOString(), version: 'v9_images' });
+  await flagRef.set({ seededAt: new Date().toISOString(), version: 'v10_images_all_modules' });
   
-  console.log("Database seeded successfully with AI-generated images.");
+  console.log("Database seeded successfully with AI-generated images for all local modules.");
 }
 
 seedDatabase().catch(error => {
