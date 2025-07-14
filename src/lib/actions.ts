@@ -769,12 +769,23 @@ export async function addCustomCoupleActivity(userId: string, data: any) { retur
 export async function addCustomFriendActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'friends', data); }
 export async function addCustomMeetActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'meet', data); }
 
-async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location: string): Promise<Activity[]> {
+async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location: string, userId?: string, partnerId?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
+        const locationToQuery = location || "Vienna, Austria";
+
+        const userIdsToQuery: string[] = ['system'];
+        if (userId) userIdsToQuery.push(userId);
+        
+        // For couples module, we also want to see activities created by the partner.
+        if (module === 'couples' && partnerId) {
+            userIdsToQuery.push(partnerId);
+        }
+
         const q = firestore.collection('activities')
             .where('modules', 'array-contains', module)
-            .where('location', '==', location);
+            .where('location', '==', locationToQuery)
+            .where('createdBy', 'in', userIdsToQuery);
         
         const querySnapshot = await q.get();
 
@@ -785,9 +796,9 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
     }
 }
 
-export async function getCustomCouplesActivities(location?: string) { return internal_getCustomLocalActivities('couples', location || 'Vienna, Austria'); }
-export async function getCustomFriendActivities(location?: string) { return internal_getCustomLocalActivities('friends', location || 'Vienna, Austria'); }
-export async function getCustomMeetActivities(location?: string) { return internal_getCustomLocalActivities('meet', location || 'Vienna, Austria'); }
+export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) { return internal_getCustomLocalActivities('couples', location || "Vienna, Austria", userId, partnerId); }
+export async function getCustomFriendActivities(location?: string, userId?: string) { return internal_getCustomLocalActivities('friends', location || "Vienna, Austria", userId); }
+export async function getCustomMeetActivities(location?: string, userId?: string) { return internal_getCustomLocalActivities('meet', location || "Vienna, Austria", userId); }
 
 export async function markCoupleActivityAsCompleted(
   userId: string,
@@ -1208,5 +1219,3 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
-
-    

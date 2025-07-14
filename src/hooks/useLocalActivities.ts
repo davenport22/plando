@@ -10,7 +10,8 @@ type ActivityModuleType = 'friends' | 'meet' | 'couples';
 
 export function useLocalActivities(
     moduleType: ActivityModuleType, 
-    userProfile: UserProfile | null
+    userProfile: UserProfile | null,
+    partnerProfile?: UserProfile | null
 ) {
     const { toast } = useToast();
 
@@ -43,16 +44,16 @@ export function useLocalActivities(
         switch(moduleType) {
             case 'couples':
                 [allActivitiesForLocation, previouslyVotedIds] = await Promise.all([
-                    getCustomCouplesActivities(determinedLocationKey),
+                    getCustomCouplesActivities(determinedLocationKey, userProfile.id, partnerProfile?.id),
                     getVotedOnCouplesActivityIds(userProfile.id).then(ids => new Set(ids))
                 ]);
                 break;
             case 'friends':
-                allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey);
+                allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey, userProfile.id);
                 // Friends module might have a different voting system, for now we don't filter
                 break;
             case 'meet':
-                allActivitiesForLocation = await getCustomMeetActivities(determinedLocationKey);
+                allActivitiesForLocation = await getCustomMeetActivities(determinedLocationKey, userProfile.id);
                  // Meet module might have a different voting system, for now we don't filter
                 break;
         }
@@ -72,7 +73,7 @@ export function useLocalActivities(
             });
         }
 
-    }, [moduleType, toast, userProfile]);
+    }, [moduleType, toast, userProfile, partnerProfile]);
     
     useEffect(() => {
         // This effect ensures fetchActivities is only called when userProfile is definitively loaded.
