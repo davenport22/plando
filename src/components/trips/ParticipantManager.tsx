@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { X, Loader2, UserPlus, Crown } from 'lucide-react';
+import { X, Loader2, UserPlus, Crown, Mail } from 'lucide-react';
+import { Separator } from '../ui/separator';
 
 interface ParticipantManagerProps {
   trip: Trip;
@@ -51,6 +52,8 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
     }
   };
 
+  const hasPendingInvites = trip.invitedEmails && trip.invitedEmails.length > 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -90,6 +93,30 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
           ))}
         </div>
       </div>
+      
+      {hasPendingInvites && (
+        <div>
+          <Label className="text-base font-semibold">Pending Invitations</Label>
+           <p className="text-sm text-muted-foreground mb-3">
+            These people have been invited but have not yet created an account.
+          </p>
+           <div className="space-y-2">
+            {trip.invitedEmails?.map(invitedEmail => (
+              <div key={invitedEmail} className="flex items-center justify-between p-2 rounded-md bg-muted/50 opacity-80">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9 bg-muted-foreground/20">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                  </Avatar>
+                  <p className="text-sm text-muted-foreground italic">{invitedEmail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Separator />
+
       <form onSubmit={handleAddParticipant} className="space-y-2">
         <Label htmlFor="participant-email" className="font-semibold">Add or Invite Participant</Label>
         <div className="flex items-center gap-2">

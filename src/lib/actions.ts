@@ -211,6 +211,7 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             ...tripDetails,
             ownerId: ownerId, 
             participantIds: Array.from(participantIds),
+            invitedEmails: emailsToInvite,
             imageUrl: imageUrl,
         };
 
@@ -269,6 +270,7 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
             ownerId: data.ownerId,
             participantIds: participantIds,
             participants: participants,
+            invitedEmails: data.invitedEmails || [],
             imageUrl: data.imageUrl,
             itineraryGenerationRule: data.itineraryGenerationRule || 'majority',
             syncLocalActivities: data.syncLocalActivities ?? true,
@@ -367,27 +369,34 @@ export async function addParticipantToTrip(tripId: string, email: string, invite
         }
         
         const userToAdd = await findUserByEmail(email);
+        const tripRef = firestore.collection('trips').doc(tripId);
         
         if (userToAdd) {
-            const tripRef = firestore.collection('trips').doc(tripId);
             const tripDoc = await tripRef.get();
-    
             if (!tripDoc.exists) return { success: false, error: "Trip not found." };
-    
             const tripData = tripDoc.data() as Trip;
             if (tripData.participantIds.includes(userToAdd.id)) return { success: false, error: "This user is already a participant." };
     
-            await tripRef.update({ participantIds: FieldValue.arrayUnion(userToAdd.id) });
+            await tripRef.update({ 
+                participantIds: FieldValue.arrayUnion(userToAdd.id),
+                invitedEmails: FieldValue.arrayRemove(email) // Remove from invited list
+            });
     
             revalidatePath(`/trips/${tripId}`);
             return { success: true, message: `${userToAdd.name} has been added to the trip.` };
         } else {
-            const tripDoc = await firestore.collection('trips').doc(tripId).get();
+            const tripDoc = await tripRef.get();
             if (!tripDoc.exists) return { success: false, error: "Trip not found." };
-            
-            const tripName = tripDoc.data()!.name;
+            const tripData = tripDoc.data() as Trip;
+            const tripName = tripData.name;
 
-            // Fire-and-forget background email generation
+            if (tripData.invitedEmails?.includes(email)) {
+                return { success: false, error: "This email has already been invited." };
+            }
+
+            // Add to invited list and send email
+            await tripRef.update({ invitedEmails: FieldValue.arrayUnion(email) });
+
             generateInvitationEmail({
                 recipientEmail: email,
                 tripName: tripName,
@@ -400,6 +409,7 @@ export async function addParticipantToTrip(tripId: string, email: string, invite
                 console.error(`Background email generation failed for ${email}: ${aiError.error}`);
             });
 
+            revalidatePath(`/trips/${tripId}`);
             return { success: true, message: `User not found. An invitation is being sent to ${email}.` };
         }
 
@@ -534,7 +544,8 @@ export async function getOrCreateUserProfile(user: {
         try {
             const tripRef = firestore.collection('trips').doc(pendingTripId);
             await tripRef.update({
-                participantIds: FieldValue.arrayUnion(user.uid)
+                participantIds: FieldValue.arrayUnion(user.uid),
+                invitedEmails: FieldValue.arrayRemove(user.email) // Remove from invited list
             });
             revalidatePath(`/trips/${pendingTripId}`);
         } catch (tripError) {
@@ -860,7 +871,6 @@ export async function getCompletedCouplesActivities(userId: string): Promise<Com
 export async function getTripActivities(tripId: string, userId: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        // Fetch the main trip data to get the destination and sync flag.
         const tripDoc = await firestore.collection('trips').doc(tripId).get();
         if (!tripDoc.exists) {
             console.error(`Trip with ID ${tripId} not found.`);
@@ -870,8 +880,6 @@ export async function getTripActivities(tripId: string, userId: string): Promise
 
         const activitiesMap = new Map<string, Activity>();
 
-        // 1. Fetch activities created specifically for THIS trip (custom or voted on).
-        // These are stored in the trip's 'activities' subcollection.
         const tripActivitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
         
         tripActivitiesSnapshot.docs.forEach(doc => {
@@ -882,26 +890,23 @@ export async function getTripActivities(tripId: string, userId: string): Promise
                 id: doc.id,
                 likes: data.likes || 0,
                 dislikes: data.dislikes || 0,
-                isLiked: votes[userId], // Set the current user's vote status
+                isLiked: votes[userId],
             } as Activity;
             activitiesMap.set(doc.id, activity);
         });
 
-        // 2. If sync is enabled, fetch global activities that match the trip's destination.
         if (tripData.syncLocalActivities && tripData.destination) {
             const localActivitiesSnapshot = await firestore.collection('activities').where('location', '==', tripData.destination).get();
             
             localActivitiesSnapshot.docs.forEach(doc => {
-                // IMPORTANT: Only add local activities if they haven't already been voted on
-                // (which would have copied them into the trip's subcollection, fetched above).
                 if (!activitiesMap.has(doc.id)) {
                      const localActivity = doc.data() as Activity;
                      activitiesMap.set(doc.id, {
                         ...localActivity,
                         id: doc.id,
-                        tripId: tripId,      // Assign tripId for context
-                        isLiked: undefined,  // Not voted on yet in this trip's context
-                        likes: 0,            // Reset for trip context
+                        tripId: tripId,
+                        isLiked: undefined,
+                        likes: 0,
                         dislikes: 0,
                         votes: {},
                     });
@@ -1164,15 +1169,15 @@ export async function clearLocalActivities(city?: string): Promise<{ success: bo
             query = query.where('location', '==', city);
         }
         
-        const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query.limit(50), resolve, reject));
+        const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query.limit(500), resolve, reject));
         totalDeleted += count;
         console.log(`Cleared ${count} documents from the activities collection for city: ${city || 'all'}.`);
         
         if (!city) {
             const usersSnapshot = await firestore.collection('users').get();
             for (const userDoc of usersSnapshot.docs) {
-                const votesQuery = userDoc.ref.collection('couplesVotes').limit(50);
-                const completedQuery = userDoc.ref.collection('completedCouplesActivities').limit(50);
+                const votesQuery = userDoc.ref.collection('couplesVotes').limit(500);
+                const completedQuery = userDoc.ref.collection('completedCouplesActivities').limit(500);
                 const [votesCount, completedCount] = await Promise.all([
                      new Promise<number>((resolve, reject) => deleteQueryBatch(votesQuery, resolve, reject)),
                      new Promise<number>((resolve, reject) => deleteQueryBatch(completedQuery, resolve, reject)),
@@ -1207,8 +1212,8 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         const tripsSnapshot = await firestore.collection('trips').get();
         for (const tripDoc of tripsSnapshot.docs) {
             const tripId = tripDoc.id;
-            const activitiesQuery = tripDoc.ref.collection('activities').limit(50);
-            const itinerariesQuery = tripDoc.ref.collection('itineraries').limit(50);
+            const activitiesQuery = tripDoc.ref.collection('activities').limit(500);
+            const itinerariesQuery = tripDoc.ref.collection('itineraries').limit(500);
 
             const [activitiesCount, itinerariesCount] = await Promise.all([
                  new Promise<number>((resolve, reject) => deleteQueryBatch(activitiesQuery, resolve, reject)),

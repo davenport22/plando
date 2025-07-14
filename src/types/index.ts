@@ -26,6 +26,7 @@ export interface Trip {
   ownerId: string;
   participantIds: string[];
   participants: UserProfile[]; // Will be populated for detailed views
+  invitedEmails?: string[]; // To show pending invitations
   imageUrl?: string; // Main trip image
   itineraryGenerationRule?: ItineraryGenerationRule;
   latitude?: number;
