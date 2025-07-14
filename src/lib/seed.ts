@@ -29,7 +29,7 @@ const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes'
 
 const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'modules'>[] = [
     { name: "Hike on Gerlitzen Alpe", imageUrls: ["https://images.unsplash.com/photo-1616253442348-e47144e580e5?q=80&w=800&auto=format&fit=crop"], description: "Take the cable car up and hike one of the many trails on Gerlitzen for stunning panoramic views of the surrounding lakes and mountains.", location: "Villach, Austria", duration: 4, dataAiHint: "alps hiking", createdBy: 'system' },
-    { name: "Mountain Biking around Lake Faak", imageUrls: ["https://images.unsplash.com/photo-1573919934164-41525a808018?q=80&w=800&auto=format&fit=crop"], description: "Explore the scenic trails around the turquoise waters of Lake Faak, with routes available for all skill levels.", location: "Villach, Austria", duration: 3, dataAiHint: "mountain biking lake", createdBy: 'system' },
+    { name: "Mountain Biking around Lake Faak", imageUrls: ["https://images.unsplash.com/photo-1572338279893-5e93f1e185b3?q=80&w=800&auto=format&fit=crop"], description: "Explore the scenic trails around the turquoise waters of Lake Faak, with routes available for all skill levels.", location: "Villach, Austria", duration: 3, dataAiHint: "mountain biking lake", createdBy: 'system' },
     { name: "Stand-up Paddling on Lake Ossiach", imageUrls: ["https://images.unsplash.com/photo-1589889422634-b2a1bd7185c7?q=80&w=800&auto=format&fit=crop"], description: "Rent a paddleboard and enjoy a relaxing yet sporty day on the beautiful Lake Ossiach, one of Carinthia's largest lakes.", location: "Villach, Austria", duration: 2, dataAiHint: "paddleboarding lake", createdBy: 'system' },
     { name: "Climb at Kletterwald Ossiacher See", imageUrls: ["https://images.unsplash.com/photo-1562913165-718e27c19356?q=80&w=800&auto=format&fit=crop"], description: "Challenge yourselves at this high ropes adventure park with various courses set in the forest right by the lake.", location: "Villach, Austria", duration: 3.5, dataAiHint: "ropes course forest", createdBy: 'system' },
     { name: "Kayaking on the Drau River", imageUrls: ["https://images.unsplash.com/photo-1620932900985-64157d53a25e?q=80&w=800&auto=format&fit=crop"], description: "Experience Villach from a different perspective with a kayak or canoe tour on the Drau river that flows through the city.", location: "Villach, Austria", duration: 2.5, dataAiHint: "kayaking river", createdBy: 'system' }
@@ -46,7 +46,7 @@ async function seedDatabase() {
     return;
   }
   
-  const flagRef = firestore.collection('_internal').doc('seed_flag_v7');
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v8');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
@@ -78,7 +78,7 @@ async function seedDatabase() {
     batch.set(docRef, newActivity);
   }
 
-  batch.set(flagRef, { seededAt: new Date().toISOString(), version: 7 });
+  batch.set(flagRef, { seededAt: new Date().toISOString(), version: 8 });
   
   await batch.commit();
   console.log("Database seeded successfully with all activities.");
