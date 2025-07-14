@@ -860,6 +860,7 @@ export async function getCompletedCouplesActivities(userId: string): Promise<Com
 export async function getTripActivities(tripId: string, userId: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
+        // Fetch the main trip data to get the destination and sync flag.
         const tripDoc = await firestore.collection('trips').doc(tripId).get();
         if (!tripDoc.exists) {
             console.error(`Trip with ID ${tripId} not found.`);
@@ -869,31 +870,38 @@ export async function getTripActivities(tripId: string, userId: string): Promise
 
         const activitiesMap = new Map<string, Activity>();
 
+        // 1. Fetch activities created specifically for THIS trip (custom or voted on).
+        // These are stored in the trip's 'activities' subcollection.
         const tripActivitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
         
         tripActivitiesSnapshot.docs.forEach(doc => {
             const data = doc.data();
             const votes = data.votes || {};
-            activitiesMap.set(doc.id, { 
+            const activity = { 
                 ...data, 
                 id: doc.id,
                 likes: data.likes || 0,
                 dislikes: data.dislikes || 0,
-                isLiked: votes[userId],
-            } as Activity);
+                isLiked: votes[userId], // Set the current user's vote status
+            } as Activity;
+            activitiesMap.set(doc.id, activity);
         });
 
+        // 2. If sync is enabled, fetch global activities that match the trip's destination.
         if (tripData.syncLocalActivities && tripData.destination) {
             const localActivitiesSnapshot = await firestore.collection('activities').where('location', '==', tripData.destination).get();
             
             localActivitiesSnapshot.docs.forEach(doc => {
+                // IMPORTANT: Only add local activities if they haven't already been voted on
+                // (which would have copied them into the trip's subcollection, fetched above).
                 if (!activitiesMap.has(doc.id)) {
                      const localActivity = doc.data() as Activity;
                      activitiesMap.set(doc.id, {
                         ...localActivity,
-                        tripId: tripId, 
-                        isLiked: undefined, 
-                        likes: 0,
+                        id: doc.id,
+                        tripId: tripId,      // Assign tripId for context
+                        isLiked: undefined,  // Not voted on yet in this trip's context
+                        likes: 0,            // Reset for trip context
                         dislikes: 0,
                         votes: {},
                     });
@@ -907,6 +915,7 @@ export async function getTripActivities(tripId: string, userId: string): Promise
         return [];
     }
 }
+
 
 export async function addTripActivity(
   tripId: string,
