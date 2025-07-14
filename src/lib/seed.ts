@@ -8,26 +8,11 @@ import type { Activity } from '@/types';
 import { generateActivityImage } from '@/ai/flows/generate-activity-image-flow';
 
 const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'modules'>[] = [
-    { name: "Explore the Naschmarkt", description: "Vienna's largest market offers a vibrant mix of international foods, local delicacies, and lively restaurants.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "vienna market", createdBy: 'system' },
     { name: "Classical Concert at St. Anne's Church", description: "Experience the magic of Mozart and Beethoven in the stunning baroque ambiance of St. Anne's Church.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna church concert", createdBy: 'system' },
-    { name: "Visit the Spanish Riding School", description: "Witness the famous Lipizzaner stallions perform their elegant ballet. A truly unique Viennese tradition.", location: "Vienna, Austria", duration: 2, dataAiHint: "vienna horses", createdBy: 'system' },
-    { name: "Coffee and Cake at a Traditional Viennese Coffee House", description: "Indulge in classic pastries like Sachertorte or Apfelstrudel in a historic setting.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna coffee cake", createdBy: 'system' },
-    { name: "Explore the MuseumsQuartier", description: "A vibrant cultural complex featuring modern art, architecture, and trendy cafes.", location: "Vienna, Austria", duration: 3, dataAiHint: "vienna museum art", createdBy: 'system' },
-    { name: "Hike in the Vienna Woods (Wienerwald)", description: "Escape the city and enjoy a scenic hike through the beautiful Vienna Woods, offering great views and fresh air.", location: "Vienna, Austria", duration: 4, dataAiHint: "vienna woods forest", createdBy: 'system' },
-    { name: "Wine Tasting at a Heurige (Wine Tavern)", description: "Sample local wines and traditional Austrian food at a cozy wine tavern on the outskirts of the city.", location: "Vienna, Austria", duration: 3.5, dataAiHint: "vienna vineyard wine", createdBy: 'system' },
-    { name: "Attend the Vienna State Opera", description: "Experience a world-class opera or ballet performance in one of the world's leading opera houses.", location: "Vienna, Austria", duration: 3, dataAiHint: "vienna opera house", createdBy: 'system' },
-    { name: "Date at Haus des Meeres", description: "Explore the Aqua Terra Zoo with its impressive shark tank and tropical house, followed by a drink at the stunning rooftop bar.", location: "Vienna, Austria", duration: 3, dataAiHint: "vienna aquarium", createdBy: 'system' },
-    { name: "Dinner in the Dark", description: "A unique culinary journey where you dine in complete darkness, heightening your senses of taste and smell.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "dark dining", createdBy: 'system' },
-    { name: "Relaxing Day at Therme Wien", description: "Unwind together in one of Europe's most modern city thermal baths, offering various pools, saunas, and relaxation areas.", location: "Vienna, Austria", duration: 5, dataAiHint: "thermal spa", createdBy: 'system' },
-    { name: "Goldsmith Workshop for Couples", description: "A creative and romantic experience where you can design and craft your own unique pieces of jewelry together.", location: "Vienna, Austria", duration: 4, dataAiHint: "jewelry making", createdBy: 'system' },
+    { name: "Coffee and Cake at a Viennese Coffee House", description: "Indulge in classic pastries like Sachertorte or Apfelstrudel in a historic setting.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna coffee cake", createdBy: 'system' },
     { name: "Fun at the Prater Amusement Park", description: "Enjoy a nostalgic day out with thrilling rides, games, and a romantic trip on the famous Wiener Riesenrad (Ferris Wheel).", location: "Vienna, Austria", duration: 3.5, dataAiHint: "amusement park", createdBy: 'system' },
     { name: "Stroll through Schönbrunn Gardens", description: "A romantic walk through the magnificent gardens of the former imperial summer residence, with beautiful fountains and the Gloriette.", location: "Vienna, Austria", duration: 2.5, dataAiHint: "vienna palace garden", createdBy: 'system' },
-    { name: "View from the Donauturm (Danube Tower)", description: "Enjoy breathtaking 360° panoramic views of Vienna from the observation deck or the rotating restaurant.", location: "Vienna, Austria", duration: 2, dataAiHint: "vienna city view", createdBy: 'system' },
     { name: "Visit Belvedere Palace to See 'The Kiss'", description: "Witness Gustav Klimt's masterpiece 'The Kiss' in person at the stunning Belvedere Palace, a perfect romantic art date.", location: "Vienna, Austria", duration: 2, dataAiHint: "vienna art palace", createdBy: 'system' },
-    { name: "Danube River Evening Cruise", description: "Enjoy a scenic dinner cruise along the Danube, watching the city lights of Vienna glide by.", location: "Vienna, Austria", duration: 3, dataAiHint: "danube river cruise", createdBy: 'system' },
-    { name: "Private Fiaker Ride for Two", description: "Take a charming and intimate horse-drawn carriage ride through Vienna's historic city center.", location: "Vienna, Austria", duration: 1, dataAiHint: "vienna carriage ride", createdBy: 'system' },
-    { name: "Visit the Imperial Butterfly House", description: "Walk through a tropical oasis in the heart of the city, surrounded by hundreds of free-flying, colorful butterflies.", location: "Vienna, Austria", duration: 1, dataAiHint: "butterfly house", createdBy: 'system' },
-    { name: "Austrian Cooking Class for Two", description: "Learn to make classic Austrian dishes like Wiener Schnitzel or Apfelstrudel together in a fun, hands-on class.", location: "Vienna, Austria", duration: 3.5, dataAiHint: "cooking class", createdBy: 'system' }
 ];
 
 const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'modules'>[] = [
@@ -38,10 +23,7 @@ const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes
     { name: "Kayaking on the Drau River", description: "Experience Villach from a different perspective with a kayak or canoe tour on the Drau river that flows through the city.", location: "Villach, Austria", duration: 2.5, dataAiHint: "kayaking river", createdBy: 'system' }
 ];
 
-const allActivities = [
-    ...viennaActivities,
-    ...villachActivities
-];
+const allActivities = [...viennaActivities, ...villachActivities];
 
 async function seedDatabase() {
   if (!isFirebaseInitialized) {
@@ -49,19 +31,20 @@ async function seedDatabase() {
     return;
   }
   
-  const flagRef = firestore.collection('_internal').doc('seed_flag_v15_final_fix');
+  // This flag ensures this specific version of the script only runs once.
+  const flagRef = firestore.collection('_internal').doc('seed_flag_fresh_start_v1');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
-    console.log("Database has already been seeded with the latest activities (v15). Skipping.");
+    console.log("Database has already been seeded with the new v1 script. Skipping.");
     return;
   }
 
-  console.log("Starting database seed v15. This may take a few minutes...");
-  const activitiesCollection = firestore.collection('activities');
+  console.log("Starting fresh database seed (v1). This may take a minute...");
   
-  // Reverting to the simple "delete and recreate" logic to ensure reliability.
-  console.log("Deleting all existing system-generated activities to ensure a clean slate...");
+  // 1. Delete all existing system-generated activities to ensure a clean slate.
+  console.log("Deleting all old system-generated activities...");
+  const activitiesCollection = firestore.collection('activities');
   const querySnapshot = await activitiesCollection.where('createdBy', '==', 'system').get();
   if (!querySnapshot.empty) {
     const deleteBatch = firestore.batch();
@@ -72,12 +55,13 @@ async function seedDatabase() {
     console.log("No old system activities found to delete.");
   }
   
+  // 2. Create new activities with AI-generated images.
   const writeBatch = firestore.batch();
   let count = 0;
 
   for (const activityData of allActivities) {
     count++;
-    console.log(`[${count}/${allActivities.length}] Generating image for: ${activityData.name}...`);
+    console.log(`[${count}/${allActivities.length}] Processing: ${activityData.name}...`);
     try {
         const imageUrl = await generateActivityImage({
             activityName: activityData.name,
@@ -96,18 +80,20 @@ async function seedDatabase() {
             dislikes: 0,
         };
         writeBatch.set(docRef, newActivity);
+        console.log(` -> Image generated and activity queued for "${activityData.name}".`);
     } catch (error) {
-        console.error(`Failed to generate image for "${activityData.name}". Skipping. Error:`, error);
+        console.error(` -> Failed to generate image for "${activityData.name}". Skipping. Error:`, error);
     }
   }
 
-  console.log("Committing all new activities with generated images to the database...");
+  // 3. Commit all the new activities to the database.
+  console.log("Committing all new activities to the database...");
   await writeBatch.commit();
   
-  // Set the flag ONLY after everything is successful.
-  await flagRef.set({ seededAt: new Date().toISOString(), version: 'v15_final_fix' });
+  // 4. Set the flag ONLY after everything is successful.
+  await flagRef.set({ seededAt: new Date().toISOString(), version: 'fresh_start_v1' });
   
-  console.log("Database seeded successfully with AI-generated images for all local modules.");
+  console.log("Database seeded successfully with new activities.");
 }
 
 seedDatabase().catch(error => {
