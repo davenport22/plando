@@ -7,6 +7,7 @@ export const CITIES = [
   "Sydney, Australia",
   "Rome, Italy",
   "Vienna, Austria",
+  "Villach, Austria",
   "Berlin, Germany",
   "Munich, Germany",
   "Los Angeles, USA",
