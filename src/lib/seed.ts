@@ -49,7 +49,7 @@ async function seedDatabase() {
     return;
   }
   
-  const flagRef = firestore.collection('_internal').doc('seed_flag_v13_fix_type');
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v14_revert_to_delete');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
@@ -60,6 +60,7 @@ async function seedDatabase() {
   console.log("Starting database seed with AI image generation. This may take a few minutes...");
   const activitiesCollection = firestore.collection('activities');
   
+  // Reverting to the simple "delete and recreate" logic to ensure reliability.
   const querySnapshot = await activitiesCollection.where('createdBy', '==', 'system').get();
   if (!querySnapshot.empty) {
     console.log(`Deleting ${querySnapshot.size} existing system-generated activities...`);
@@ -101,7 +102,7 @@ async function seedDatabase() {
   console.log("Committing all new activities with generated images to the database...");
   await writeBatch.commit();
   
-  await flagRef.set({ seededAt: new Date().toISOString(), version: 'v13_fix_type' });
+  await flagRef.set({ seededAt: new Date().toISOString(), version: 'v14_revert_to_delete' });
   
   console.log("Database seeded successfully with AI-generated images for all local modules.");
 }
