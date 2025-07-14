@@ -1,3 +1,4 @@
+
 // This script is designed to be run manually from the command line
 // to seed the Firestore database with initial data.
 import { firestore, isFirebaseInitialized } from './firebase';
@@ -26,13 +27,26 @@ const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes'
     { name: "Austrian Cooking Class for Two", description: "Learn to make classic Austrian dishes like Wiener Schnitzel or Apfelstrudel together in a fun, hands-on class.", location: "Vienna, Austria", duration: 3.5, dataAiHint: "cooking class", createdBy: 'system' }
 ];
 
+const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'modules'>[] = [
+    { name: "Hike on Gerlitzen Alpe", description: "Take the cable car up and hike one of the many trails on Gerlitzen for stunning panoramic views of the surrounding lakes and mountains.", location: "Villach, Austria", duration: 4, dataAiHint: "alps hiking", createdBy: 'system' },
+    { name: "Mountain Biking around Lake Faak", description: "Explore the scenic trails around the turquoise waters of Lake Faak, with routes available for all skill levels.", location: "Villach, Austria", duration: 3, dataAiHint: "mountain biking lake", createdBy: 'system' },
+    { name: "Stand-up Paddling on Lake Ossiach", description: "Rent a paddleboard and enjoy a relaxing yet sporty day on the beautiful Lake Ossiach, one of Carinthia's largest lakes.", location: "Villach, Austria", duration: 2, dataAiHint: "paddleboarding lake", createdBy: 'system' },
+    { name: "Climb at Kletterwald Ossiacher See", description: "Challenge yourselves at this high ropes adventure park with various courses set in the forest right by the lake.", location: "Villach, Austria", duration: 3.5, dataAiHint: "ropes course forest", createdBy: 'system' },
+    { name: "Kayaking on the Drau River", description: "Experience Villach from a different perspective with a kayak or canoe tour on the Drau river that flows through the city.", location: "Villach, Austria", duration: 2.5, dataAiHint: "kayaking river", createdBy: 'system' }
+];
+
+const allActivities = [
+    ...viennaActivities,
+    ...villachActivities
+];
+
 async function seedDatabase() {
   if (!isFirebaseInitialized) {
     console.error("Firebase not initialized. Cannot seed database. Please check your .env file.");
     return;
   }
   
-  const flagRef = firestore.collection('_internal').doc('seed_flag_v5');
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v6');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
@@ -44,15 +58,14 @@ async function seedDatabase() {
   const activitiesCollection = firestore.collection('activities');
   const batch = firestore.batch();
   
-  // To ensure a clean slate, first query and delete existing seeded activities if any.
   const querySnapshot = await activitiesCollection.where('createdBy', '==', 'system').get();
   if (!querySnapshot.empty) {
     console.log(`Deleting ${querySnapshot.size} existing system-generated activities...`);
     querySnapshot.docs.forEach(doc => batch.delete(doc.ref));
   }
 
-  console.log(`Adding ${viennaActivities.length} new activities for Vienna...`);
-  for (const activityData of viennaActivities) {
+  console.log(`Adding ${allActivities.length} new activities...`);
+  for (const activityData of allActivities) {
     const docRef = activitiesCollection.doc();
     let imageUrl = `https://placehold.co/400x250.png`;
     const newActivity: Activity = {
@@ -63,15 +76,14 @@ async function seedDatabase() {
         createdBy: 'system',
         likes: 0,
         dislikes: 0,
-        location: "Vienna, Austria",
     };
     batch.set(docRef, newActivity);
   }
 
-  batch.set(flagRef, { seededAt: new Date().toISOString(), version: 5 });
+  batch.set(flagRef, { seededAt: new Date().toISOString(), version: 6 });
   
   await batch.commit();
-  console.log("Database seeded successfully with Vienna activities.");
+  console.log("Database seeded successfully with all activities.");
 }
 
 seedDatabase().catch(error => {
