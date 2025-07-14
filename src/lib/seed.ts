@@ -49,25 +49,27 @@ async function seedDatabase() {
     return;
   }
   
-  const flagRef = firestore.collection('_internal').doc('seed_flag_v14_revert_to_delete');
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v15_final_fix');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
-    console.log("Database has already been seeded with the latest activities and images. Skipping.");
+    console.log("Database has already been seeded with the latest activities (v15). Skipping.");
     return;
   }
 
-  console.log("Starting database seed with AI image generation. This may take a few minutes...");
+  console.log("Starting database seed v15. This may take a few minutes...");
   const activitiesCollection = firestore.collection('activities');
   
   // Reverting to the simple "delete and recreate" logic to ensure reliability.
+  console.log("Deleting all existing system-generated activities to ensure a clean slate...");
   const querySnapshot = await activitiesCollection.where('createdBy', '==', 'system').get();
   if (!querySnapshot.empty) {
-    console.log(`Deleting ${querySnapshot.size} existing system-generated activities...`);
     const deleteBatch = firestore.batch();
     querySnapshot.docs.forEach(doc => deleteBatch.delete(doc.ref));
     await deleteBatch.commit();
-    console.log("Old activities deleted.");
+    console.log(`Deleted ${querySnapshot.size} old system activities.`);
+  } else {
+    console.log("No old system activities found to delete.");
   }
   
   const writeBatch = firestore.batch();
@@ -102,7 +104,8 @@ async function seedDatabase() {
   console.log("Committing all new activities with generated images to the database...");
   await writeBatch.commit();
   
-  await flagRef.set({ seededAt: new Date().toISOString(), version: 'v14_revert_to_delete' });
+  // Set the flag ONLY after everything is successful.
+  await flagRef.set({ seededAt: new Date().toISOString(), version: 'v15_final_fix' });
   
   console.log("Database seeded successfully with AI-generated images for all local modules.");
 }
