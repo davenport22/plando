@@ -122,7 +122,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+      const safeToIgnoreErrors = [
+        'auth/popup-closed-by-user',
+        'auth/cancelled-popup-request',
+        'auth/user-cancelled'
+      ];
+      if (!safeToIgnoreErrors.includes(error.code)) {
         console.error("Error during sign-in with popup:", error);
         throw new Error(getFriendlyAuthErrorMessage(error.code));
       }
