@@ -49,7 +49,7 @@ async function seedDatabase() {
     return;
   }
   
-  const flagRef = firestore.collection('_internal').doc('seed_flag_v11_invited_users');
+  const flagRef = firestore.collection('_internal').doc('seed_flag_v13_fix_type');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
@@ -101,7 +101,7 @@ async function seedDatabase() {
   console.log("Committing all new activities with generated images to the database...");
   await writeBatch.commit();
   
-  await flagRef.set({ seededAt: new Date().toISOString(), version: 'v11_invited_users' });
+  await flagRef.set({ seededAt: new Date().toISOString(), version: 'v13_fix_type' });
   
   console.log("Database seeded successfully with AI-generated images for all local modules.");
 }
