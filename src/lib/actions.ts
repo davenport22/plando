@@ -772,7 +772,6 @@ export async function addCustomMeetActivity(userId: string, data: any) { return 
 async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
-        
         const q = firestore.collection('activities')
             .where('modules', 'array-contains', module)
             .where('location', '==', location);
@@ -780,7 +779,6 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
         const querySnapshot = await q.get();
 
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-
     } catch (error) {
         console.error(`Error fetching custom activities for module ${module} with location ${location}:`, error);
         return [];
@@ -955,16 +953,25 @@ export async function voteOnTripActivity(
     const activityRef = firestore.collection('trips').doc(tripId).collection('activities').doc(activityId);
 
     try {
+        // Ensure the activity document exists in the trip's subcollection before trying to update it.
         let activityDoc = await activityRef.get();
-
         if (!activityDoc.exists) {
             const localActivityDoc = await firestore.collection('activities').doc(activityId).get();
             if (!localActivityDoc.exists) throw new Error("Activity not found in any local collection.");
+            
             const activityToCreate = localActivityDoc.data() as Activity;
-            const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
+            
+            // Create a new document in the trip's activities subcollection with default votes
+            const newActivityData = { 
+                ...activityToCreate, 
+                votes: {}, 
+                likes: 0, 
+                dislikes: 0 
+            };
             await activityRef.set(newActivityData);
         }
 
+        // Now, perform the vote update in a transaction.
         await firestore.runTransaction(async (transaction) => {
             const docForUpdate = await transaction.get(activityRef);
             if (!docForUpdate.exists) throw new Error("Activity does not exist in trip collection.");
@@ -974,24 +981,27 @@ export async function voteOnTripActivity(
             const previousVote = votes[userId];
 
             if (previousVote === vote) {
-                return; // No change in vote
+                return; // No change in vote, so we do nothing.
             }
 
             let likesIncrement = 0;
             let dislikesIncrement = 0;
 
             if (previousVote === undefined) {
+                // This is a new vote.
                 if (vote) likesIncrement = 1; else dislikesIncrement = 1;
             } else {
-                if (vote) { 
+                // This is a flipped vote.
+                if (vote) { // was false, now true
                     likesIncrement = 1;
                     dislikesIncrement = -1;
-                } else { 
+                } else { // was true, now false
                     likesIncrement = -1;
                     dislikesIncrement = 1;
                 }
             }
-
+            
+            // Atomically update vote counts and the voter map.
             transaction.update(activityRef, {
                 [`votes.${userId}`]: vote,
                 likes: FieldValue.increment(likesIncrement),
@@ -999,6 +1009,7 @@ export async function voteOnTripActivity(
             });
         });
 
+        // After the transaction, fetch the final state of the document.
         const updatedDoc = await activityRef.get();
         const updatedData = updatedDoc.data()!;
         const finalVotes = updatedData.votes || {};
