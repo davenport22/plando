@@ -22,7 +22,7 @@ export default function ModulesPage() {
     <div className="container mx-auto py-12 px-4">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-headline font-bold text-primary">Welcome to Plando</h1>
-        <p className="text-xl text-muted-foreground mt-2">Your all-in-one planning suite. Choose a module to get started.</p>
+        <p className="text-xl text-muted-foreground mt-2">This is not a planning suite - it's a living life suite.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
