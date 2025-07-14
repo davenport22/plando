@@ -33,10 +33,6 @@ const getFriendlyAuthErrorMessage = (errorCode: string) => {
     return FIREBASE_ERROR_MESSAGES[errorCode] || "An unexpected authentication error occurred. Please try again.";
 };
 
-const ADMIN_EMAIL = 'admin@admin.com';
-const ADMIN_PASSWORD = 'admin';
-
-
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
@@ -75,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const pendingTripId = localStorage.getItem('pendingTripId');
 
       if (firebaseUser) {
-        if (firebaseUser.email === ADMIN_EMAIL) {
+        if (firebaseUser.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
             setIsAdmin(true);
         }
         try {
@@ -126,7 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      if (error.code !== 'auth/popup-closed-by-user') {
+      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         console.error("Error during sign-in with popup:", error);
         throw new Error(getFriendlyAuthErrorMessage(error.code));
       }
@@ -135,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const registerWithEmail = async (email: string, password: string, name: string) => {
     try {
-        if (email.toLowerCase() === ADMIN_EMAIL) {
+        if (email.toLowerCase() === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
             throw new Error("This email is reserved for administration.");
         }
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -147,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginWithEmail = async (email: string, password: string) => {
     // Special local admin check
-    if (email.toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    if (email.toLowerCase() === process.env.NEXT_PUBLIC_ADMIN_EMAIL && password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
         setLoading(true);
         setIsAdmin(true);
         setUser(null);
