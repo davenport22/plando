@@ -12,7 +12,7 @@ interface TripCardProps {
 }
 
 export function TripCard({ trip }: TripCardProps) {
-  const imageHint = trip.destination.toLowerCase().split(',')[0].split(' ').slice(0, 2).join(' ') || "travel,landscape";
+  const imageHint = trip.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',') || "travel,landscape";
 
   const displayImageUrl = trip.imageUrl && !trip.imageUrl.includes('placehold.co')
     ? trip.imageUrl 

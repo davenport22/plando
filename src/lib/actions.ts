@@ -366,7 +366,7 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const imageUrlIsPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co') || !currentTripData.imageUrl.includes('source.unsplash.com');
+        const imageUrlIsPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co') || !currentTripData.imageUrl.includes('storage.googleapis.com');
 
         if (destinationChanged || imageUrlIsPlaceholder) {
              const destinationForImage = data.destination || currentTripData.destination;
