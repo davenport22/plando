@@ -99,6 +99,8 @@ export default function TripDetailPage() {
 
   const [selectedActivityForDialog, setSelectedActivityForDialog] = useState<Activity | null>(null);
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
+  
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     if (!tripId || !user) return;
@@ -120,6 +122,7 @@ export default function TripDetailPage() {
         router.push('/trips');
       }
       setIsLoading(false);
+      setIsInitialLoad(false);
     };
 
     fetchTripData();
@@ -130,6 +133,15 @@ export default function TripDetailPage() {
       setTripDuration(calculateTripDuration(trip.startDate, trip.endDate));
     }
   }, [trip]);
+
+  // This effect will run after the itinerary state has been updated by drag-and-drop
+  useEffect(() => {
+    // We prevent this from running on the initial data load
+    if (!isInitialLoad && generatedItinerary) {
+      saveItinerary(tripId, generatedItinerary);
+    }
+  }, [generatedItinerary, isInitialLoad, tripId]);
+
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -164,7 +176,6 @@ export default function TripDetailPage() {
         newItinerary.days[oldDayIndex] = recalculateTimesForDay(newItinerary.days[oldDayIndex]);
       }
       
-      saveItinerary(tripId, newItinerary);
       return newItinerary;
     });
   };
@@ -269,7 +280,7 @@ export default function TripDetailPage() {
 
       <Card className="mb-8 overflow-hidden shadow-xl">
         <div className="relative h-64 w-full md:h-80">
-          <Image src={trip.imageUrl || `https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop`} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0]} />
+          <Image src={trip.imageUrl || 'https://images.unsplash.com/photo-1594794633912-9a07a9757357?q=80&w=1200&auto=format&fit=crop'} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0]} />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-8">
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
             <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>
