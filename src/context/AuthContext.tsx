@@ -9,6 +9,7 @@ import {
   GoogleAuthProvider, 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  updateProfile,
   type User 
 } from 'firebase/auth';
 import { auth, isClientConfigured } from '@/lib/firebase/client';
@@ -140,6 +141,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("This email is reserved for administration.");
         }
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // After creating the user, immediately update their profile with the provided name.
+        if (userCredential.user) {
+          await updateProfile(userCredential.user, { displayName: name });
+        }
     } catch (error: any) {
         console.error("Error during email registration:", error);
         throw new Error(getFriendlyAuthErrorMessage(error.code) || error.message);

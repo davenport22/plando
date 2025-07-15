@@ -14,6 +14,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
+import { generateAndStoreActivityImage } from './aiUtils';
 
 
 const handleAIError = (error: unknown, defaultMessage: string): { error: string } => {
@@ -565,18 +566,17 @@ export async function getOrCreateUserProfile(user: {
       };
       await userRef.set(newUserProfile);
 
-      // Add user to the trip they were invited to
-      if (pendingTripId) {
+      // If the user was invited to a trip, add them to it now.
+      if (pendingTripId && user.email) {
         try {
             const tripRef = firestore.collection('trips').doc(pendingTripId);
             await tripRef.update({
                 participantIds: FieldValue.arrayUnion(user.uid),
-                invitedEmails: FieldValue.arrayRemove(user.email) // Remove from invited list
+                invitedEmails: FieldValue.arrayRemove(user.email)
             });
             revalidatePath(`/trips/${pendingTripId}`);
         } catch (tripError) {
             console.error(`Failed to add new user ${user.uid} to trip ${pendingTripId} after registration.`, tripError);
-            // Non-fatal error, user profile is created, but they might need to be added manually.
         }
       }
 
@@ -765,11 +765,11 @@ async function internal_addCustomLocalActivity(
     
     let imageUrl = customActivityFallbackImageUrl;
     try {
-        const generatedImage = await generateActivityImage({
-            activityName: activityData.name,
-            location: activityData.location,
-            dataAiHint: activityData.dataAiHint,
-        });
+        const generatedImage = await generateAndStoreActivityImage(
+            activityData.name,
+            activityData.location,
+            activityData.dataAiHint,
+        );
         if (generatedImage) {
             imageUrl = generatedImage;
         }
@@ -959,11 +959,11 @@ export async function addTripActivity(
         
         let imageUrl = customActivityFallbackImageUrl; 
         try {
-            const generatedImage = await generateActivityImage({
-                activityName: data.name,
-                location: data.location,
-                dataAiHint: data.dataAiHint,
-            });
+            const generatedImage = await generateAndStoreActivityImage(
+                data.name,
+                data.location,
+                data.dataAiHint,
+            );
             if (generatedImage) {
                 imageUrl = generatedImage;
             }
