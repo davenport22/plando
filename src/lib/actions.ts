@@ -204,7 +204,19 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
-        const imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
+        let imageUrl: string;
+        try {
+            imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
+        } catch (error) {
+            console.warn(`AI image generation failed for trip "${tripDetails.name}". Falling back to placeholder. Error:`, error);
+            const destinationHint = tripDetails.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, '+');
+            imageUrl = `https://placehold.co/1200x400.png`;
+            // Add helpful logging for the user.
+            if (error instanceof Error && error.message.includes('does not exist')) {
+                 console.warn("Hint: This error often means Firebase Storage is not enabled or configured correctly. Please check your Firebase project settings.");
+            }
+        }
+
 
         const newTripData = {
             ...tripDetails,
