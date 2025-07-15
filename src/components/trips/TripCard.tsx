@@ -19,7 +19,7 @@ export function TripCard({ trip }: TripCardProps) {
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
           <Image
-            src={trip.imageUrl || 'https://images.unsplash.com/photo-1568736333610-eae6e0ab9206?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxhdXN0cmlhfGVufDB8fHx8MTc1MjYwODU2Nnww&ixlib=rb-4.1.0&q=80&w=1080'}
+            src={trip.imageUrl || 'https://images.unsplash.com/photo-1594794633912-9a07a9757357?q=80&w=1200&auto=format&fit=crop'}
             alt={trip.name}
             fill
             className="object-cover"
