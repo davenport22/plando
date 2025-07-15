@@ -191,21 +191,8 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
-        let imageUrl: string;
-        try {
-            imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
-        } catch (error) {
-            console.warn(`AI image generation failed for trip "${tripDetails.name}". Falling back to a placeholder. Error:`, error);
-            imageUrl = `https://placehold.co/1200x400.png`;
-            if (error instanceof Error) {
-                if (error.message.includes('does not exist')) {
-                    console.warn("Hint: This error often means Firebase Storage is not enabled or configured correctly. Please check your Firebase project settings.");
-                } else if (error.message.includes('permission denied')) {
-                     console.warn("Hint: This error often means the Generative Language API is not enabled in your Google Cloud project for your API key.");
-                }
-            }
-        }
-
+        // Use a static, reliable Unsplash URL.
+        const imageUrl = "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop";
 
         const newTripData = {
             ...tripDetails,
@@ -359,21 +346,13 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         if (!currentTripDoc.exists) {
             return { success: false, error: "Trip not found." };
         }
-        const currentTripData = currentTripDoc.data() as Trip;
 
         const updatedData = { ...data };
 
-        const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const imageUrlIsPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
-
-        if (destinationChanged || imageUrlIsPlaceholder) {
-             const destinationForImage = data.destination || currentTripData.destination;
-            try {
-                updatedData.imageUrl = await generateDestinationImage({ destination: destinationForImage });
-            } catch (error) {
-                console.warn(`AI image generation failed during trip update for "${currentTripData.name}". Falling back to a placeholder. Error:`, error);
-                updatedData.imageUrl = `https://placehold.co/1200x400.png`;
-            }
+        // If the imageUrl is missing or a placeholder, set it to the reliable static URL.
+        const currentTripData = currentTripDoc.data() as Trip;
+        if (!currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co')) {
+             updatedData.imageUrl = "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop";
         }
 
         await tripRef.update(updatedData);
