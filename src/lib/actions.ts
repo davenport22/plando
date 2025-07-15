@@ -203,9 +203,7 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
-        const imageUrl = `https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=${encodeURIComponent(
-          tripDetails.destination
-        )}`;
+        const imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
 
         const newTripData = {
             ...tripDetails,
@@ -241,6 +239,9 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
 
     } catch (e) {
         console.error('Error creating trip:', e);
+        if (e instanceof Error && (e.message.includes("API") || e.message.includes("permission"))) {
+            return { success: false, ...handleAIError(e, "Could not create trip due to an AI service error.") };
+        }
         const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
         return { success: false, error: `Failed to create trip: ${errorMessage}` };
     }
@@ -337,13 +338,11 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const imageUrlMissingOrPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co') || !currentTripData.imageUrl.includes('unsplash');
+        const imageUrlMissingOrPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
 
         if (destinationChanged || imageUrlMissingOrPlaceholder) {
              const destinationForImage = data.destination || currentTripData.destination;
-            updatedData.imageUrl = `https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=${encodeURIComponent(
-              destinationForImage
-            )}`;
+            updatedData.imageUrl = await generateDestinationImage({ destination: destinationForImage });
         }
 
         await tripRef.update(updatedData);
