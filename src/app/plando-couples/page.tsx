@@ -7,7 +7,7 @@ import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Heart, RotateCcw, MapPin, ListChecks, Sparkles, Users, PlusCircle } from 'lucide-react';
+import { Loader2, Heart, RotateCcw, MapPin, ListChecks, Sparkles, Users, PlusCircle, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
@@ -239,14 +239,14 @@ export default function PlandoCouplesPage() {
 
           <div className="flex justify-center gap-2 mb-4">
             <Link href="/plando-couples/matches" passHref>
-                <Button variant="secondary" disabled={activities.length === 0 && matchesCount === 0 && !connectedPartner}>
+                <Button variant="secondary" disabled={!connectedPartner}>
                     <ListChecks className="mr-2 h-4 w-4" />
                     View Matches ({matchesCount})
                 </Button>
             </Link>
             <Dialog open={isCustomActivityOpen} onOpenChange={setIsCustomActivityOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline">
+                    <Button variant="outline" disabled={!connectedPartner}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Custom
                     </Button>
                 </DialogTrigger>
@@ -262,20 +262,27 @@ export default function PlandoCouplesPage() {
             </Dialog>
         </div>
 
-           {locationStatusMessage && (
+           {locationStatusMessage && connectedPartner && (
             <div className="mb-3 text-xs text-muted-foreground p-2 border border-dashed rounded-md flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary/70"/> 
                 <span>{locationStatusMessage}</span>
             </div>
           )}
           <div className="flex flex-col items-center justify-center min-h-[380px]">
-            {isLoading && activities.length > 0 && ( 
+             {!connectedPartner ? (
+                <div className="text-center text-muted-foreground space-y-4 py-8">
+                    <UserPlus className="h-20 w-20 mx-auto text-primary/40" />
+                    <p className="text-xl font-semibold text-foreground">Connect with a partner</p>
+                    <p>
+                        Please connect with your partner first to start swiping on date ideas together.
+                    </p>
+                </div>
+            ) : isLoading && activities.length > 0 ? ( 
               <div className="flex flex-col items-center justify-center h-full">
                   <Loader2 className="h-10 w-10 animate-spin text-primary" />
                   <p className="mt-3 text-sm text-muted-foreground">Reloading date ideas...</p>
               </div>
-            )}
-            {!isLoading && currentActivity ? (
+            ) : !isLoading && currentActivity ? (
               <div className="w-full max-w-xs sm:max-w-sm">
                 <ActivityVotingCard
                   key={currentActivity.id}
