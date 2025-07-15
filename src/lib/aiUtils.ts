@@ -1,4 +1,4 @@
-// @/lib/aiUtils.ts
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -28,7 +28,7 @@ export async function generateAndStoreActivityImage(
 
   const promptQuery = dataAiHint || `${activityName} in ${location}`;
   
-  const { media } = await ai.generate({
+  const {media} = await ai.generate({
     model: 'googleai/gemini-2.0-flash-preview-image-generation',
     prompt: `A beautiful, vibrant, photorealistic image of ${promptQuery}. travel photography, high quality, stunning view. Do not include text or people unless it's essential for the activity.`,
     config: {
@@ -56,7 +56,7 @@ export async function generateAndStoreActivityImage(
   await file.save(compressedImageBuffer, {
       metadata: {
           contentType: 'image/jpeg',
-          cacheControl: 'public, max-age=31536000', // Cache for 1 year
+          cacheControl: 'public, max-age=31536000',
       },
   });
 
@@ -64,5 +64,3 @@ export async function generateAndStoreActivityImage(
 
   return file.publicUrl();
 }
-
-    

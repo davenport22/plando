@@ -159,7 +159,6 @@ export default function TripDetailPage() {
         newDay.activities.splice(overActivityIndex, 0, movedActivity);
       }
 
-      // Recalculate times for the affected day(s)
       newItinerary.days[newDayIndex] = recalculateTimesForDay(newItinerary.days[newDayIndex]);
       if (oldDayIndex !== newDayIndex) {
         newItinerary.days[oldDayIndex] = recalculateTimesForDay(newItinerary.days[oldDayIndex]);
@@ -182,11 +181,9 @@ export default function TripDetailPage() {
     const result = await voteOnTripActivity(tripId, activityId, user.uid, liked);
 
     if (result.success && result.updatedActivity) {
-        // Optional: you could update the full activity list with the returned activity, 
-        // but for now, just removing it is fine.
     } else {
         toast({ title: "Vote Sync Failed", description: result.error || "Your vote might not have been saved.", variant: "destructive"});
-        setUserActivities(originalActivities); // Revert on failure
+        setUserActivities(originalActivities); 
     }
 };
 
@@ -272,7 +269,7 @@ export default function TripDetailPage() {
 
       <Card className="mb-8 overflow-hidden shadow-xl">
         <div className="relative h-64 w-full md:h-80">
-          <Image src={trip.imageUrl || `https://placehold.co/1200x400.png`} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0].split(' ').slice(0, 2).join(' ')} />
+          <Image src={trip.imageUrl || `https://placehold.co/1200x400.png`} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0]} />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-8">
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
             <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>
@@ -381,5 +378,3 @@ export default function TripDetailPage() {
     </DndContextProvider>
   );
 }
-
-    

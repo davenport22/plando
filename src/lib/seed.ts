@@ -1,8 +1,6 @@
 
 'use server';
 
-// This script is designed to be run manually from the command line
-// to seed the Firestore database with initial data.
 import { firestore, isFirebaseInitialized } from './firebase';
 import type { Activity } from '@/types';
 import { generateAndStoreActivityImage } from './aiUtils';
@@ -24,7 +22,7 @@ const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes
 ];
 
 const allActivities = [...viennaActivities, ...villachActivities];
-const SEED_FLAG_VERSION = 'v4_ai_images'; // New flag for this version
+const SEED_FLAG_VERSION = 'v4_ai_images';
 
 async function seedDatabase() {
   if (!isFirebaseInitialized) {
@@ -54,7 +52,7 @@ async function seedDatabase() {
   let successCount = 0;
 
   for (const activityData of allActivities) {
-    let imageUrl;
+    let imageUrl: string;
     try {
         console.log(` -> Generating AI image for "${activityData.name}"...`);
         imageUrl = await generateAndStoreActivityImage(
@@ -121,5 +119,3 @@ seedDatabase().catch(error => {
   console.error('Seeding script failed with a critical error:', error);
   process.exit(1);
 });
-
-    

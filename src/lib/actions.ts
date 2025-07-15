@@ -196,9 +196,7 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
         } catch (error) {
             console.warn(`AI image generation failed for trip "${tripDetails.name}". Falling back to a placeholder. Error:`, error);
-            const destinationHint = tripDetails.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',');
             imageUrl = `https://placehold.co/1200x400.png`;
-            // Add helpful logging for the user.
             if (error instanceof Error) {
                 if (error.message.includes('does not exist')) {
                     console.warn("Hint: This error often means Firebase Storage is not enabled or configured correctly. Please check your Firebase project settings.");
@@ -220,7 +218,6 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
         const docRef = await firestore.collection('trips').add(newTripData);
         const tripId = docRef.id;
 
-        // Fire-and-forget invitations after trip is created
         if (emailsToInvite.length > 0) {
             emailsToInvite.forEach(email => {
                 generateInvitationEmail({
@@ -259,14 +256,12 @@ export async function deleteTrip(tripId: string): Promise<{ success: boolean; er
 
         const tripRef = firestore.collection('trips').doc(tripId);
         
-        // Delete subcollections first
         const activitiesQuery = tripRef.collection('activities').limit(500);
         const itinerariesQuery = tripRef.collection('itineraries').limit(500);
         
         await new Promise<number>((resolve, reject) => deleteQueryBatch(activitiesQuery, resolve, reject));
         await new Promise<number>((resolve, reject) => deleteQueryBatch(itinerariesQuery, resolve, reject));
         
-        // Delete the main trip document
         await tripRef.delete();
 
         revalidatePath('/trips');
@@ -376,7 +371,7 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
             try {
                 updatedData.imageUrl = await generateDestinationImage({ destination: destinationForImage });
             } catch (error) {
-                console.warn(`AI image generation failed for trip "${currentTripData.name}". Falling back to a placeholder. Error:`, error);
+                console.warn(`AI image generation failed during trip update for "${currentTripData.name}". Falling back to a placeholder. Error:`, error);
                 updatedData.imageUrl = `https://placehold.co/1200x400.png`;
             }
         }
@@ -414,7 +409,7 @@ export async function addParticipantToTrip(tripId: string, email: string, invite
     
             await tripRef.update({ 
                 participantIds: FieldValue.arrayUnion(userToAdd.id),
-                invitedEmails: FieldValue.arrayRemove(email) // Remove from invited list
+                invitedEmails: FieldValue.arrayRemove(email)
             });
     
             revalidatePath(`/trips/${tripId}`);
@@ -429,7 +424,6 @@ export async function addParticipantToTrip(tripId: string, email: string, invite
                 return { success: false, error: "This email has already been invited." };
             }
 
-            // Add to invited list and send email
             await tripRef.update({ invitedEmails: FieldValue.arrayUnion(email) });
 
             generateInvitationEmail({
@@ -545,7 +539,6 @@ export async function getOrCreateUserProfile(user: {
 
     if (doc.exists) {
       const existingProfile = doc.data() as UserProfile;
-      // If user logs in with Google after email, update their name and avatar if they are generic
       const updates: Partial<UserProfile> = {};
       if (user.name && existingProfile.name === 'New User') {
           updates.name = user.name;
@@ -574,7 +567,6 @@ export async function getOrCreateUserProfile(user: {
       };
       await userRef.set(newUserProfile);
 
-      // If the user was invited to a trip, add them to it now.
       if (pendingTripId && user.email) {
         try {
             const tripRef = firestore.collection('trips').doc(pendingTripId);
@@ -773,15 +765,13 @@ async function internal_addCustomLocalActivity(
     
     let imageUrl: string;
     try {
-        const generatedImage = await generateAndStoreActivityImage(
+        imageUrl = await generateAndStoreActivityImage(
             activityData.name,
             activityData.location,
             activityData.dataAiHint,
         );
-        imageUrl = generatedImage;
     } catch (aiError) {
         console.warn(`AI image generation failed for activity "${activityData.name}", falling back to a placeholder.`, aiError);
-        const hint = activityData.dataAiHint || activityData.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity";
         imageUrl = `https://placehold.co/400x250.png`;
     }
 
@@ -822,7 +812,6 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
         const userIdsToQuery: string[] = ['system'];
         if (userId) userIdsToQuery.push(userId);
         
-        // For couples module, we also want to see activities created by the partner.
         if (module === 'couples' && partnerId) {
             userIdsToQuery.push(partnerId);
         }
@@ -967,15 +956,13 @@ export async function addTripActivity(
         
         let imageUrl: string; 
         try {
-            const generatedImage = await generateAndStoreActivityImage(
+            imageUrl = await generateAndStoreActivityImage(
                 data.name,
                 data.location,
                 data.dataAiHint,
             );
-            imageUrl = generatedImage;
         } catch(aiError) {
              console.warn(`AI image generation failed for activity "${data.name}", falling back to a placeholder.`, aiError);
-             const hint = data.dataAiHint || data.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity";
              imageUrl = `https://placehold.co/400x250.png`;
         }
 
@@ -1012,7 +999,6 @@ export async function voteOnTripActivity(
     const activityRef = firestore.collection('trips').doc(tripId).collection('activities').doc(activityId);
 
     try {
-        // Ensure the activity document exists in the trip's subcollection before trying to update it.
         let activityDoc = await activityRef.get();
         if (!activityDoc.exists) {
             const localActivityDoc = await firestore.collection('activities').doc(activityId).get();
@@ -1020,7 +1006,6 @@ export async function voteOnTripActivity(
             
             const activityToCreate = localActivityDoc.data() as Activity;
             
-            // Create a new document in the trip's activities subcollection with default votes
             const newActivityData = { 
                 ...activityToCreate, 
                 votes: {}, 
@@ -1030,7 +1015,6 @@ export async function voteOnTripActivity(
             await activityRef.set(newActivityData);
         }
 
-        // Now, perform the vote update in a transaction.
         await firestore.runTransaction(async (transaction) => {
             const docForUpdate = await transaction.get(activityRef);
             if (!docForUpdate.exists) throw new Error("Activity does not exist in trip collection.");
@@ -1040,27 +1024,24 @@ export async function voteOnTripActivity(
             const previousVote = votes[userId];
 
             if (previousVote === vote) {
-                return; // No change in vote, so we do nothing.
+                return; 
             }
 
             let likesIncrement = 0;
             let dislikesIncrement = 0;
 
             if (previousVote === undefined) {
-                // This is a new vote.
                 if (vote) likesIncrement = 1; else dislikesIncrement = 1;
             } else {
-                // This is a flipped vote.
-                if (vote) { // was false, now true
+                if (vote) { 
                     likesIncrement = 1;
                     dislikesIncrement = -1;
-                } else { // was true, now false
+                } else { 
                     likesIncrement = -1;
                     dislikesIncrement = 1;
                 }
             }
             
-            // Atomically update vote counts and the voter map.
             transaction.update(activityRef, {
                 [`votes.${userId}`]: vote,
                 likes: FieldValue.increment(likesIncrement),
@@ -1068,7 +1049,6 @@ export async function voteOnTripActivity(
             });
         });
 
-        // After the transaction, fetch the final state of the document.
         const updatedDoc = await activityRef.get();
         const updatedData = updatedDoc.data()!;
         const finalVotes = updatedData.votes || {};
@@ -1267,5 +1247,3 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
-
-    
