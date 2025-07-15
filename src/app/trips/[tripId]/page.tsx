@@ -10,7 +10,7 @@ import { ItineraryDisplay } from '@/components/itinerary/ItineraryDisplay';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { suggestItineraryAction, getTrip, updateTrip, getTripActivities, addTripActivity, voteOnTripActivity, getItinerary, saveItinerary } from '@/lib/actions';
+import { suggestItineraryAction, getTrip, updateTrip, getTripActivities, addTripActivity, voteOnTripActivity, getItinerary, saveItinerary, deleteTrip } from '@/lib/actions';
 import { calculateTripDuration } from '@/lib/utils';
 import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit, Vote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -234,6 +234,17 @@ export default function TripDetailPage() {
     }
   };
 
+  const handleDeleteTrip = async (tripToDeleteId: string) => {
+    if (!trip) return;
+    const result = await deleteTrip(tripToDeleteId);
+    if (result.success) {
+      toast({ title: "Trip Deleted!", description: `Your trip "${trip.name}" has been deleted.`});
+      router.push('/trips');
+    } else {
+       toast({ title: "Delete Failed", description: result.error, variant: "destructive" });
+    }
+  }
+
   const handleOpenActivityDetail = (activity: Activity) => {
     setSelectedActivityForDialog(activity);
     setIsActivityDetailDialogOpen(true);
@@ -261,7 +272,7 @@ export default function TripDetailPage() {
 
       <Card className="mb-8 overflow-hidden shadow-xl">
         <div className="relative h-64 w-full md:h-80">
-          <Image src={trip.imageUrl || `https://source.unsplash.com/1200x400/?${trip.destination}`} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0].split(' ').slice(0, 2).join(' ')} />
+          <Image src={trip.imageUrl || `https://placehold.co/1200x400.png`} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0].split(' ').slice(0, 2).join(' ')} />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-8">
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
             <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>
@@ -346,7 +357,7 @@ export default function TripDetailPage() {
                     <DialogTitle className="text-2xl font-headline text-primary">Edit Trip</DialogTitle>
                     <DialogDescription>Modify details and manage participants for your trip.</DialogDescription>
                   </DialogHeader>
-                  {trip && <EditTripForm currentTrip={trip} onSubmit={handleUpdateTripDetails} />}
+                  {trip && <EditTripForm currentTrip={trip} onSubmit={handleUpdateTripDetails} onDelete={handleDeleteTrip} />}
                 </DialogContent>
               </Dialog>
               
@@ -370,3 +381,5 @@ export default function TripDetailPage() {
     </DndContextProvider>
   );
 }
+
+    

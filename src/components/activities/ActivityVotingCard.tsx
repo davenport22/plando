@@ -97,10 +97,6 @@ export function ActivityVotingCard({ activity, onVote, onCardClick }: ActivityVo
 
   const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity,travel";
   
-  const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 && !activity.imageUrls[0].includes('placehold.co')
-    ? activity.imageUrls[0] 
-    : `https://source.unsplash.com/400x250/?${imageHint}`;
-
   return (
     <Card 
       ref={cardRef}
@@ -126,7 +122,7 @@ export function ActivityVotingCard({ activity, onVote, onCardClick }: ActivityVo
 
       <CardHeader className="p-0 relative">
         <Image
-          src={displayImageUrl}
+          src={activity.imageUrls?.[0] || 'https://placehold.co/400x250.png'}
           alt={activity.name}
           width={400}
           height={250}
@@ -153,3 +149,5 @@ export function ActivityVotingCard({ activity, onVote, onCardClick }: ActivityVo
     </Card>
   );
 }
+
+    

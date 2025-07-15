@@ -64,3 +64,5 @@ export async function generateAndStoreActivityImage(
 
   return file.publicUrl();
 }
+
+    

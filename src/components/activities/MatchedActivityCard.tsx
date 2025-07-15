@@ -17,10 +17,6 @@ interface MatchedActivityCardProps {
 export function MatchedActivityCard({ activity, onCardClick, onMarkAsDone }: MatchedActivityCardProps) {
   const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity,date";
 
-  const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 && !activity.imageUrls[0].includes('placehold.co')
-    ? activity.imageUrls[0] 
-    : `https://source.unsplash.com/400x250/?${imageHint}`;
-
   let formattedMatchedDate = "Recently";
   try {
     formattedMatchedDate = format(parseISO(activity.matchedDate), "PP");
@@ -47,7 +43,7 @@ export function MatchedActivityCard({ activity, onCardClick, onMarkAsDone }: Mat
       >
         <CardHeader className="p-0 relative">
           <Image
-            src={displayImageUrl}
+            src={activity.imageUrls?.[0] || 'https://placehold.co/400x250.png'}
             alt={activity.name}
             width={400}
             height={200}
@@ -90,3 +86,5 @@ export function MatchedActivityCard({ activity, onCardClick, onMarkAsDone }: Mat
     </Card>
   );
 }
+
+    

@@ -5,6 +5,7 @@
 // to seed the Firestore database with initial data.
 import { firestore, isFirebaseInitialized } from './firebase';
 import type { Activity } from '@/types';
+import { generateAndStoreActivityImage } from './aiUtils';
 
 const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'modules'>[] = [
     { name: "Classical Concert at St. Anne's Church", description: "Experience the magic of Mozart and Beethoven in the stunning baroque ambiance of St. Anne's Church.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna church concert", createdBy: 'system' },
@@ -23,7 +24,7 @@ const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes
 ];
 
 const allActivities = [...viennaActivities, ...villachActivities];
-const SEED_FLAG_VERSION = 'v3_unsplash_images'; // New flag for this version
+const SEED_FLAG_VERSION = 'v4_ai_images'; // New flag for this version
 
 async function seedDatabase() {
   if (!isFirebaseInitialized) {
@@ -53,11 +54,20 @@ async function seedDatabase() {
   let successCount = 0;
 
   for (const activityData of allActivities) {
-    const docRef = activitiesCollection.doc();
-    
-    const hint = activityData.dataAiHint || activityData.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity";
-    const imageUrl = `https://source.unsplash.com/400x250/?${hint}`;
+    let imageUrl;
+    try {
+        console.log(` -> Generating AI image for "${activityData.name}"...`);
+        imageUrl = await generateAndStoreActivityImage(
+            activityData.name,
+            activityData.location,
+            activityData.dataAiHint
+        );
+    } catch(e) {
+        console.warn(` -> Failed to generate AI image for "${activityData.name}". Falling back to placeholder.`);
+        imageUrl = `https://placehold.co/400x250.png`;
+    }
 
+    const docRef = activitiesCollection.doc();
     const newActivity: Activity = {
         ...(activityData as Omit<Activity, 'id'>),
         id: docRef.id,
@@ -69,7 +79,7 @@ async function seedDatabase() {
     };
     writeBatch.set(docRef, newActivity);
     successCount++;
-    console.log(` -> Queued "${activityData.name}" for creation with Unsplash image.`);
+    console.log(` -> Queued "${activityData.name}" for creation.`);
   }
 
   if (successCount > 0) {
@@ -111,3 +121,5 @@ seedDatabase().catch(error => {
   console.error('Seeding script failed with a critical error:', error);
   process.exit(1);
 });
+
+    

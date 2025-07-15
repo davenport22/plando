@@ -6,7 +6,6 @@ import { generateActivityDescription, type GenerateActivityDescriptionInput, typ
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
 import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-flow';
 import { extractActivityDetailsFromUrl, type ExtractActivityDetailsFromUrlOutput } from '@/ai/flows/extract-activity-details-from-url-flow';
-import { generateActivityImage } from '@/ai/flows/generate-activity-image-flow';
 import { sendEmail } from '@/lib/emailService';
 import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule, type CompletedActivity } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
@@ -196,12 +195,16 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
         try {
             imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
         } catch (error) {
-            console.warn(`AI image generation failed for trip "${tripDetails.name}". Falling back to Unsplash. Error:`, error);
+            console.warn(`AI image generation failed for trip "${tripDetails.name}". Falling back to a placeholder. Error:`, error);
             const destinationHint = tripDetails.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',');
-            imageUrl = `https://source.unsplash.com/1200x400/?${destinationHint}`;
+            imageUrl = `https://placehold.co/1200x400.png`;
             // Add helpful logging for the user.
-            if (error instanceof Error && error.message.includes('does not exist')) {
-                 console.warn("Hint: This error often means Firebase Storage is not enabled or configured correctly. Please check your Firebase project settings.");
+            if (error instanceof Error) {
+                if (error.message.includes('does not exist')) {
+                    console.warn("Hint: This error often means Firebase Storage is not enabled or configured correctly. Please check your Firebase project settings.");
+                } else if (error.message.includes('permission denied')) {
+                     console.warn("Hint: This error often means the Generative Language API is not enabled in your Google Cloud project for your API key.");
+                }
             }
         }
 
@@ -366,16 +369,15 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const imageUrlIsPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co') || !currentTripData.imageUrl.includes('storage.googleapis.com');
+        const imageUrlIsPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
 
         if (destinationChanged || imageUrlIsPlaceholder) {
              const destinationForImage = data.destination || currentTripData.destination;
             try {
                 updatedData.imageUrl = await generateDestinationImage({ destination: destinationForImage });
             } catch (error) {
-                console.warn(`AI image generation failed for trip "${currentTripData.name}". Falling back to Unsplash. Error:`, error);
-                const destinationHint = destinationForImage.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',');
-                updatedData.imageUrl = `https://source.unsplash.com/1200x400/?${destinationHint}`;
+                console.warn(`AI image generation failed for trip "${currentTripData.name}". Falling back to a placeholder. Error:`, error);
+                updatedData.imageUrl = `https://placehold.co/1200x400.png`;
             }
         }
 
@@ -778,9 +780,9 @@ async function internal_addCustomLocalActivity(
         );
         imageUrl = generatedImage;
     } catch (aiError) {
-        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to Unsplash.`, aiError);
+        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to a placeholder.`, aiError);
         const hint = activityData.dataAiHint || activityData.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity";
-        imageUrl = `https://source.unsplash.com/400x250/?${hint}`;
+        imageUrl = `https://placehold.co/400x250.png`;
     }
 
     const newActivity: Activity = {
@@ -972,9 +974,9 @@ export async function addTripActivity(
             );
             imageUrl = generatedImage;
         } catch(aiError) {
-             console.warn(`AI image generation failed for activity "${data.name}", falling back to Unsplash.`, aiError);
+             console.warn(`AI image generation failed for activity "${data.name}", falling back to a placeholder.`, aiError);
              const hint = data.dataAiHint || data.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity";
-             imageUrl = `https://source.unsplash.com/400x250/?${hint}`;
+             imageUrl = `https://placehold.co/400x250.png`;
         }
 
         const docRef = firestore.collection('trips').doc(tripId).collection('activities').doc();
@@ -1265,3 +1267,5 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
+
+    

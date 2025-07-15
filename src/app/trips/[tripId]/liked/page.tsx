@@ -33,10 +33,6 @@ function VotedActivityCard({
 }) {
   const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity";
   
-  const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 && !activity.imageUrls[0].includes('placehold.co')
-    ? activity.imageUrls[0] 
-    : `https://source.unsplash.com/400x250/?${imageHint}`;
-
   return (
     <Card 
       className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg flex flex-col h-full group"
@@ -51,7 +47,7 @@ function VotedActivityCard({
       >
         <CardHeader className="p-0 relative">
           <Image
-            src={displayImageUrl}
+            src={activity.imageUrls?.[0] || 'https://placehold.co/400x250.png'}
             alt={activity.name}
             width={400}
             height={200}
@@ -320,3 +316,5 @@ export default function VotedActivitiesPage() {
     </div>
   );
 }
+
+    

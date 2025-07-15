@@ -31,10 +31,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { deleteTrip } from "@/lib/actions";
-
 
 const editTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
@@ -56,15 +52,13 @@ type EditTripFormValues = z.infer<typeof editTripFormSchema>;
 interface EditTripFormProps {
   currentTrip: Trip;
   onSubmit: (data: Partial<Omit<Trip, 'id' | 'ownerId' | 'participantIds' | 'imageUrl' | 'participants'>>) => Promise<void>;
+  onDelete: (tripId: string) => Promise<void>;
 }
 
-export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
+export function EditTripForm({ currentTrip, onSubmit, onDelete }: EditTripFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [durationDisplay, setDurationDisplay] = useState<string>("");
-  const { toast } = useToast();
-  const router = useRouter();
-
 
   const form = useForm<EditTripFormValues>({
     resolver: zodResolver(editTripFormSchema),
@@ -135,22 +129,8 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
 
   const handleDeleteTrip = async () => {
     setIsDeleting(true);
-    const result = await deleteTrip(currentTrip.id);
+    await onDelete(currentTrip.id);
     setIsDeleting(false);
-
-    if (result.success) {
-      toast({
-        title: "Trip Deleted",
-        description: `Your trip "${currentTrip.name}" has been permanently deleted.`,
-      });
-      router.push('/trips');
-    } else {
-      toast({
-        title: "Deletion Failed",
-        description: result.error || "An unknown error occurred.",
-        variant: "destructive",
-      });
-    }
   };
 
 
@@ -376,3 +356,5 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
     </div>
   );
 }
+
+    

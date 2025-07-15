@@ -15,10 +15,6 @@ interface CompletedActivityCardProps {
 export function CompletedActivityCard({ activity, onCardClick }: CompletedActivityCardProps) {
   const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity,date";
 
-  const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 && !activity.imageUrls[0].includes('placehold.co')
-    ? activity.imageUrls[0] 
-    : `https://source.unsplash.com/400x250/?${imageHint}`;
-
   let formattedCompletedDate = "Recently";
   try {
     formattedCompletedDate = format(parseISO(activity.completedDate), "PP");
@@ -37,7 +33,7 @@ export function CompletedActivityCard({ activity, onCardClick }: CompletedActivi
     >
         <CardHeader className="p-0 relative">
           <Image
-            src={displayImageUrl}
+            src={activity.imageUrls?.[0] || 'https://placehold.co/400x250.png'}
             alt={activity.name}
             width={400}
             height={200}
@@ -68,3 +64,5 @@ export function CompletedActivityCard({ activity, onCardClick }: CompletedActivi
     </Card>
   );
 }
+
+    

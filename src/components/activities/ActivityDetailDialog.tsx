@@ -74,9 +74,7 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
   };
   
   const imageHint = activity.dataAiHint || (name ? name.toLowerCase().split(" ").slice(0,2).join(",") : "activity,detail");
-  const displayImageUrl = imageUrls && imageUrls.length > 0 && !imageUrls[0].includes('placehold.co')
-    ? imageUrls[currentImageIndex] 
-    : `https://source.unsplash.com/600x400/?${imageHint}`;
+  const displayImageUrl = imageUrls?.[currentImageIndex] || 'https://placehold.co/600x400.png';
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -216,3 +214,5 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
     </Dialog>
   );
 }
+
+    

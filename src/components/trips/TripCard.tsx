@@ -14,18 +14,12 @@ interface TripCardProps {
 export function TripCard({ trip }: TripCardProps) {
   const imageHint = trip.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',') || "travel,landscape";
 
-  const displayImageUrl = trip.imageUrl && !trip.imageUrl.includes('placehold.co')
-    ? trip.imageUrl 
-    : `https://source.unsplash.com/600x400/?${imageHint}`;
-
-  const duration = calculateTripDuration(trip.startDate, trip.endDate);
-
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg">
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
           <Image
-            src={displayImageUrl}
+            src={trip.imageUrl || 'https://placehold.co/600x400.png'}
             alt={trip.name}
             fill
             className="object-cover"
@@ -41,7 +35,7 @@ export function TripCard({ trip }: TripCardProps) {
         <div className="flex items-center text-sm text-muted-foreground mb-1">
           <CalendarDays className="mr-2 h-4 w-4 text-primary" /> 
           {trip.startDate} - {trip.endDate} 
-          {duration && <span className="ml-1">({duration})</span>}
+          {trip.startDate && trip.endDate && <span className="ml-1">({calculateTripDuration(trip.startDate, trip.endDate)})</span>}
         </div>
         <div className="flex items-center text-sm text-muted-foreground">
           <Users className="mr-2 h-4 w-4 text-primary" /> {trip.participantIds.length} participant(s)
@@ -57,3 +51,5 @@ export function TripCard({ trip }: TripCardProps) {
     </Card>
   );
 }
+
+    
