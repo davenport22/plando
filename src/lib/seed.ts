@@ -5,7 +5,7 @@
 // to seed the Firestore database with initial data.
 import { firestore, isFirebaseInitialized } from './firebase';
 import type { Activity } from '@/types';
-import { generateActivityImage } from '@/ai/flows/generate-activity-image-flow';
+import { generateAndStoreActivityImage } from '@/lib/aiUtils';
 
 const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'modules'>[] = [
     { name: "Classical Concert at St. Anne's Church", description: "Experience the magic of Mozart and Beethoven in the stunning baroque ambiance of St. Anne's Church.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna church concert", createdBy: 'system' },
@@ -24,22 +24,23 @@ const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes
 ];
 
 const allActivities = [...viennaActivities, ...villachActivities];
+const SEED_FLAG_VERSION = 'v1_final_working_seed';
 
 async function seedDatabase() {
   if (!isFirebaseInitialized) {
     console.error("Firebase not initialized. Cannot seed database. Please check your .env file and ensure Firebase Storage is enabled.");
     return;
   }
-  
-  const flagRef = firestore.collection('_internal').doc('seed_flag_final_fix_v1');
+
+  const flagRef = firestore.collection('_internal').doc(SEED_FLAG_VERSION);
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
-    console.log("Database has already been seeded with the final fix v1 script. Skipping.");
-    return;
+      console.log(`Database has already been seeded with version: ${SEED_FLAG_VERSION}. Halting.`);
+      return;
   }
-
-  console.log("Starting database seed (final_fix_v1). This may take a minute...");
+  
+  console.log(`Starting database seed (version: ${SEED_FLAG_VERSION}). This may take a minute...`);
   
   // 1. Delete all existing system-generated activities to ensure a clean slate.
   console.log("Deleting all old system-generated activities...");
@@ -56,17 +57,16 @@ async function seedDatabase() {
   
   // 2. Create new activities with AI-generated images.
   const writeBatch = firestore.batch();
-  let count = 0;
+  let successCount = 0;
 
   for (const activityData of allActivities) {
-    count++;
-    console.log(`[${count}/${allActivities.length}] Processing: ${activityData.name}...`);
+    console.log(`[${successCount + 1}/${allActivities.length}] Processing: ${activityData.name}...`);
     try {
-        const imageUrl = await generateActivityImage({
-            activityName: activityData.name,
-            location: activityData.location,
-            dataAiHint: activityData.dataAiHint,
-        });
+        const imageUrl = await generateAndStoreActivityImage(
+            activityData.name,
+            activityData.location,
+            activityData.dataAiHint,
+        );
 
         const docRef = activitiesCollection.doc();
         const newActivity: Activity = {
@@ -79,23 +79,29 @@ async function seedDatabase() {
             dislikes: 0,
         };
         writeBatch.set(docRef, newActivity);
+        successCount++;
         console.log(` -> Image generated and activity queued for "${activityData.name}".`);
     } catch (error) {
-        console.error(` -> Failed to generate image for "${activityData.name}". Skipping. Error:`, error);
+        console.error(` -> Failed to process "${activityData.name}". Skipping. Error:`, error);
     }
   }
 
   // 3. Commit all the new activities to the database.
-  console.log("Committing all new activities to the database...");
-  await writeBatch.commit();
+  if (successCount > 0) {
+      console.log(`Committing ${successCount} new activities to the database...`);
+      await writeBatch.commit();
+      console.log(`Successfully added ${successCount} new activities.`);
+  } else {
+      console.log("No new activities were successfully processed to commit.");
+  }
   
   // 4. Set the flag ONLY after everything is successful.
-  await flagRef.set({ seededAt: new Date().toISOString(), version: 'final_fix_v1' });
+  await flagRef.set({ seededAt: new Date().toISOString(), version: SEED_FLAG_VERSION });
   
-  console.log("Database seeded successfully with new activities.");
+  console.log("Database seeding complete.");
 }
 
 seedDatabase().catch(error => {
-  console.error('Seeding failed:', error);
+  console.error('Seeding script failed with a critical error:', error);
   process.exit(1);
 });

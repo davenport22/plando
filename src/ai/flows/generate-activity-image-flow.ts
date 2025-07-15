@@ -10,10 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import sharp from 'sharp';
-import { getStorage } from 'firebase-admin/storage';
-import { randomUUID } from 'crypto';
-import { isFirebaseInitialized } from '@/lib/firebase';
+import { generateAndStoreActivityImage } from '@/lib/aiUtils';
 
 const GenerateActivityImageInputSchema = z.object({
   activityName: z.string().describe('The name of the travel activity (e.g., "Eiffel Tower Visit", "Cooking Class").'),
@@ -43,46 +40,7 @@ const generateActivityImageFlow = ai.defineFlow(
     outputSchema: GenerateActivityImageOutputSchema,
   },
   async ({ activityName, location, dataAiHint }) => {
-     if (!isFirebaseInitialized) {
-        throw new Error('Firebase Storage is not initialized. Cannot upload image.');
-    }
-
-    const promptQuery = dataAiHint || `${activityName} in ${location}`;
-    
-    const {media} = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-preview-image-generation',
-      prompt: `A beautiful, vibrant, photorealistic image of ${promptQuery}. travel photography, high quality, stunning view. Do not include text or people unless it's essential for the activity.`,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-      },
-    });
-
-    if (!media?.url) {
-      throw new Error('Image generation failed to return a media object.');
-    }
-
-    const parts = media.url.split(',');
-    const base64Data = parts[1];
-    const imageBuffer = Buffer.from(base64Data, 'base64');
-
-    const compressedImageBuffer = await sharp(imageBuffer)
-      .resize({ width: 400 }) 
-      .jpeg({ quality: 75 })
-      .toBuffer();
-
-    const bucket = getStorage().bucket();
-    const fileName = `images/activities/${randomUUID()}.jpeg`;
-    const file = bucket.file(fileName);
-
-    await file.save(compressedImageBuffer, {
-        metadata: {
-            contentType: 'image/jpeg',
-            cacheControl: 'public, max-age=31536000', // Cache for 1 year
-        },
-    });
-
-    await file.makePublic();
-
-    return file.publicUrl();
+    // This flow now calls the reusable utility function.
+    return await generateAndStoreActivityImage(activityName, location, dataAiHint);
   }
 );
