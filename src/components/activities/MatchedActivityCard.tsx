@@ -15,11 +15,11 @@ interface MatchedActivityCardProps {
 }
 
 export function MatchedActivityCard({ activity, onCardClick, onMarkAsDone }: MatchedActivityCardProps) {
-  const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 
-    ? activity.imageUrls[0] 
-    : "https://placehold.co/400x250.png";
+  const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity,date";
 
-  const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(" ") || "activity";
+  const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 && !activity.imageUrls[0].includes('placehold.co')
+    ? activity.imageUrls[0] 
+    : `https://source.unsplash.com/400x250/?${imageHint}`;
 
   let formattedMatchedDate = "Recently";
   try {

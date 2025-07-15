@@ -12,7 +12,11 @@ interface TripCardProps {
 }
 
 export function TripCard({ trip }: TripCardProps) {
-  const imageHint = trip.destination.toLowerCase().split(',')[0].split(' ').slice(0, 2).join(' ') || "travel landscape";
+  const imageHint = trip.destination.toLowerCase().split(',')[0].split(' ').slice(0, 2).join(' ') || "travel,landscape";
+
+  const displayImageUrl = trip.imageUrl && !trip.imageUrl.includes('placehold.co')
+    ? trip.imageUrl 
+    : `https://source.unsplash.com/600x400/?${imageHint}`;
 
   const duration = calculateTripDuration(trip.startDate, trip.endDate);
 
@@ -21,7 +25,7 @@ export function TripCard({ trip }: TripCardProps) {
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
           <Image
-            src={trip.imageUrl || "https://placehold.co/600x400.png"}
+            src={displayImageUrl}
             alt={trip.name}
             fill
             className="object-cover"

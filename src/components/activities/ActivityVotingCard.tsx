@@ -95,12 +95,11 @@ export function ActivityVotingCard({ activity, onVote, onCardClick }: ActivityVo
     return 0;
   };
 
-  // Ensure dataAiHint is passed to Image component
-  const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(" ") || "activity travel";
-
-  const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 
+  const imageHint = activity.dataAiHint || activity.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity,travel";
+  
+  const displayImageUrl = activity.imageUrls && activity.imageUrls.length > 0 && !activity.imageUrls[0].includes('placehold.co')
     ? activity.imageUrls[0] 
-    : "https://placehold.co/400x250.png";
+    : `https://source.unsplash.com/400x250/?${imageHint}`;
 
   return (
     <Card 

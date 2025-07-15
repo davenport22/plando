@@ -5,7 +5,6 @@
 // to seed the Firestore database with initial data.
 import { firestore, isFirebaseInitialized } from './firebase';
 import type { Activity } from '@/types';
-import { generateAndStoreActivityImage } from '@/lib/aiUtils';
 
 const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'modules'>[] = [
     { name: "Classical Concert at St. Anne's Church", description: "Experience the magic of Mozart and Beethoven in the stunning baroque ambiance of St. Anne's Church.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna church concert", createdBy: 'system' },
@@ -24,12 +23,12 @@ const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes
 ];
 
 const allActivities = [...viennaActivities, ...villachActivities];
-const SEED_FLAG_VERSION = 'v2_placeholder_images';
+const SEED_FLAG_VERSION = 'v3_unsplash_images'; // New flag for this version
 
 async function seedDatabase() {
   if (!isFirebaseInitialized) {
     console.error("Firebase not initialized. Cannot seed database. Please check your .env file.");
-    return;
+    process.exit(1);
   }
 
   const flagRef = firestore.collection('_internal').doc(SEED_FLAG_VERSION);
@@ -42,27 +41,27 @@ async function seedDatabase() {
   
   console.log(`Starting database seed (version: ${SEED_FLAG_VERSION})...`);
   
-  console.log("Deleting all old system-generated activities...");
+  console.log("Deleting all old system-generated activities to ensure a clean slate...");
   const activitiesCollection = firestore.collection('activities');
-  const querySnapshot = await activitiesCollection.where('createdBy', '==', 'system').get();
-  if (!querySnapshot.empty) {
-    const deleteBatch = firestore.batch();
-    querySnapshot.docs.forEach(doc => deleteBatch.delete(doc.ref));
-    await deleteBatch.commit();
-    console.log(`Deleted ${querySnapshot.size} old system activities.`);
-  } else {
-    console.log("No old system activities found to delete.");
-  }
+  const query = activitiesCollection.where('createdBy', '==', 'system');
   
+  await new Promise((resolve, reject) => {
+    deleteQueryBatch(query, resolve, reject);
+  });
+
   const writeBatch = firestore.batch();
   let successCount = 0;
 
   for (const activityData of allActivities) {
     const docRef = activitiesCollection.doc();
+    
+    const hint = activityData.dataAiHint || activityData.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity";
+    const imageUrl = `https://source.unsplash.com/400x250/?${hint}`;
+
     const newActivity: Activity = {
         ...(activityData as Omit<Activity, 'id'>),
         id: docRef.id,
-        imageUrls: ["https://placehold.co/400x250.png"],
+        imageUrls: [imageUrl],
         modules: ['couples', 'friends', 'meet'],
         createdBy: 'system',
         likes: 0,
@@ -70,7 +69,7 @@ async function seedDatabase() {
     };
     writeBatch.set(docRef, newActivity);
     successCount++;
-    console.log(` -> Queued "${activityData.name}" for creation.`);
+    console.log(` -> Queued "${activityData.name}" for creation with Unsplash image.`);
   }
 
   if (successCount > 0) {
@@ -84,6 +83,28 @@ async function seedDatabase() {
   await flagRef.set({ seededAt: new Date().toISOString(), version: SEED_FLAG_VERSION });
   
   console.log("Database seeding complete.");
+}
+
+async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (value: unknown) => void, reject: (reason?: any) => void) {
+    const snapshot = await query.limit(500).get();
+  
+    if (snapshot.size === 0) {
+      console.log("No more old system activities to delete.");
+      resolve(true);
+      return;
+    }
+  
+    const batch = firestore.batch();
+    snapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+  
+    await batch.commit();
+    console.log(`Deleted a batch of ${snapshot.size} old activities.`);
+  
+    process.nextTick(() => {
+      deleteQueryBatch(query, resolve, reject);
+    });
 }
 
 seedDatabase().catch(error => {

@@ -47,7 +47,7 @@ const mapAiOutputToItinerary = (aiOutput: any, tripId: string): Itinerary | null
           description: act.description || '',
           likes: act.likes !== undefined ? act.likes : 0,
           dislikes: act.dislikes !== undefined ? act.dislikes : 0,
-          imageUrls: [`https://placehold.co/400x300.png`],
+          imageUrls: [],
           dataAiHint: `${act.name || ''} ${act.location || ''}`.trim(),
       })),
     })),
@@ -261,7 +261,7 @@ export default function TripDetailPage() {
 
       <Card className="mb-8 overflow-hidden shadow-xl">
         <div className="relative h-64 w-full md:h-80">
-          <Image src={trip.imageUrl || "https://placehold.co/1200x400.png"} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0].split(' ').slice(0, 2).join(' ')} />
+          <Image src={trip.imageUrl || `https://source.unsplash.com/1200x400/?${trip.destination}`} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0].split(' ').slice(0, 2).join(' ')} />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-8">
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
             <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>

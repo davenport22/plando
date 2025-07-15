@@ -73,7 +73,10 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
     setCurrentImageIndex((prevIndex) => (prevIndex - 1 + (imageUrls?.length || 1)) % (imageUrls?.length || 1));
   };
   
-  const imageHint = activity.dataAiHint || (name ? name.toLowerCase().split(" ").slice(0,2).join(" ") : "activity detail");
+  const imageHint = activity.dataAiHint || (name ? name.toLowerCase().split(" ").slice(0,2).join(",") : "activity,detail");
+  const displayImageUrl = imageUrls && imageUrls.length > 0 && !imageUrls[0].includes('placehold.co')
+    ? imageUrls[currentImageIndex] 
+    : `https://source.unsplash.com/600x400/?${imageHint}`;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -89,10 +92,9 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
         </DialogHeader>
         
         <div className="flex-grow overflow-y-auto pr-2 space-y-6">
-          {imageUrls && imageUrls.length > 0 && (
-            <div className="relative w-full aspect-video rounded-lg overflow-hidden shadow-lg">
+          <div className="relative w-full aspect-video rounded-lg overflow-hidden shadow-lg">
               <Image
-                src={imageUrls[currentImageIndex]}
+                src={displayImageUrl}
                 alt={`${name} - image ${currentImageIndex + 1}`}
                 fill
                 style={{ objectFit: 'cover' }}
@@ -100,7 +102,7 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
                 priority={currentImageIndex === 0}
                 data-ai-hint={imageHint}
               />
-              {imageUrls.length > 1 && (
+              {imageUrls && imageUrls.length > 1 && (
                 <>
                   <Button
                     variant="ghost"
@@ -135,7 +137,6 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
                 </>
               )}
             </div>
-          )}
 
           <div>
             <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center">

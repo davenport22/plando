@@ -37,18 +37,6 @@ const handleAIError = (error: unknown, defaultMessage: string): { error: string 
     return { error: "An unknown error occurred." };
 }
 
-// A fallback SVG icon for custom activities if AI image generation fails.
-const customActivityFallbackSvg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250">
-  <rect width="100%" height="100%" fill="#f0f8ff" />
-  <g transform="translate(175, 100)" stroke="#a9a9a9" stroke-width="12" stroke-linecap="round">
-    <line x1="0" y1="25" x2="50" y2="25" />
-    <line x1="25" y1="0" x2="25" y2="50" />
-  </g>
-</svg>`;
-const customActivityFallbackImageUrl = `data:image/svg+xml;base64,${Buffer.from(customActivityFallbackSvg).toString('base64')}`;
-
-
 // This function will be called from client components to generate the itinerary.
 export async function suggestItineraryAction(
   tripId: string
@@ -208,9 +196,9 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
         try {
             imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
         } catch (error) {
-            console.warn(`AI image generation failed for trip "${tripDetails.name}". Falling back to placeholder. Error:`, error);
-            const destinationHint = tripDetails.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, '+');
-            imageUrl = `https://placehold.co/1200x400.png`;
+            console.warn(`AI image generation failed for trip "${tripDetails.name}". Falling back to Unsplash. Error:`, error);
+            const destinationHint = tripDetails.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',');
+            imageUrl = `https://source.unsplash.com/1200x400/?${destinationHint}`;
             // Add helpful logging for the user.
             if (error instanceof Error && error.message.includes('does not exist')) {
                  console.warn("Hint: This error often means Firebase Storage is not enabled or configured correctly. Please check your Firebase project settings.");
@@ -378,11 +366,17 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const imageUrlIsPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
+        const imageUrlIsPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co') || !currentTripData.imageUrl.includes('source.unsplash.com');
 
         if (destinationChanged || imageUrlIsPlaceholder) {
              const destinationForImage = data.destination || currentTripData.destination;
-            updatedData.imageUrl = await generateDestinationImage({ destination: destinationForImage });
+            try {
+                updatedData.imageUrl = await generateDestinationImage({ destination: destinationForImage });
+            } catch (error) {
+                console.warn(`AI image generation failed for trip "${currentTripData.name}". Falling back to Unsplash. Error:`, error);
+                const destinationHint = destinationForImage.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',');
+                updatedData.imageUrl = `https://source.unsplash.com/1200x400/?${destinationHint}`;
+            }
         }
 
         await tripRef.update(updatedData);
@@ -775,18 +769,18 @@ async function internal_addCustomLocalActivity(
   try {
     const newActivityRef = firestore.collection('activities').doc();
     
-    let imageUrl = customActivityFallbackImageUrl;
+    let imageUrl: string;
     try {
         const generatedImage = await generateAndStoreActivityImage(
             activityData.name,
             activityData.location,
             activityData.dataAiHint,
         );
-        if (generatedImage) {
-            imageUrl = generatedImage;
-        }
+        imageUrl = generatedImage;
     } catch (aiError) {
-        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to placeholder.`, aiError);
+        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to Unsplash.`, aiError);
+        const hint = activityData.dataAiHint || activityData.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity";
+        imageUrl = `https://source.unsplash.com/400x250/?${hint}`;
     }
 
     const newActivity: Activity = {
@@ -969,18 +963,18 @@ export async function addTripActivity(
     try {
         const { id, ...data } = activityData as any;
         
-        let imageUrl = customActivityFallbackImageUrl; 
+        let imageUrl: string; 
         try {
             const generatedImage = await generateAndStoreActivityImage(
                 data.name,
                 data.location,
                 data.dataAiHint,
             );
-            if (generatedImage) {
-                imageUrl = generatedImage;
-            }
+            imageUrl = generatedImage;
         } catch(aiError) {
-             console.warn(`AI image generation failed for activity "${data.name}", falling back to placeholder.`, aiError);
+             console.warn(`AI image generation failed for activity "${data.name}", falling back to Unsplash.`, aiError);
+             const hint = data.dataAiHint || data.name.toLowerCase().split(" ").slice(0,2).join(",") || "activity";
+             imageUrl = `https://source.unsplash.com/400x250/?${hint}`;
         }
 
         const docRef = firestore.collection('trips').doc(tripId).collection('activities').doc();

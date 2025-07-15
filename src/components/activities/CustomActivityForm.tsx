@@ -60,7 +60,9 @@ export function CustomActivityForm({ onAddActivity }: CustomActivityFormProps) {
     } else {
       form.setValue('name', result.name || '');
       form.setValue('description', result.description || '');
-      form.setValue('location', result.location || '');
+      if (result.location) {
+        form.setValue('location', result.location);
+      }
       if (result.duration) {
         form.setValue('duration', result.duration);
       }
