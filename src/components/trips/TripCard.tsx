@@ -13,13 +13,14 @@ interface TripCardProps {
 
 export function TripCard({ trip }: TripCardProps) {
   const imageHint = trip.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',') || "travel,landscape";
+  const defaultImageUrl = "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop";
 
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg">
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
           <Image
-            src={trip.imageUrl || 'https://images.unsplash.com/photo-1594794633912-9a07a9757357?q=80&w=1200&auto=format&fit=crop'}
+            src={trip.imageUrl || defaultImageUrl}
             alt={trip.name}
             fill
             className="object-cover"
