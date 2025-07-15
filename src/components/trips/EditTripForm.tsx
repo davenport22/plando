@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DialogClose } from "@/components/ui/dialog";
 import { cn, calculateTripDuration } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, Loader2, Save, Sparkles } from "lucide-react";
+import { CalendarIcon, Loader2, Save, Sparkles, Trash2, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Trip } from "@/types";
 import { Separator } from "@/components/ui/separator";
@@ -20,6 +20,21 @@ import { ParticipantManager } from "./ParticipantManager";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { CitySelect } from "@/components/common/CitySelect";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { deleteTrip } from "@/lib/actions";
+
 
 const editTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
@@ -45,7 +60,11 @@ interface EditTripFormProps {
 
 export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [durationDisplay, setDurationDisplay] = useState<string>("");
+  const { toast } = useToast();
+  const router = useRouter();
+
 
   const form = useForm<EditTripFormValues>({
     resolver: zodResolver(editTripFormSchema),
@@ -113,6 +132,27 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
     });
     setIsLoading(false);
   }
+
+  const handleDeleteTrip = async () => {
+    setIsDeleting(true);
+    const result = await deleteTrip(currentTrip.id);
+    setIsDeleting(false);
+
+    if (result.success) {
+      toast({
+        title: "Trip Deleted",
+        description: `Your trip "${currentTrip.name}" has been permanently deleted.`,
+      });
+      router.push('/trips');
+    } else {
+      toast({
+        title: "Deletion Failed",
+        description: result.error || "An unknown error occurred.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -301,6 +341,38 @@ export function EditTripForm({ currentTrip, onSubmit }: EditTripFormProps) {
         </Form>
         <Separator />
         <ParticipantManager trip={currentTrip} />
+
+        <Separator />
+        <div className="space-y-4 rounded-lg border border-destructive/50 p-4">
+            <h3 className="font-semibold text-destructive flex items-center gap-2">
+                <AlertTriangle />
+                Danger Zone
+            </h3>
+            <p className="text-sm text-muted-foreground">
+                Deleting a trip is a permanent action and cannot be undone. All associated activities and itinerary data will be lost forever.
+            </p>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete this Trip
+                </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                    This will permanently delete the trip "{currentTrip.name}" and all its data. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteTrip} disabled={isDeleting}>
+                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Yes, delete trip"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     </div>
   );
 }

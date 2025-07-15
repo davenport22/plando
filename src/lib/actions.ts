@@ -247,6 +247,33 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
     }
 }
 
+export async function deleteTrip(tripId: string): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Firebase is not initialized.' };
+
+    try {
+        if (!tripId) return { success: false, error: "Trip ID is required." };
+
+        const tripRef = firestore.collection('trips').doc(tripId);
+        
+        // Delete subcollections first
+        const activitiesQuery = tripRef.collection('activities').limit(500);
+        const itinerariesQuery = tripRef.collection('itineraries').limit(500);
+        
+        await new Promise<number>((resolve, reject) => deleteQueryBatch(activitiesQuery, resolve, reject));
+        await new Promise<number>((resolve, reject) => deleteQueryBatch(itinerariesQuery, resolve, reject));
+        
+        // Delete the main trip document
+        await tripRef.delete();
+
+        revalidatePath('/trips');
+        return { success: true };
+    } catch (error) {
+        console.error(`Error deleting trip ${tripId}:`, error);
+        return { success: false, error: "Failed to delete trip." };
+    }
+}
+
+
 export async function getTrip(tripId: string): Promise<Trip | null> {
     try {
         const tripDoc = await firestore.collection('trips').doc(tripId).get();
