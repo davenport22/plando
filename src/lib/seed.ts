@@ -4,6 +4,7 @@
 import { firestore, isFirebaseInitialized } from './firebase';
 import type { Activity } from '@/types';
 import { generateAndStoreActivityImage } from './aiUtils';
+import { generateActivityDescription } from '@/ai/flows/generate-activity-description-flow';
 
 const viennaActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes' | 'modules'>[] = [
     { name: "Classical Concert at St. Anne's Church", description: "Experience the magic of Mozart and Beethoven in the stunning baroque ambiance of St. Anne's Church.", location: "Vienna, Austria", duration: 1.5, dataAiHint: "vienna church concert", createdBy: 'system' },
@@ -22,7 +23,7 @@ const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes
 ];
 
 const allActivities = [...viennaActivities, ...villachActivities];
-const SEED_FLAG_VERSION = 'v4_ai_images';
+const SEED_FLAG_VERSION = 'v5_ai_details';
 
 async function seedDatabase() {
   if (!isFirebaseInitialized) {
@@ -65,9 +66,21 @@ async function seedDatabase() {
         imageUrl = `https://placehold.co/400x250.png`;
     }
 
+    let enhancedDetails = {};
+    try {
+        console.log(` -> Generating AI description for "${activityData.name}"...`);
+        enhancedDetails = await generateActivityDescription({
+            activityName: activityData.name,
+            location: activityData.location,
+        });
+    } catch(e) {
+        console.warn(` -> Failed to generate AI description for "${activityData.name}".`);
+    }
+
     const docRef = activitiesCollection.doc();
     const newActivity: Activity = {
         ...(activityData as Omit<Activity, 'id'>),
+        ...enhancedDetails,
         id: docRef.id,
         imageUrls: [imageUrl],
         modules: ['couples', 'friends', 'meet'],

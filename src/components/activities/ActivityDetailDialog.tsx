@@ -1,16 +1,13 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Activity } from '@/types';
-import type { GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, MapPin, Clock, ThumbsUp, ThumbsDown, Info, CalendarDays, Tag, Loader2, DollarSign, Sunrise } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Clock, ThumbsUp, ThumbsDown, Info, CalendarDays, Tag, DollarSign, Sunrise } from "lucide-react";
 import { Badge } from '../ui/badge';
-import { enhanceActivityDescriptionAction } from '@/lib/actions';
-import { useToast } from '@/hooks/use-toast';
 
 interface ActivityDetailDialogProps {
   activity: Activity | null;
@@ -26,44 +23,32 @@ const categoryVariantMap: Record<string, "default" | "secondary" | "outline" | "
 
 export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: ActivityDetailDialogProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [enhancedActivityDetails, setEnhancedActivityDetails] = useState<GenerateActivityDescriptionOutput | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (activity) {
-      setCurrentImageIndex(0);
-      setEnhancedActivityDetails(null); 
-
-      if (isOpen) {
-        setIsLoadingDetails(true);
-        enhanceActivityDescriptionAction(activity.name, activity.location)
-          .then(result => {
-            if ('description' in result) { // Check if it's the success type
-              setEnhancedActivityDetails(result);
-            } else if ('error' in result) {
-              console.warn("Failed to enhance activity details:", result.error);
-              // Optionally show a toast, but we'll fallback to original description anyway
-            }
-          })
-          .catch(error => {
-            console.error("Error fetching enhanced activity details:", error);
-            // toast({ title: "Error", description: "Could not fetch enhanced activity details.", variant: "destructive" });
-          })
-          .finally(() => {
-            setIsLoadingDetails(false);
-          });
-      }
-    }
-  }, [activity, isOpen, toast]);
-
+  
   if (!activity) {
     return null;
   }
 
-  const { name, description: originalDescription, location, duration, imageUrls, category, startTime, likes, dislikes } = activity;
+  const { 
+    name, 
+    description: originalDescription, 
+    location, 
+    duration, 
+    imageUrls, 
+    category, 
+    startTime, 
+    likes, 
+    dislikes,
+    // Enhanced fields
+    description: enhancedDescription,
+    suggestedDurationHours,
+    bestTimeToVisit,
+    estimatedPriceRange,
+    address
+  } = activity;
 
-  const displayDescription = enhancedActivityDetails?.description || originalDescription || "No description available.";
+  const displayDescription = enhancedDescription || originalDescription || "No description available.";
+  const displayAddress = address || location;
+  const displayDuration = suggestedDurationHours ? `${suggestedDurationHours} hours (suggested)` : `${duration} hours`;
 
   const handleNextImage = () => {
     setCurrentImageIndex((prevIndex) => (prevIndex + 1) % (imageUrls?.length || 1));
@@ -80,8 +65,7 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
     <Dialog open={isOpen} onOpenChange={(open) => {
       onOpenChange(open);
       if (!open) {
-        setEnhancedActivityDetails(null);
-        setIsLoadingDetails(false);
+        setCurrentImageIndex(0);
       }
     }}>
       <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[90vh] flex flex-col">
@@ -141,14 +125,7 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
                 <Info className="mr-2 h-5 w-5 text-primary" />
                 About this activity
             </h3>
-            {isLoadingDetails && !enhancedActivityDetails ? (
-              <div className="flex items-center text-muted-foreground py-2">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span>Loading enhanced details...</span>
-              </div>
-            ) : (
-              <p className="whitespace-pre-line text-muted-foreground prose prose-sm sm:prose-base max-w-none">{displayDescription}</p>
-            )}
+            <p className="whitespace-pre-line text-muted-foreground prose prose-sm sm:prose-base max-w-none">{displayDescription}</p>
           </div>
            
           <div className="space-y-3 text-sm">
@@ -159,27 +136,25 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
               <div className="flex items-center text-muted-foreground">
                 <MapPin className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
-                <span>{enhancedActivityDetails?.address || location}</span>
+                <span>{displayAddress}</span>
               </div>
               <div className="flex items-center text-muted-foreground">
                 <Clock className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
                 <span>
-                  {enhancedActivityDetails?.suggestedDurationHours 
-                    ? `${enhancedActivityDetails.suggestedDurationHours} hours (suggested)` 
-                    : `${duration} hours`}
-                  {startTime && !enhancedActivityDetails?.suggestedDurationHours ? ` (Starts around ${startTime})` : ''}
+                  {displayDuration}
+                  {startTime && !suggestedDurationHours ? ` (Starts around ${startTime})` : ''}
                 </span>
               </div>
-              {enhancedActivityDetails?.bestTimeToVisit && (
+              {bestTimeToVisit && (
                 <div className="flex items-center text-muted-foreground">
                   <Sunrise className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
-                  <span>Best time to visit: {enhancedActivityDetails.bestTimeToVisit}</span>
+                  <span>Best time to visit: {bestTimeToVisit}</span>
                 </div>
               )}
-              {enhancedActivityDetails?.estimatedPriceRange && (
+              {estimatedPriceRange && (
                 <div className="flex items-center text-muted-foreground">
                   <DollarSign className="mr-3 h-5 w-5 text-accent flex-shrink-0" />
-                  <span>Price: {enhancedActivityDetails.estimatedPriceRange}</span>
+                  <span>Price: {estimatedPriceRange}</span>
                 </div>
               )}
               {category && (
@@ -214,5 +189,3 @@ export function ActivityDetailDialog({ activity, isOpen, onOpenChange }: Activit
     </Dialog>
   );
 }
-
-    

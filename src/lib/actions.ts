@@ -2,7 +2,7 @@
 'use server';
 
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
-import { generateActivityDescription, type GenerateActivityDescriptionInput, type GenerateActivityDescriptionOutput } from '@/ai/flows/generate-activity-description-flow';
+import { generateActivityDescription } from '@/ai/flows/generate-activity-description-flow';
 import { generateDestinationImage } from '@/ai/flows/generate-destination-image-flow';
 import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-flow';
 import { extractActivityDetailsFromUrl, type ExtractActivityDetailsFromUrlOutput } from '@/ai/flows/extract-activity-details-from-url-flow';
@@ -101,33 +101,6 @@ export async function suggestItineraryAction(
 
   } catch (error) {
     return handleAIError(error, "Failed to generate itinerary");
-  }
-}
-
-
-export async function enhanceActivityDescriptionAction(
-  activityName: string,
-  location: string
-): Promise<GenerateActivityDescriptionOutput | { error: string }> {
-  try {
-    if (!activityName || !location) {
-      return { error: "Activity name and location are required to enhance description." };
-    }
-
-    const input: GenerateActivityDescriptionInput = {
-      activityName,
-      location,
-    };
-
-    const result = await generateActivityDescription(input);
-
-    if (!result || !result.description) {
-      return { error: "Failed to generate enhanced description: AI returned invalid data." };
-    }
-    return result;
-
-  } catch (error) {
-    return handleAIError(error, "Failed to generate enhanced description");
   }
 }
 
@@ -754,8 +727,19 @@ async function internal_addCustomLocalActivity(
         imageUrl = `https://placehold.co/400x250.png`;
     }
 
+    let enhancedDetails = {};
+    try {
+      enhancedDetails = await generateActivityDescription({
+        activityName: activityData.name,
+        location: activityData.location,
+      });
+    } catch(aiError) {
+      console.warn(`AI description generation failed for activity "${activityData.name}".`);
+    }
+
     const newActivity: Activity = {
       ...(activityData as Omit<Activity, 'id'>),
+      ...enhancedDetails,
       id: newActivityRef.id,
       modules: [module],
       imageUrls: [imageUrl],
@@ -945,10 +929,21 @@ export async function addTripActivity(
              imageUrl = `https://placehold.co/400x250.png`;
         }
 
+        let enhancedDetails = {};
+        try {
+          enhancedDetails = await generateActivityDescription({
+            activityName: data.name,
+            location: data.location,
+          });
+        } catch(aiError) {
+          console.warn(`AI description generation failed for activity "${data.name}".`);
+        }
+
         const docRef = firestore.collection('trips').doc(tripId).collection('activities').doc();
 
         const newActivityPayload: Activity = {
             ...(data as Omit<Activity, 'id'>),
+            ...enhancedDetails,
             id: docRef.id,
             imageUrls: [imageUrl],
             likes: 1, 
