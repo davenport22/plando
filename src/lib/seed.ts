@@ -24,11 +24,11 @@ const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes
 ];
 
 const allActivities = [...viennaActivities, ...villachActivities];
-const SEED_FLAG_VERSION = 'v1_final_working_seed';
+const SEED_FLAG_VERSION = 'v2_placeholder_images';
 
 async function seedDatabase() {
   if (!isFirebaseInitialized) {
-    console.error("Firebase not initialized. Cannot seed database. Please check your .env file and ensure Firebase Storage is enabled.");
+    console.error("Firebase not initialized. Cannot seed database. Please check your .env file.");
     return;
   }
 
@@ -40,9 +40,8 @@ async function seedDatabase() {
       return;
   }
   
-  console.log(`Starting database seed (version: ${SEED_FLAG_VERSION}). This may take a minute...`);
+  console.log(`Starting database seed (version: ${SEED_FLAG_VERSION})...`);
   
-  // 1. Delete all existing system-generated activities to ensure a clean slate.
   console.log("Deleting all old system-generated activities...");
   const activitiesCollection = firestore.collection('activities');
   const querySnapshot = await activitiesCollection.where('createdBy', '==', 'system').get();
@@ -55,47 +54,33 @@ async function seedDatabase() {
     console.log("No old system activities found to delete.");
   }
   
-  // 2. Create new activities with AI-generated images.
   const writeBatch = firestore.batch();
   let successCount = 0;
 
   for (const activityData of allActivities) {
-    console.log(`[${successCount + 1}/${allActivities.length}] Processing: ${activityData.name}...`);
-    try {
-        const imageUrl = await generateAndStoreActivityImage(
-            activityData.name,
-            activityData.location,
-            activityData.dataAiHint,
-        );
-
-        const docRef = activitiesCollection.doc();
-        const newActivity: Activity = {
-            ...(activityData as Omit<Activity, 'id'>),
-            id: docRef.id,
-            imageUrls: [imageUrl],
-            modules: ['couples', 'friends', 'meet'],
-            createdBy: 'system',
-            likes: 0,
-            dislikes: 0,
-        };
-        writeBatch.set(docRef, newActivity);
-        successCount++;
-        console.log(` -> Image generated and activity queued for "${activityData.name}".`);
-    } catch (error) {
-        console.error(` -> Failed to process "${activityData.name}". Skipping. Error:`, error);
-    }
+    const docRef = activitiesCollection.doc();
+    const newActivity: Activity = {
+        ...(activityData as Omit<Activity, 'id'>),
+        id: docRef.id,
+        imageUrls: ["https://placehold.co/400x250.png"],
+        modules: ['couples', 'friends', 'meet'],
+        createdBy: 'system',
+        likes: 0,
+        dislikes: 0,
+    };
+    writeBatch.set(docRef, newActivity);
+    successCount++;
+    console.log(` -> Queued "${activityData.name}" for creation.`);
   }
 
-  // 3. Commit all the new activities to the database.
   if (successCount > 0) {
       console.log(`Committing ${successCount} new activities to the database...`);
       await writeBatch.commit();
       console.log(`Successfully added ${successCount} new activities.`);
   } else {
-      console.log("No new activities were successfully processed to commit.");
+      console.log("No new activities were processed to commit.");
   }
   
-  // 4. Set the flag ONLY after everything is successful.
   await flagRef.set({ seededAt: new Date().toISOString(), version: SEED_FLAG_VERSION });
   
   console.log("Database seeding complete.");
