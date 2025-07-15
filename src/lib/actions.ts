@@ -338,9 +338,9 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const destinationChanged = data.destination && data.destination !== currentTripData.destination;
-        const imageUrlMissingOrPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
+        const imageUrlIsPlaceholder = !currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co');
 
-        if (destinationChanged || imageUrlMissingOrPlaceholder) {
+        if (destinationChanged || imageUrlIsPlaceholder) {
              const destinationForImage = data.destination || currentTripData.destination;
             updatedData.imageUrl = await generateDestinationImage({ destination: destinationForImage });
         }
