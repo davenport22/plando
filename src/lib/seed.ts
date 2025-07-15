@@ -31,16 +31,15 @@ async function seedDatabase() {
     return;
   }
   
-  // This flag ensures this specific version of the script only runs once.
-  const flagRef = firestore.collection('_internal').doc('seed_flag_fresh_start_v1');
+  const flagRef = firestore.collection('_internal').doc('seed_flag_final_fix_v1');
   const flagDoc = await flagRef.get();
 
   if (flagDoc.exists) {
-    console.log("Database has already been seeded with the new v1 script. Skipping.");
+    console.log("Database has already been seeded with the final fix v1 script. Skipping.");
     return;
   }
 
-  console.log("Starting fresh database seed (v1). This may take a minute...");
+  console.log("Starting database seed (final_fix_v1). This may take a minute...");
   
   // 1. Delete all existing system-generated activities to ensure a clean slate.
   console.log("Deleting all old system-generated activities...");
@@ -91,7 +90,7 @@ async function seedDatabase() {
   await writeBatch.commit();
   
   // 4. Set the flag ONLY after everything is successful.
-  await flagRef.set({ seededAt: new Date().toISOString(), version: 'fresh_start_v1' });
+  await flagRef.set({ seededAt: new Date().toISOString(), version: 'final_fix_v1' });
   
   console.log("Database seeded successfully with new activities.");
 }
