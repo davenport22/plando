@@ -422,15 +422,35 @@ export async function removeParticipantFromTrip(tripId: string, participantId: s
     }
 }
 
-export async function joinTripWithId(tripId: string): Promise<{ success: boolean; error?: string }> {
-    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-    
-    // This is a placeholder for getting the current user's ID.
-    // In a real app, you would get this from the session or an auth context.
-    const authUser = await getAuth().verifyIdToken( 'some-id-token'); //This needs a real token
-    const userId = authUser.uid;
-    // const userId = "temp-user-id"; // Replace with actual current user ID from your auth system
+export async function resendInvitation(tripId: string, recipientEmail: string, inviterName: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tripDoc = await firestore.collection('trips').doc(tripId).get();
+    if (!tripDoc.exists) {
+      return { success: false, error: 'Trip not found.' };
+    }
+    const tripName = tripDoc.data()!.name;
 
+    const emailContent = await generateInvitationEmail({
+      recipientEmail,
+      tripName,
+      inviterName,
+      tripId,
+    });
+    await sendEmail({ to: recipientEmail, subject: emailContent.subject, html: emailContent.body });
+
+    revalidatePath(`/trips/${tripId}`);
+    return { success: true };
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes("API") || error.message.includes("permission"))) {
+        return { success: false, ...handleAIError(error, "Could not resend invitation due to an AI service error.") };
+    }
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while resending the invitation.';
+    return { success: false, error: errorMessage };
+  }
+}
+
+export async function joinTripWithId(tripId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
     if (!userId) {
         return { success: false, error: 'You must be logged in to join a trip.' };
     }
@@ -447,9 +467,15 @@ export async function joinTripWithId(tripId: string): Promise<{ success: boolean
         if (tripData.participantIds.includes(userId)) {
             return { success: false, error: "You are already a member of this trip." };
         }
+        
+        const userProfile = await getUserProfile(userId);
+        if (!userProfile) {
+            return { success: false, error: 'Your user profile could not be found.'};
+        }
 
         await tripRef.update({ 
             participantIds: FieldValue.arrayUnion(userId),
+            invitedEmails: FieldValue.arrayRemove(userProfile.email),
         });
 
         revalidatePath('/trips');
@@ -558,12 +584,7 @@ export async function getOrCreateUserProfile(user: {
 
       if (pendingTripId && user.email) {
         try {
-            const tripRef = firestore.collection('trips').doc(pendingTripId);
-            await tripRef.update({
-                participantIds: FieldValue.arrayUnion(user.uid),
-                invitedEmails: FieldValue.arrayRemove(user.email)
-            });
-            revalidatePath(`/trips/${pendingTripId}`);
+            await joinTripWithId(pendingTripId, user.uid);
         } catch (tripError) {
             console.error(`Failed to add new user ${user.uid} to trip ${pendingTripId} after registration.`, tripError);
         }

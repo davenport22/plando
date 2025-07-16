@@ -5,12 +5,12 @@ import { useState } from 'react';
 import type { Trip, UserProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { addParticipantToTrip, removeParticipantFromTrip } from '@/lib/actions';
+import { addParticipantToTrip, removeParticipantFromTrip, resendInvitation } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { X, Loader2, UserPlus, Crown, Mail } from 'lucide-react';
+import { X, Loader2, UserPlus, Crown, Mail, Send } from 'lucide-react';
 import { Separator } from '../ui/separator';
 
 interface ParticipantManagerProps {
@@ -23,6 +23,7 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
   const [email, setEmail] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [resendingEmail, setResendingEmail] = useState<string | null>(null);
 
   const handleAddParticipant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +48,22 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
 
     if (result.success) {
       toast({ title: 'Participant Removed', description: 'The user has been removed from the trip.' });
+    } else {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    }
+  };
+
+  const handleResendInvite = async (recipientEmail: string) => {
+    if (!userProfile) {
+      toast({ title: 'Error', description: 'You must be logged in to resend invitations.', variant: 'destructive'});
+      return;
+    }
+    setResendingEmail(recipientEmail);
+    const result = await resendInvitation(trip.id, recipientEmail, userProfile.name);
+    setResendingEmail(null);
+
+    if (result.success) {
+      toast({ title: 'Invitation Resent!', description: `A new invitation has been sent to ${recipientEmail}.` });
     } else {
       toast({ title: 'Error', description: result.error, variant: 'destructive' });
     }
@@ -109,6 +126,19 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
                   </Avatar>
                   <p className="text-sm text-muted-foreground italic">{invitedEmail}</p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleResendInvite(invitedEmail)}
+                  disabled={resendingEmail === invitedEmail}
+                >
+                  {resendingEmail === invitedEmail ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-2 h-4 w-4" />
+                  )}
+                  Resend
+                </Button>
               </div>
             ))}
           </div>
