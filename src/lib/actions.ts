@@ -164,15 +164,12 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
-        // Use a static, reliable Unsplash URL.
-        const imageUrl = "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop";
-
         const newTripData = {
             ...tripDetails,
             ownerId: ownerId, 
             participantIds: Array.from(participantIds),
             invitedEmails: emailsToInvite,
-            imageUrl: imageUrl,
+            imageUrl: "https://images.unsplash.com/photo-1522881193457-31ae894a5045?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0cmF2ZWwlMjBwbGFubmluZ3xlbnwwfHx8fDE3NTI2OTYyNjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
@@ -322,10 +319,9 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
 
         const updatedData = { ...data };
 
-        // If the imageUrl is missing or a placeholder, set it to the reliable static URL.
         const currentTripData = currentTripDoc.data() as Trip;
-        if (!currentTripData.imageUrl || currentTripData.imageUrl.includes('placehold.co')) {
-             updatedData.imageUrl = "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop";
+        if (!currentTripData.imageUrl) {
+             updatedData.imageUrl = "https://images.unsplash.com/photo-1522881193457-31ae894a5045?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0cmF2ZWwlMjBwbGFubmluZ3xlbnwwfHx8fDE3NTI2OTYyNjN8MA&ixlib=rb-4.1.0&q=80&w=1080";
         }
 
         await tripRef.update(updatedData);
