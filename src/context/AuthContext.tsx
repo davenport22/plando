@@ -65,7 +65,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   useEffect(() => {
-    // This is the single source of truth for auth state changes.
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       setProfileError(null);
@@ -96,7 +95,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setProfileError(errorMessage);
         }
       } else {
-        // User is signed out, clear all state, unless we are in local admin mode.
         if (!isAdmin) {
             setUser(null);
             setUserProfile(null);
@@ -132,7 +130,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("This email is reserved for administration.");
         }
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // After creating the user, immediately update their profile with the provided name.
         if (userCredential.user) {
           await updateProfile(userCredential.user, { displayName: name });
         }
@@ -143,7 +140,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const loginWithEmail = async (email: string, password: string) => {
-    // Special local admin check
     if (email.toLowerCase() === process.env.NEXT_PUBLIC_ADMIN_EMAIL && password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
         setLoading(true);
         setIsAdmin(true);
@@ -167,7 +163,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Error signing out:", error);
     }
-    // Always reset admin state on logout
     setIsAdmin(false);
   };
 

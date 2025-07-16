@@ -43,7 +43,6 @@ export function RegisterForm() {
     setIsLoading(true);
     try {
       await registerWithEmail(data.email, data.password, data.name);
-      // On success, the AuthContext's onAuthStateChanged listener will handle redirection.
     } catch (error: any) {
       toast({
         title: "Registration Failed",

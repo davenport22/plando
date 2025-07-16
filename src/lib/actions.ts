@@ -449,11 +449,18 @@ export async function resendInvitation(tripId: string, recipientEmail: string, i
   }
 }
 
-export async function joinTripWithId(tripId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+export async function joinTripWithId(tripId: string): Promise<{ success: boolean; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-    if (!userId) {
+    
+    // This is a temporary solution to get the current user.
+    // In a real app, you'd get the user ID from the session or auth context.
+    const { getAuth: getClientAuth, auth } = await import('@/lib/firebase/client');
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
         return { success: false, error: 'You must be logged in to join a trip.' };
     }
+    const userId = currentUser.uid;
 
     try {
         const tripRef = firestore.collection('trips').doc(tripId);
@@ -584,7 +591,7 @@ export async function getOrCreateUserProfile(user: {
 
       if (pendingTripId && user.email) {
         try {
-            await joinTripWithId(pendingTripId, user.uid);
+            await joinTripWithId(pendingTripId);
         } catch (tripError) {
             console.error(`Failed to add new user ${user.uid} to trip ${pendingTripId} after registration.`, tripError);
         }
