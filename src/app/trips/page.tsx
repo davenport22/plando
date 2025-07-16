@@ -42,7 +42,7 @@ function JoinTripForm({ onTripJoined }: { onTripJoined: () => void }) {
     <Card className="mb-8 shadow-lg">
         <CardHeader>
             <CardTitle className="font-headline text-xl text-primary">Join a Trip</CardTitle>
-            <CardDescription>Enter the Trip ID you received in your invitation email.</CardDescription>
+            <CardDescription>Enter the Trip ID shared with you to join an existing trip.</CardDescription>
         </CardHeader>
         <CardContent>
             <form onSubmit={handleJoinTrip} className="flex flex-col sm:flex-row gap-2">
@@ -139,7 +139,7 @@ export default function TripsPage() {
             <pre className="mt-2 text-xs bg-destructive-foreground/10 p-3 rounded font-mono whitespace-pre-wrap">
                 {`FIREBASE_PROJECT_ID="your-project-id"
 FIREBASE_CLIENT_EMAIL="firebase-adminsdk-..."
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_HERE...\\n-----END PRIVATE KEY-----\\n"`}
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_CONTENT_WITH_ALL_ITS_NEWLINES\\n...\\n-----END PRIVATE KEY-----\\n"`}
             </pre>
             <p className="mt-4">After saving the `.env` file, the page will need to be refreshed.</p>
             <p className="mt-2 font-mono text-xs bg-destructive-foreground/10 p-2 rounded">Error details: {fetchError}</p>
