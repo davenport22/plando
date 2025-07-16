@@ -775,14 +775,14 @@ async function internal_addCustomLocalActivity(
     }
 
     const newActivity: Activity = {
-      ...(activityData as Omit<Activity, 'id'>),
-      ...enhancedDetails,
-      id: newActivityRef.id,
-      modules: [module],
-      imageUrls: [imageUrl],
-      createdBy: userId,
-      likes: 0, 
-      dislikes: 0,
+        ...(activityData as Omit<Activity, 'id'>),
+        ...enhancedDetails,
+        id: newActivityRef.id,
+        modules: [module],
+        imageUrls: [imageUrl],
+        createdBy: userId,
+        likes: 0, 
+        dislikes: 0,
     };
 
     await newActivityRef.set(newActivity);
