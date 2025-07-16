@@ -14,6 +14,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
 import { generateAndStoreActivityImage } from './aiUtils';
+import { getAuth } from 'firebase-admin/auth';
 
 
 const handleAIError = (error: unknown, defaultMessage: string): { error: string } => {
@@ -420,6 +421,46 @@ export async function removeParticipantFromTrip(tripId: string, participantId: s
         return { success: false, error: errorMessage };
     }
 }
+
+export async function joinTripWithId(tripId: string): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+    
+    // This is a placeholder for getting the current user's ID.
+    // In a real app, you would get this from the session or an auth context.
+    const authUser = await getAuth().verifyIdToken( 'some-id-token'); //This needs a real token
+    const userId = authUser.uid;
+    // const userId = "temp-user-id"; // Replace with actual current user ID from your auth system
+
+    if (!userId) {
+        return { success: false, error: 'You must be logged in to join a trip.' };
+    }
+
+    try {
+        const tripRef = firestore.collection('trips').doc(tripId);
+        const tripDoc = await tripRef.get();
+
+        if (!tripDoc.exists) {
+            return { success: false, error: 'Trip not found. Please check the ID and try again.' };
+        }
+        
+        const tripData = tripDoc.data() as Trip;
+        if (tripData.participantIds.includes(userId)) {
+            return { success: false, error: "You are already a member of this trip." };
+        }
+
+        await tripRef.update({ 
+            participantIds: FieldValue.arrayUnion(userId),
+        });
+
+        revalidatePath('/trips');
+        return { success: true };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to join trip: ${errorMessage}` };
+    }
+}
+
 
 export async function importLocalActivitiesToTrip(tripId: string): Promise<{ success: boolean; error?: string; count: number; }> {
     if (!isFirebaseInitialized) {

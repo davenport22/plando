@@ -4,13 +4,65 @@
 import { useState, useEffect } from 'react';
 import { TripCard } from '@/components/trips/TripCard';
 import { Button } from '@/components/ui/button';
-import { getTripsForUser } from '@/lib/actions';
+import { getTripsForUser, joinTripWithId } from '@/lib/actions';
 import type { Trip } from '@/types';
-import { PlusCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, AlertCircle, Loader2, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+
+function JoinTripForm({ onTripJoined }: { onTripJoined: () => void }) {
+  const [tripId, setTripId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleJoinTrip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tripId.trim()) {
+      toast({ title: "Please enter a Trip ID.", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    const result = await joinTripWithId(tripId);
+    if (result.success) {
+      toast({ title: "Success!", description: "You have been added to the trip." });
+      setTripId('');
+      onTripJoined(); // Callback to refresh the trip list
+    } else {
+      toast({ title: "Failed to Join", description: result.error, variant: "destructive" });
+    }
+    setIsLoading(false);
+  };
+
+  return (
+    <Card className="mb-8 shadow-lg">
+        <CardHeader>
+            <CardTitle className="font-headline text-xl text-primary">Join a Trip</CardTitle>
+            <CardDescription>Enter the Trip ID you received in your invitation email.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <form onSubmit={handleJoinTrip} className="flex flex-col sm:flex-row gap-2">
+                <Input
+                    placeholder="Enter Trip ID"
+                    value={tripId}
+                    onChange={(e) => setTripId(e.target.value)}
+                    disabled={isLoading}
+                    className="flex-grow"
+                />
+                <Button type="submit" disabled={isLoading} className="sm:w-auto">
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+                    Join Trip
+                </Button>
+            </form>
+        </CardContent>
+    </Card>
+  );
+}
+
 
 export default function TripsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -20,31 +72,33 @@ export default function TripsPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const fetchUserTrips = async () => {
+    if (!user) return;
+    setDataLoading(true);
+    getTripsForUser(user.uid)
+      .then(result => {
+        if (result.success && result.trips) {
+          setTrips(result.trips);
+        } else {
+          setFetchError(result.error || 'An unknown error occurred while fetching trips.');
+        }
+      })
+      .catch(err => {
+          const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
+          setFetchError(errorMessage);
+      })
+      .finally(() => {
+        setDataLoading(false);
+      });
+  }
+
   useEffect(() => {
-    // If auth has loaded and there's no user, redirect to login page
     if (!authLoading && !user) {
       router.push('/');
       return;
     }
-
-    // If there is a user, fetch their trips
     if (user) {
-      setDataLoading(true);
-      getTripsForUser(user.uid)
-        .then(result => {
-          if (result.success && result.trips) {
-            setTrips(result.trips);
-          } else {
-            setFetchError(result.error || 'An unknown error occurred while fetching trips.');
-          }
-        })
-        .catch(err => {
-            const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
-            setFetchError(errorMessage);
-        })
-        .finally(() => {
-          setDataLoading(false);
-        });
+      fetchUserTrips();
     }
   }, [user, authLoading, router]);
 
@@ -61,6 +115,8 @@ export default function TripsPage() {
           </Button>
         </Link>
       </div>
+
+      <JoinTripForm onTripJoined={fetchUserTrips} />
       
       {isLoading ? (
         <div className="text-center py-20">
