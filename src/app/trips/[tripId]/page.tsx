@@ -280,7 +280,7 @@ export default function TripDetailPage() {
 
       <Card className="mb-8 overflow-hidden shadow-xl">
         <div className="relative h-64 w-full md:h-80">
-          <Image src={trip.imageUrl || 'https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop'} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0]} />
+          <Image src={trip.imageUrl || 'https://images.unsplash.com/photo-1522881193457-31ae894a5045?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0cmF2ZWwlMjBwbGFubmluZ3xlbnwwfHx8fDE3NTI2OTYyNjN8MA&ixlib=rb-4.1.0&q=80&w=1080'} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0]} />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-8">
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
             <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>
