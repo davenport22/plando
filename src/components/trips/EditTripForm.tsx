@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DialogClose } from "@/components/ui/dialog";
 import { cn, calculateTripDuration } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, Loader2, Save, Sparkles, Trash2, AlertTriangle } from "lucide-react";
+import { CalendarIcon, Loader2, Save, Sparkles, Trash2, AlertTriangle, Copy, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Trip } from "@/types";
 import { Separator } from "@/components/ui/separator";
@@ -31,6 +31,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+
 
 const editTripFormSchema = z.object({
   name: z.string().min(3, "Trip name must be at least 3 characters.").max(50, "Trip name must be at most 50 characters."),
@@ -56,9 +58,11 @@ interface EditTripFormProps {
 }
 
 export function EditTripForm({ currentTrip, onSubmit, onDelete }: EditTripFormProps) {
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [durationDisplay, setDurationDisplay] = useState<string>("");
+  const [hasCopied, setHasCopied] = useState(false);
 
   const form = useForm<EditTripFormValues>({
     resolver: zodResolver(editTripFormSchema),
@@ -132,12 +136,30 @@ export function EditTripForm({ currentTrip, onSubmit, onDelete }: EditTripFormPr
     await onDelete(currentTrip.id);
     setIsDeleting(false);
   };
+  
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(currentTrip.id);
+    setHasCopied(true);
+    toast({ title: "Copied!", description: "Trip ID copied to clipboard." });
+    setTimeout(() => setHasCopied(false), 2000);
+  };
 
 
   return (
     <div className="space-y-6">
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 pt-4">
+                 <div className="space-y-2">
+                  <FormLabel htmlFor="trip-id">Shareable Trip ID</FormLabel>
+                   <div className="flex items-center gap-2">
+                    <Input id="trip-id" value={currentTrip.id} readOnly className="font-mono bg-muted/50" />
+                    <Button type="button" variant="outline" size="icon" onClick={handleCopyId} aria-label="Copy Trip ID">
+                      {hasCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <FormDescription>Share this ID with friends so they can join your trip.</FormDescription>
+                </div>
+                <Separator />
                 <FormField
                 control={form.control}
                 name="name"
@@ -356,5 +378,3 @@ export function EditTripForm({ currentTrip, onSubmit, onDelete }: EditTripFormPr
     </div>
   );
 }
-
-    
