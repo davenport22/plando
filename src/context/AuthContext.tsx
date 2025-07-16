@@ -69,8 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       setProfileError(null);
-      const pendingTripId = localStorage.getItem('pendingTripId');
-
+      
       if (firebaseUser) {
         if (firebaseUser.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
             setIsAdmin(true);
@@ -81,7 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               email: firebaseUser.email,
               name: firebaseUser.displayName,
               photoURL: firebaseUser.photoURL,
-          }, pendingTripId);
+          });
           
           setUser(firebaseUser);
           setUserProfile(profile);
@@ -95,10 +94,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUserProfile(null);
           setIsNewUser(null);
           setProfileError(errorMessage);
-        } finally {
-            if (pendingTripId) {
-                localStorage.removeItem('pendingTripId');
-            }
         }
       } else {
         // User is signed out, clear all state, unless we are in local admin mode.
@@ -106,10 +101,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(null);
             setUserProfile(null);
             setIsNewUser(null);
-        }
-        
-        if (pendingTripId) {
-            localStorage.removeItem('pendingTripId');
         }
       }
       setLoading(false);

@@ -4,14 +4,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import Link from 'next/link';
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import { Loader2 } from "lucide-react";
 
-function RegisterPageContent() {
-  const searchParams = useSearchParams();
-  const tripId = searchParams.get('tripId');
-
+export default function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-background to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md shadow-2xl">
@@ -20,7 +14,7 @@ function RegisterPageContent() {
           <CardDescription>Join Plando and start planning your next adventure.</CardDescription>
         </CardHeader>
         <CardContent>
-          <RegisterForm tripId={tripId} />
+          <RegisterForm />
         </CardContent>
         <div className="p-6 pt-0 text-center">
           <p className="text-sm text-muted-foreground">
@@ -33,17 +27,4 @@ function RegisterPageContent() {
       </Card>
     </div>
   );
-}
-
-
-export default function RegisterPage() {
-  return (
-    <Suspense fallback={
-        <div className="w-full h-screen flex flex-col items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-    }>
-      <RegisterPageContent />
-    </Suspense>
-  )
 }
