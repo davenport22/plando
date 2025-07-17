@@ -15,19 +15,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
-function JoinTripForm({ onTripJoined }: { onTripJoined: () => void }) {
+function JoinTripForm({ userId, onTripJoined }: { userId: string | null; onTripJoined: () => void }) {
   const [tripId, setTripId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleJoinTrip = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userId) {
+        toast({ title: "Please log in to join a trip.", variant: "destructive"});
+        return;
+    }
     if (!tripId.trim()) {
       toast({ title: "Please enter a Trip ID.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
-    const result = await joinTripWithId(tripId);
+    const result = await joinTripWithId(tripId, userId);
     if (result.success) {
       toast({ title: "Success!", description: "You have been added to the trip." });
       setTripId('');
@@ -50,10 +54,10 @@ function JoinTripForm({ onTripJoined }: { onTripJoined: () => void }) {
                     placeholder="Enter Trip ID"
                     value={tripId}
                     onChange={(e) => setTripId(e.target.value)}
-                    disabled={isLoading}
+                    disabled={isLoading || !userId}
                     className="flex-grow"
                 />
-                <Button type="submit" disabled={isLoading} className="sm:w-auto">
+                <Button type="submit" disabled={isLoading || !userId} className="sm:w-auto">
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
                     Join Trip
                 </Button>
@@ -116,7 +120,7 @@ export default function TripsPage() {
         </Link>
       </div>
 
-      <JoinTripForm onTripJoined={fetchUserTrips} />
+      <JoinTripForm userId={user?.uid || null} onTripJoined={fetchUserTrips} />
       
       {isLoading ? (
         <div className="text-center py-20">
