@@ -62,7 +62,7 @@ export async function sendEmail(params: EmailParams): Promise<{ success: boolean
 
     try {
         await transporter.sendMail({
-            from: `"${EMAIL_FROM}" <${EMAIL_USER}>`, // Recommended format: "Sender Name" <email@address.com>
+            from: EMAIL_FROM, // Use the full "Name <email>" string from the .env file
             to: params.to,
             subject: params.subject,
             html: params.html,
