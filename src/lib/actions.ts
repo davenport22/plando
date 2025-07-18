@@ -165,14 +165,20 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
-        const destinationQuery = encodeURIComponent(tripDetails.destination.split(',')[0]);
+        let imageUrl: string;
+        try {
+            imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
+        } catch (aiError) {
+            console.warn(`AI image generation failed for trip "${tripDetails.name}", falling back to a placeholder.`, aiError);
+            imageUrl = 'https://placehold.co/1600x900.png';
+        }
         
         const newTripData = {
             ...tripDetails,
             ownerId: ownerId, 
             participantIds: Array.from(participantIds),
             invitedEmails: emailsToInvite,
-            imageUrl: `https://source.unsplash.com/1600x900/?${destinationQuery}`,
+            imageUrl: imageUrl,
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
@@ -324,8 +330,8 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
 
         const currentTripData = currentTripDoc.data() as Trip;
         if (!currentTripData.imageUrl || currentTripData.destination !== updatedData.destination) {
-            const destinationQuery = encodeURIComponent((updatedData.destination || currentTripData.destination).split(',')[0]);
-            updatedData.imageUrl = `https://source.unsplash.com/1600x900/?${destinationQuery}`;
+            const newImageUrl = await generateDestinationImage({ destination: updatedData.destination || currentTripData.destination });
+            updatedData.imageUrl = newImageUrl;
         }
 
         await tripRef.update(updatedData);
@@ -1283,5 +1289,3 @@ export async function removeParticipantFromTrip(tripId: string, participantId: s
         return { success: false, error: errorMessage };
     }
 }
-
-    
