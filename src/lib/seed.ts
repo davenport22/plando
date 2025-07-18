@@ -19,11 +19,12 @@ const villachActivities: Omit<Activity, 'id' | 'imageUrls' | 'likes' | 'dislikes
     { name: "Mountain Biking around Lake Faak", description: "Explore the scenic trails around the turquoise waters of Lake Faak, with routes available for all skill levels.", location: "Villach, Austria", duration: 3, dataAiHint: "mountain biking lake", createdBy: 'system' },
     { name: "Stand-up Paddling on Lake Ossiach", description: "Rent a paddleboard and enjoy a relaxing yet sporty day on the beautiful Lake Ossiach, one of Carinthia's largest lakes.", location: "Villach, Austria", duration: 2, dataAiHint: "paddleboarding lake", createdBy: 'system' },
     { name: "Climb at Kletterwald Ossiacher See", description: "Challenge yourselves at this high ropes adventure park with various courses set in the forest right by the lake.", location: "Villach, Austria", duration: 3.5, dataAiHint: "ropes course forest", createdBy: 'system' },
-    { name: "Kayaking on the Drau River", description: "Experience Villach from a different perspective with a kayak or canoe tour on the Drau river that flows through the city.", location: "Villach, Austria", duration: 2.5, dataAiHint: "kayaking river", createdBy: 'system' }
+    { name: "Kayaking on the Drau River", description: "Experience Villach from a different perspective with a kayak or canoe tour on the Drau river that flows through the city.", location: "Villach, Austria", duration: 2.5, dataAiHint: "kayaking river", createdBy: 'system' },
+    { name: "Paragliding from Gerlitzen", description: "Experience the thrill of a tandem paragliding flight from the Gerlitzen mountain, soaring over Lake Ossiach.", location: "Villach, Austria", duration: 2, dataAiHint: "paragliding alps", createdBy: 'system' },
 ];
 
 const allActivities = [...viennaActivities, ...villachActivities];
-const SEED_FLAG_VERSION = 'v5_ai_details';
+const SEED_FLAG_VERSION = 'v6_added_paragliding';
 
 async function seedDatabase() {
   if (!isFirebaseInitialized) {
