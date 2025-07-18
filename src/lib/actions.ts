@@ -165,14 +165,17 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
-        const docRef = await firestore.collection('trips').add({
+        const destinationQuery = encodeURIComponent(tripDetails.destination.split(',')[0]);
+        
+        const newTripData = {
             ...tripDetails,
             ownerId: ownerId, 
             participantIds: Array.from(participantIds),
             invitedEmails: emailsToInvite,
-            imageUrl: "https://images.unsplash.com/photo-1522881193457-31ae894a5045?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0cmF2ZWwlMjBwbGFubmluZ3xlbnwwfHx8fDE3NTI2OTYyNjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
-        });
+            imageUrl: `https://source.unsplash.com/1600x900/?${destinationQuery}`,
+        };
 
+        const docRef = await firestore.collection('trips').add(newTripData);
         const tripId = docRef.id;
 
         if (emailsToInvite.length > 0) {
@@ -320,8 +323,9 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
         const updatedData = { ...data };
 
         const currentTripData = currentTripDoc.data() as Trip;
-        if (!currentTripData.imageUrl) {
-             updatedData.imageUrl = "https://images.unsplash.com/photo-1522881193457-31ae894a5045?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0cmF2ZWwlMjBwbGFubmluZ3xlbnwwfHx8fDE3NTI2OTYyNjN8MA&ixlib=rb-4.1.0&q=80&w=1080";
+        if (!currentTripData.imageUrl || currentTripData.destination !== updatedData.destination) {
+            const destinationQuery = encodeURIComponent((updatedData.destination || currentTripData.destination).split(',')[0]);
+            updatedData.imageUrl = `https://source.unsplash.com/1600x900/?${destinationQuery}`;
         }
 
         await tripRef.update(updatedData);
@@ -423,7 +427,7 @@ export async function resendInvitation(tripId: string, recipientEmail: string, i
   }
 }
 
-export async function joinTripWithId(tripId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+export async function joinTripWithId(tripId: string, userId: string | null): Promise<{ success: boolean; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
     if (!userId) return { success: false, error: 'You must be logged in to join a trip.' };
     
@@ -1279,3 +1283,5 @@ export async function removeParticipantFromTrip(tripId: string, participantId: s
         return { success: false, error: errorMessage };
     }
 }
+
+    

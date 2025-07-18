@@ -13,7 +13,7 @@ interface TripCardProps {
 
 export function TripCard({ trip }: TripCardProps) {
   const imageHint = trip.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',') || "travel,landscape";
-  const defaultImageUrl = "https://images.unsplash.com/photo-1527631746610-bca00a040d60?q=80&w=1200&auto=format&fit=crop";
+  const defaultImageUrl = "https://placehold.co/1600x900.png";
 
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg">
@@ -52,3 +52,5 @@ export function TripCard({ trip }: TripCardProps) {
     </Card>
   );
 }
+
+    
