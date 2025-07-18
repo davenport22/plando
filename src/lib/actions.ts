@@ -397,31 +397,6 @@ export async function addParticipantToTrip(tripId: string, email: string, invite
     }
 }
 
-export async function removeParticipantFromTrip(tripId: string, participantId: string): Promise<{ success: boolean; error?: string }> {
-    try {
-        if (!tripId || !participantId) {
-            return { success: false, error: "Trip ID and participant ID are required." };
-        }
-
-        const tripRef = firestore.collection('trips').doc(tripId);
-        const tripDoc = await tripRef.get();
-
-        if (!tripDoc.exists) return { success: false, error: "Trip not found." };
-
-        const tripData = tripDoc.data() as Trip;
-        if (tripData.ownerId === participantId) return { success: false, error: "The trip owner cannot be removed." };
-
-        await tripRef.update({ participantIds: FieldValue.arrayRemove(participantId) });
-
-        revalidatePath(`/trips/${tripId}`);
-        return { success: true };
-
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
 export async function resendInvitation(tripId: string, recipientEmail: string, inviterName: string): Promise<{ success: boolean; error?: string }> {
   try {
     const tripDoc = await firestore.collection('trips').doc(tripId).get();
@@ -1278,3 +1253,4 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
     }
 }
+
