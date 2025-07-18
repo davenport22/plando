@@ -2,8 +2,7 @@
 import type { Trip } from '@/types';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, MapPin, Users } from "lucide-react";
-import Image from "next/image";
+import { CalendarDays, MapPin, Users, PlaneTakeoff } from "lucide-react";
 import Link from 'next/link';
 import { calculateTripDuration } from '@/lib/utils';
 
@@ -12,20 +11,11 @@ interface TripCardProps {
 }
 
 export function TripCard({ trip }: TripCardProps) {
-  const imageHint = trip.destination.toLowerCase().split(',')[0].trim().replace(/\s+/g, ',') || "travel,landscape";
-  const defaultImageUrl = "https://placehold.co/1600x900.png";
-
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg">
       <CardHeader className="p-0">
-        <div className="relative h-48 w-full">
-          <Image
-            src={trip.imageUrl || defaultImageUrl}
-            alt={trip.name}
-            fill
-            className="object-cover"
-            data-ai-hint={imageHint}
-          />
+        <div className="relative h-48 w-full bg-muted flex items-center justify-center">
+          <PlaneTakeoff className="h-24 w-24 text-muted-foreground/50" />
         </div>
       </CardHeader>
       <CardContent className="p-6 flex-grow">
@@ -43,7 +33,7 @@ export function TripCard({ trip }: TripCardProps) {
         </div>
       </CardContent>
       <CardFooter className="p-6 bg-muted/30">
-        <Link href={`/trips/${trip.id}`}>
+        <Link href={`/trips/${trip.id}`} className="w-full">
           <Button className="w-full" aria-label={`View details for ${trip.name}`}>
             View Details
           </Button>
@@ -52,5 +42,3 @@ export function TripCard({ trip }: TripCardProps) {
     </Card>
   );
 }
-
-    
