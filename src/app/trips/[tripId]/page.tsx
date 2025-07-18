@@ -280,15 +280,7 @@ export default function TripDetailPage() {
 
       <Card className="mb-8 overflow-hidden shadow-xl">
         <div className="relative h-64 w-full md:h-80 bg-muted flex flex-col justify-end">
-          {trip.imageUrl && (
-            <Image
-              src={trip.imageUrl}
-              alt={`Image of ${trip.destination}`}
-              fill
-              className="object-cover"
-              priority
-            />
-          )}
+          <PlaneTakeoff className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-32 w-32 text-muted-foreground/20" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
           <div className="relative z-10 p-8">
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
