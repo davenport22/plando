@@ -119,16 +119,19 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
           </p>
            <div className="space-y-2">
             {trip.invitedEmails?.map(invitedEmail => (
-              <div key={invitedEmail} className="flex items-center justify-between p-2 rounded-md bg-muted/50 opacity-80">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9 bg-muted-foreground/20">
-                    <Mail className="h-5 w-5 text-muted-foreground" />
-                  </Avatar>
-                  <p className="text-sm text-muted-foreground italic">{invitedEmail}</p>
+              <div key={invitedEmail} className="p-2 rounded-md bg-muted/50 opacity-80">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9 bg-muted-foreground/20">
+                        <Mail className="h-5 w-5 text-muted-foreground" />
+                    </Avatar>
+                    <p className="text-sm text-muted-foreground italic">{invitedEmail}</p>
+                    </div>
                 </div>
-                <Button
+                 <Button
                   variant="outline"
                   size="sm"
+                  className="w-full mt-2"
                   onClick={() => handleResendInvite(invitedEmail)}
                   disabled={resendingEmail === invitedEmail}
                 >
@@ -137,7 +140,7 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
                   ) : (
                     <Send className="mr-2 h-4 w-4" />
                   )}
-                  Resend
+                  Resend Invitation
                 </Button>
               </div>
             ))}

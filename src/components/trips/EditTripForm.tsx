@@ -333,7 +333,7 @@ export function EditTripForm({ currentTrip, onSubmit, onDelete }: EditTripFormPr
                   )}
                 />
                 
-                <div className="flex justify-between items-center pt-4">
+                <div className="flex justify-center items-center gap-4 pt-4">
                   <DialogClose asChild>
                     <Button type="submit" disabled={isLoading}>
                       {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -342,8 +342,8 @@ export function EditTripForm({ currentTrip, onSubmit, onDelete }: EditTripFormPr
                   </DialogClose>
                   <AlertDialog>
                       <AlertDialogTrigger asChild>
-                      <Button variant="destructive" type="button">
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete Trip
+                      <Button variant="outline" type="button">
+                           Delete Trip
                       </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
