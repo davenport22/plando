@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { suggestItineraryAction, getTrip, updateTrip, getTripActivities, addTripActivity, voteOnTripActivity, getItinerary, saveItinerary, deleteTrip } from '@/lib/actions';
 import { calculateTripDuration } from '@/lib/utils';
-import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit, Vote } from 'lucide-react';
+import { ArrowLeft, Loader2, PlusCircle, Wand2, Search, ListChecks, Edit, Vote, PlaneTakeoff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from "next/image";
 import Link from 'next/link';
@@ -279,9 +279,9 @@ export default function TripDetailPage() {
       </Button>
 
       <Card className="mb-8 overflow-hidden shadow-xl">
-        <div className="relative h-64 w-full md:h-80">
-          <Image src={trip.imageUrl || 'https://images.unsplash.com/photo-1522881193457-31ae894a5045?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0cmF2ZWwlMjBwbGFubmluZ3xlbnwwfHx8fDE3NTI2OTYyNjN8MA&ixlib=rb-4.1.0&q=80&w=1080'} alt={trip.name} fill style={{ objectFit: 'cover' }} priority data-ai-hint={trip.destination.toLowerCase().split(',')[0]} />
-          <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-8">
+        <div className="relative h-64 w-full md:h-80 bg-muted flex flex-col justify-end">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="relative z-10 p-8">
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
             <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>
             <div className="flex items-center gap-4 mt-2">
