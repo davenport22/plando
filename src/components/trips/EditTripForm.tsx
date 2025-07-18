@@ -333,48 +333,39 @@ export function EditTripForm({ currentTrip, onSubmit, onDelete }: EditTripFormPr
                   )}
                 />
                 
-                <DialogClose asChild>
-                <Button type="submit" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Trip Details
-                </Button>
-                </DialogClose>
+                <div className="flex justify-between items-center pt-4">
+                  <DialogClose asChild>
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                      Save Changes
+                    </Button>
+                  </DialogClose>
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                      <Button variant="destructive" type="button">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete Trip
+                      </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                          This will permanently delete the trip "{currentTrip.name}" and all its data. This action cannot be undone.
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeleteTrip} disabled={isDeleting}>
+                              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Yes, delete trip"}
+                          </AlertDialogAction>
+                      </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+                </div>
             </form>
         </Form>
         <Separator />
         <ParticipantManager trip={currentTrip} />
-
-        <Separator />
-        <div className="space-y-4 rounded-lg border border-destructive/50 p-4">
-            <h3 className="font-semibold text-destructive flex items-center gap-2">
-                <AlertTriangle />
-                Danger Zone
-            </h3>
-            <p className="text-sm text-muted-foreground">
-                Deleting a trip is a permanent action and cannot be undone. All associated activities and itinerary data will be lost forever.
-            </p>
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full">
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete this Trip
-                </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                    This will permanently delete the trip "{currentTrip.name}" and all its data. This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteTrip} disabled={isDeleting}>
-                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Yes, delete trip"}
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
     </div>
   );
 }
