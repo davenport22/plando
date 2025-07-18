@@ -76,7 +76,7 @@ const generateInvitationEmailFlow = ai.defineFlow(
       <p>Great news! <strong>${input.inviterName}</strong> has invited you to join them in planning the "<strong>${input.tripName}</strong>" trip on Plando.</p>
       <p>Click the button below to sign up or log in. Afterwards, go to the "My Trips" page and enter the following Trip ID to join:</p>
       <p style="font-size: 1.5em; font-weight: bold; letter-spacing: 2px; text-align: center; padding: 10px; border: 1px dashed #ccc; background-color: #f9f9f9;">${input.tripId}</p>
-      <a href="https://plando.app/" style="background-color: #1a73e8; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Go to Plando</a>
+      <a href="https://6000-firebase-studio-1750279304267.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev/" style="background-color: #1a73e8; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Go to Plando</a>
       <p>Happy planning!</p>
       <p>Best,<br>The Plando Team</p>
     `;
