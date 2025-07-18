@@ -165,15 +165,14 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
-        const newTripData = {
+        const docRef = await firestore.collection('trips').add({
             ...tripDetails,
             ownerId: ownerId, 
             participantIds: Array.from(participantIds),
             invitedEmails: emailsToInvite,
             imageUrl: "https://images.unsplash.com/photo-1522881193457-31ae894a5045?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0cmF2ZWwlMjBwbGFubmluZ3xlbnwwfHx8fDE3NTI2OTYyNjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
-        };
+        });
 
-        const docRef = await firestore.collection('trips').add(newTripData);
         const tripId = docRef.id;
 
         if (emailsToInvite.length > 0) {
@@ -424,7 +423,7 @@ export async function resendInvitation(tripId: string, recipientEmail: string, i
   }
 }
 
-export async function joinTripWithId(tripId: string, userId: string | null): Promise<{ success: boolean; error?: string }> {
+export async function joinTripWithId(tripId: string, userId: string): Promise<{ success: boolean; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
     if (!userId) return { success: false, error: 'You must be logged in to join a trip.' };
     
@@ -1254,3 +1253,29 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
     }
 }
 
+export async function removeParticipantFromTrip(tripId: string, participantId: string): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+    try {
+        if (!tripId || !participantId) {
+            return { success: false, error: "Trip ID and participant ID are required." };
+        }
+
+        const tripRef = firestore.collection('trips').doc(tripId);
+        const tripDoc = await tripRef.get();
+
+        if (!tripDoc.exists) return { success: false, error: "Trip not found." };
+
+        const tripData = tripDoc.data() as Trip;
+        if (tripData.ownerId === participantId) return { success: false, error: "The trip owner cannot be removed." };
+
+        await tripRef.update({ participantIds: FieldValue.arrayRemove(participantId) });
+
+        revalidatePath(`/trips/${tripId}`);
+        revalidatePath('/trips');
+        return { success: true };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
