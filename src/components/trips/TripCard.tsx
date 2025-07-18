@@ -16,16 +16,7 @@ export function TripCard({ trip }: TripCardProps) {
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg">
       <CardHeader className="p-0">
         <div className="relative h-48 w-full bg-muted flex items-center justify-center">
-          {trip.imageUrl ? (
-            <Image
-                src={trip.imageUrl}
-                alt={`Image of ${trip.destination}`}
-                fill
-                className="object-cover"
-            />
-          ) : (
-            <PlaneTakeoff className="h-24 w-24 text-muted-foreground/50" />
-          )}
+          <PlaneTakeoff className="h-24 w-24 text-muted-foreground/50" />
         </div>
       </CardHeader>
       <CardContent className="p-6 flex-grow">
