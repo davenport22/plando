@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { X, Loader2, UserPlus, Crown, Mail, Send } from 'lucide-react';
 import { Separator } from '../ui/separator';
+import { useRouter } from 'next/navigation';
 
 interface ParticipantManagerProps {
   trip: Trip;
@@ -20,6 +21,7 @@ interface ParticipantManagerProps {
 export function ParticipantManager({ trip }: ParticipantManagerProps) {
   const { toast } = useToast();
   const { userProfile } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -47,7 +49,13 @@ export function ParticipantManager({ trip }: ParticipantManagerProps) {
     setRemovingId(null);
 
     if (result.success) {
-      toast({ title: 'Participant Removed', description: 'The user has been removed from the trip.' });
+      // Check if the current user removed themselves
+      if (participantId === userProfile?.id) {
+        toast({ title: 'You have left the trip', description: `You have been removed from "${trip.name}".` });
+        router.push('/trips');
+      } else {
+        toast({ title: 'Participant Removed', description: 'The user has been removed from the trip.' });
+      }
     } else {
       toast({ title: 'Error', description: result.error, variant: 'destructive' });
     }
