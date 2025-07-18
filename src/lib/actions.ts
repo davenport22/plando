@@ -449,7 +449,7 @@ export async function resendInvitation(tripId: string, recipientEmail: string, i
   }
 }
 
-export async function joinTripWithId(tripId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+export async function joinTripWithId(tripId: string, userId: string | null): Promise<{ success: boolean; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
     if (!userId) return { success: false, error: 'You must be logged in to join a trip.' };
     
