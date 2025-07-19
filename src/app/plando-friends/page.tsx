@@ -2,25 +2,42 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { Activity } from '@/types';
+import type { Activity, UserProfile } from '@/types';
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Users, RotateCcw, MapPin, PlusCircle } from 'lucide-react';
+import { Loader2, Users, RotateCcw, MapPin, PlusCircle, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { plandoModules } from "@/config/plandoModules";
 import { useLocalActivities } from '@/hooks/useLocalActivities';
 import { useAuth } from '@/context/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
-import { addCustomFriendActivity } from '@/lib/actions';
+import { addCustomFriendActivity, connectFriend, disconnectFriend, getUserProfile } from '@/lib/actions';
+import { FriendConnection } from '@/components/friends/FriendConnection';
+import { Separator } from '@/components/ui/separator';
 
 export default function PlandoFriendsPage() {
   const { toast } = useToast();
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading, refreshUserProfile } = useAuth();
   const friendsModule = plandoModules.find(m => m.id === 'friends');
   const Icon = friendsModule?.Icon || Users;
+
+  const [connectedFriend, setConnectedFriend] = useState<UserProfile | null>(null);
+
+  // Load friend data and then pass it to the activity hook
+  useEffect(() => {
+    if (userProfile?.friendId) {
+        getUserProfile(userProfile.friendId).then(friend => {
+            if (friend) {
+                setConnectedFriend(friend);
+            }
+        });
+    } else {
+        setConnectedFriend(null);
+    }
+  }, [userProfile]);
 
   const { 
     activities, 
@@ -29,7 +46,7 @@ export default function PlandoFriendsPage() {
     locationStatusMessage, 
     currentLocationKey, 
     fetchActivities: fetchNewActivities 
-  } = useLocalActivities('friends', userProfile);
+  } = useLocalActivities('friends', userProfile, connectedFriend);
   
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [showEndOfList, setShowEndOfList] = useState(false);
@@ -38,6 +55,11 @@ export default function PlandoFriendsPage() {
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
   const [isCustomActivityOpen, setIsCustomActivityOpen] = useState(false);
+  
+  // Friend connection state
+  const [friendEmailInput, setFriendEmailInput] = useState("");
+  const [isConnectingFriend, setIsConnectingFriend] = useState(false);
+
 
   useEffect(() => {
     setCurrentActivityIndex(0);
@@ -45,16 +67,11 @@ export default function PlandoFriendsPage() {
   }, [activities]);
 
   const handleVote = (activityId: string, liked: boolean) => {
-    setActivities(prevActivities =>
-      prevActivities.map(act =>
-        act.id === activityId ? { ...act, isLiked: liked } : act
-      )
-    );
-    
+    // This is a placeholder for voting logic. For now, it just advances the card.
     const votedActivity = activities.find(act => act.id === activityId);
     if (votedActivity) {
         toast({
-        title: liked ? "Friend Activity Liked!" : "Friend Activity Skipped",
+        title: liked ? "Activity Liked!" : "Activity Skipped",
         description: `You ${liked ? 'liked' : 'skipped'} "${votedActivity.name}".`,
         });
     }
@@ -72,7 +89,7 @@ export default function PlandoFriendsPage() {
   };
 
   const handleResetDeck = () => {
-    toast({ title: "Resetting Friend Activity Deck...", description: `Reloading activities for ${currentLocationKey}.`});
+    toast({ title: "Resetting Activity Deck...", description: `Reloading activities for ${currentLocationKey}.`});
     fetchNewActivities();
   };
 
@@ -89,6 +106,41 @@ export default function PlandoFriendsPage() {
       } else {
           toast({ title: "Error", description: result.error || "Failed to add custom activity.", variant: "destructive" });
       }
+  };
+
+  const handleConnectFriend = async () => {
+    if (!friendEmailInput.trim() || !userProfile) {
+      toast({ title: "Error", description: "Please enter your friend's email.", variant: "destructive" });
+      return;
+    }
+    if (friendEmailInput.trim().toLowerCase() === userProfile.email.toLowerCase()) {
+      toast({ title: "Oops!", description: "You can't connect with yourself.", variant: "destructive" });
+      return;
+    }
+    setIsConnectingFriend(true);
+    
+    const result = await connectFriend(userProfile.id, friendEmailInput.trim().toLowerCase());
+
+    if (result.success && result.friend) {
+      await refreshUserProfile();
+      toast({ title: "Friend Connected!", description: `You are now connected with ${result.friend.name}.` });
+      setFriendEmailInput("");
+    } else {
+      toast({ title: "Connection Failed", description: result.error || "Please check the email and try again.", variant: "destructive" });
+    }
+    setIsConnectingFriend(false);
+  };
+
+  const handleDisconnectFriend = async () => {
+    if (connectedFriend && userProfile) {
+      const result = await disconnectFriend(userProfile.id);
+      if(result.success) {
+        toast({ title: "Friend Disconnected", description: `You are no longer connected with ${connectedFriend.name}.` });
+        await refreshUserProfile();
+      } else {
+        toast({ title: "Error", description: result.error || "Could not disconnect friend.", variant: "destructive" });
+      }
+    }
   };
   
   const currentActivity = !isLoading && !showEndOfList && activities.length > 0 
@@ -112,10 +164,27 @@ export default function PlandoFriendsPage() {
             <Icon className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-3xl font-headline text-primary">{friendsModule?.name || "Plando Friends"}</CardTitle>
-          <CardDescription className="text-md text-muted-foreground">Discover and swipe on activities to do with friends!</CardDescription>
+          <CardDescription className="text-md text-muted-foreground">
+             {connectedFriend 
+              ? `Finding activities for you and ${connectedFriend.name}!` 
+              : "Discover activities. Connect with a friend to share ideas!"}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center min-h-[480px] p-4 sm:p-6">
-           <div className="mb-4">
+        <CardContent className="flex flex-col items-center justify-center min-h-[520px] p-4 sm:p-6">
+          <div className="mb-6 p-4 border rounded-lg bg-muted/30 w-full">
+             <FriendConnection
+              connectedFriend={connectedFriend}
+              isConnecting={isConnectingFriend}
+              friendEmailInput={friendEmailInput}
+              setFriendEmailInput={setFriendEmailInput}
+              handleConnectFriend={handleConnectFriend}
+              handleDisconnectFriend={handleDisconnectFriend}
+            />
+          </div>
+          
+          <Separator className="my-4" />
+
+          <div className="mb-4">
             <Dialog open={isCustomActivityOpen} onOpenChange={setIsCustomActivityOpen}>
                 <DialogTrigger asChild>
                     <Button variant="outline">
@@ -139,13 +208,21 @@ export default function PlandoFriendsPage() {
                 <span>{locationStatusMessage}</span>
             </div>
           )}
-          {isLoading && activities.length > 0 && ( 
-            <div className="flex flex-col items-center justify-center h-full">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="mt-3 text-sm text-muted-foreground">Reloading friend activities...</p>
-            </div>
-          )}
-          {!isLoading && currentActivity ? (
+          
+           {!connectedFriend ? (
+                <div className="text-center text-muted-foreground space-y-4 py-8">
+                    <UserPlus className="h-20 w-20 mx-auto text-primary/40" />
+                    <p className="text-xl font-semibold text-foreground">Connect with a friend</p>
+                    <p>
+                        Please connect with a friend first to start swiping on activity ideas.
+                    </p>
+                </div>
+            ) : isLoading && activities.length > 0 ? ( 
+              <div className="flex flex-col items-center justify-center h-full">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  <p className="mt-3 text-sm text-muted-foreground">Reloading friend activities...</p>
+              </div>
+          ) : !isLoading && currentActivity ? (
             <div className="w-full max-w-xs sm:max-w-sm">
               <ActivityVotingCard
                 key={currentActivity.id}
@@ -155,7 +232,7 @@ export default function PlandoFriendsPage() {
               />
             </div>
           ) : !isLoading && (
-            <div className="text-center text-muted-foreground space-y-4">
+            <div className="text-center text-muted-foreground space-y-4 py-8">
               <Users className="h-20 w-20 mx-auto text-primary/40" />
               <p className="text-xl">
                 {activities.length === 0 

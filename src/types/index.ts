@@ -13,6 +13,7 @@ export interface UserProfile extends User {
   interests: string[];
   avatarUrl?: string;
   partnerId?: string;
+  friendId?: string; // For 1:1 friend connection
 }
 
 export type ItineraryGenerationRule = 'majority' | 'all';

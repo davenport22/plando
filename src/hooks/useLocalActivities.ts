@@ -11,7 +11,7 @@ type ActivityModuleType = 'friends' | 'meet' | 'couples';
 export function useLocalActivities(
     moduleType: ActivityModuleType, 
     userProfile: UserProfile | null,
-    partnerProfile?: UserProfile | null
+    connectedProfile?: UserProfile | null // Can be partner or friend
 ) {
     const { toast } = useToast();
 
@@ -44,13 +44,13 @@ export function useLocalActivities(
         switch(moduleType) {
             case 'couples':
                 [allActivitiesForLocation, previouslyVotedIds] = await Promise.all([
-                    getCustomCouplesActivities(determinedLocationKey, userProfile.id, partnerProfile?.id),
+                    getCustomCouplesActivities(determinedLocationKey, userProfile.id, connectedProfile?.id),
                     getVotedOnCouplesActivityIds(userProfile.id).then(ids => new Set(ids))
                 ]);
                 break;
             case 'friends':
-                allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey, userProfile.id);
-                // Friends module might have a different voting system, for now we don't filter
+                allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey, userProfile.id, connectedProfile?.id);
+                // For now, friends module doesn't track votes in the same way, so we show all.
                 break;
             case 'meet':
                 allActivitiesForLocation = await getCustomMeetActivities(determinedLocationKey, userProfile.id);
@@ -66,14 +66,14 @@ export function useLocalActivities(
         setVotedActivityIds(previouslyVotedIds);
         setIsLoading(false);
         
-        if (activitiesToShow.length === 0 && allActivitiesForLocation.length > 0) {
+        if (moduleType === 'couples' && activitiesToShow.length === 0 && allActivitiesForLocation.length > 0) {
              toast({ 
                 title: "All Activities Voted On", 
                 description: `You've already seen all available activities for ${determinedLocationKey}!`,
             });
         }
 
-    }, [moduleType, toast, userProfile, partnerProfile]);
+    }, [moduleType, toast, userProfile, connectedProfile]);
     
     useEffect(() => {
         // This effect ensures fetchActivities is only called when userProfile is definitively loaded.

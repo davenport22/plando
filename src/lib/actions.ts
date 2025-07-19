@@ -165,20 +165,12 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
-        let imageUrl: string;
-        try {
-            imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
-        } catch (aiError) {
-            console.warn(`AI image generation failed for trip "${tripDetails.name}", falling back to a placeholder.`, aiError);
-            imageUrl = 'https://placehold.co/1600x900.png';
-        }
-        
         const newTripData = {
             ...tripDetails,
             ownerId: ownerId, 
             participantIds: Array.from(participantIds),
             invitedEmails: emailsToInvite,
-            imageUrl: imageUrl,
+            imageUrl: `https://source.unsplash.com/1600x900/?${encodeURIComponent(tripDetails.destination)}`,
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
@@ -330,8 +322,7 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
 
         const currentTripData = currentTripDoc.data() as Trip;
         if (!currentTripData.imageUrl || currentTripData.destination !== updatedData.destination) {
-            const newImageUrl = await generateDestinationImage({ destination: updatedData.destination || currentTripData.destination });
-            updatedData.imageUrl = newImageUrl;
+            updatedData.imageUrl = `https://source.unsplash.com/1600x900/?${encodeURIComponent(updatedData.destination || currentTripData.destination)}`;
         }
 
         await tripRef.update(updatedData);
@@ -820,6 +811,10 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
             userIdsToQuery.push(partnerId);
         }
 
+        if (module === 'friends' && partnerId) {
+            userIdsToQuery.push(partnerId);
+        }
+
         const q = firestore.collection('activities')
             .where('modules', 'array-contains', module)
             .where('location', '==', locationToQuery)
@@ -835,7 +830,7 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
 }
 
 export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) { return internal_getCustomLocalActivities('couples', location || "Vienna, Austria", userId, partnerId); }
-export async function getCustomFriendActivities(location?: string, userId?: string) { return internal_getCustomLocalActivities('friends', location || "Vienna, Austria", userId); }
+export async function getCustomFriendActivities(location?: string, userId?: string, friendId?: string) { return internal_getCustomLocalActivities('friends', location || "Vienna, Austria", userId, friendId); }
 export async function getCustomMeetActivities(location?: string, userId?: string) { return internal_getCustomLocalActivities('meet', location || "Vienna, Austria", userId); }
 
 export async function markCoupleActivityAsCompleted(
@@ -1287,5 +1282,69 @@ export async function removeParticipantFromTrip(tripId: string, participantId: s
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
+    }
+}
+
+// --- Plando Friends Actions ---
+
+export async function connectFriend(currentUserId: string, friendEmail: string): Promise<{ success: boolean; error?: string; friend?: UserProfile }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+    if (!currentUserId || !friendEmail) return { success: false, error: 'User ID and friend email are required.' };
+
+    try {
+        const [currentUserProfile, friendProfile] = await Promise.all([
+            getUserProfile(currentUserId),
+            findUserByEmail(friendEmail)
+        ]);
+        
+        if (!currentUserProfile) return { success: false, error: "Your user profile could not be found." };
+        if (currentUserProfile.friendId) return { success: false, error: "You are already connected with a friend. Please disconnect first." };
+        
+        if (!friendProfile) return { success: false, error: "Could not find a user with that email address." };
+        if (friendProfile.id === currentUserId) return { success: false, error: "You cannot connect with yourself." };
+        if (friendProfile.friendId) return { success: false, error: `${friendProfile.name} is already connected with someone.` };
+        
+        const userRef = firestore.collection('users').doc(currentUserId);
+        const friendRef = firestore.collection('users').doc(friendProfile.id);
+
+        await userRef.update({ friendId: friendProfile.id });
+        await friendRef.update({ friendId: currentUserId });
+
+        revalidatePath('/plando-friends');
+        return { success: true, friend: friendProfile };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to connect friend: ${errorMessage}` };
+    }
+}
+
+export async function disconnectFriend(currentUserId: string): Promise<{ success: boolean; error?: string }> {
+     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+     if (!currentUserId) return { success: false, error: 'User ID is required.' };
+    
+    try {
+        const currentUserDoc = await firestore.collection('users').doc(currentUserId).get();
+        if (!currentUserDoc.exists) return { success: false, error: 'Current user not found.' };
+
+        const currentUserProfile = currentUserDoc.data() as UserProfile;
+        const friendId = currentUserProfile.friendId;
+
+        await firestore.collection('users').doc(currentUserId).update({
+            friendId: FieldValue.delete()
+        });
+
+        if (friendId) {
+            await firestore.collection('users').doc(friendId).update({
+                friendId: FieldValue.delete()
+            });
+        }
+        
+        revalidatePath('/plando-friends');
+        return { success: true };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to disconnect friend: ${errorMessage}` };
     }
 }

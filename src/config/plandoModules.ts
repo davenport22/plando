@@ -1,4 +1,5 @@
 
+
 import { PlaneTakeoff, Users, Sparkles, Heart, Settings, User as UserIcon, type LucideIcon, CheckSquare } from 'lucide-react';
 
 export interface PlandoThemeColors {
@@ -100,7 +101,7 @@ export const plandoModules: PlandoModuleConfig[] = [
     path: '/plando-friends',
     Icon: Users,
     themeClass: 'theme-plando-friends',
-    disabled: true,
+    disabled: false,
     light: {
       background: "140 65% 96%", 
       foreground: "140 35% 25%", 
