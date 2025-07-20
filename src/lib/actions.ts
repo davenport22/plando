@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { generateSuggestedItinerary, type GenerateSuggestedItineraryInput, type GenerateSuggestedItineraryOutput } from '@/ai/flows/generate-suggested-itinerary';
@@ -603,6 +604,7 @@ export async function updateUserProfile(userId: string, dataToUpdate: Partial<Us
         
         revalidatePath('/profile');
         revalidatePath(`/profile/edit`);
+        revalidatePath('/plando-friends');
 
         return { success: true, updatedProfile };
 
@@ -1298,17 +1300,15 @@ export async function connectFriend(currentUserId: string, friendEmail: string):
         ]);
         
         if (!currentUserProfile) return { success: false, error: "Your user profile could not be found." };
-        if (currentUserProfile.friendId) return { success: false, error: "You are already connected with a friend. Please disconnect first." };
-        
         if (!friendProfile) return { success: false, error: "Could not find a user with that email address." };
         if (friendProfile.id === currentUserId) return { success: false, error: "You cannot connect with yourself." };
-        if (friendProfile.friendId) return { success: false, error: `${friendProfile.name} is already connected with someone.` };
+        if (currentUserProfile.friendIds?.includes(friendProfile.id)) return { success: false, error: `You are already friends with ${friendProfile.name}.`};
         
         const userRef = firestore.collection('users').doc(currentUserId);
         const friendRef = firestore.collection('users').doc(friendProfile.id);
 
-        await userRef.update({ friendId: friendProfile.id });
-        await friendRef.update({ friendId: currentUserId });
+        await userRef.update({ friendIds: FieldValue.arrayUnion(friendProfile.id) });
+        await friendRef.update({ friendIds: FieldValue.arrayUnion(currentUserId) });
 
         revalidatePath('/plando-friends');
         return { success: true, friend: friendProfile };
@@ -1319,26 +1319,19 @@ export async function connectFriend(currentUserId: string, friendEmail: string):
     }
 }
 
-export async function disconnectFriend(currentUserId: string): Promise<{ success: boolean; error?: string }> {
+export async function disconnectFriend(currentUserId: string, friendId: string): Promise<{ success: boolean; error?: string }> {
      if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-     if (!currentUserId) return { success: false, error: 'User ID is required.' };
+     if (!currentUserId || !friendId) return { success: false, error: 'User and friend IDs are required.' };
     
     try {
-        const currentUserDoc = await firestore.collection('users').doc(currentUserId).get();
-        if (!currentUserDoc.exists) return { success: false, error: 'Current user not found.' };
-
-        const currentUserProfile = currentUserDoc.data() as UserProfile;
-        const friendId = currentUserProfile.friendId;
-
-        await firestore.collection('users').doc(currentUserId).update({
-            friendId: FieldValue.delete()
+        const userRef = firestore.collection('users').doc(currentUserId);
+        const friendRef = firestore.collection('users').doc(friendId);
+        
+        await userRef.update({ 
+            friendIds: FieldValue.arrayRemove(friendId),
+            activeFriendId: FieldValue.delete()
         });
-
-        if (friendId) {
-            await firestore.collection('users').doc(friendId).update({
-                friendId: FieldValue.delete()
-            });
-        }
+        await friendRef.update({ friendIds: FieldValue.arrayRemove(currentUserId) });
         
         revalidatePath('/plando-friends');
         return { success: true };
@@ -1346,5 +1339,40 @@ export async function disconnectFriend(currentUserId: string): Promise<{ success
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: `Failed to disconnect friend: ${errorMessage}` };
+    }
+}
+
+export async function getFriendsForUser(userId: string): Promise<UserProfile[]> {
+    if (!isFirebaseInitialized || !userId) return [];
+    try {
+        const user = await getUserProfile(userId);
+        if (!user || !user.friendIds || user.friendIds.length === 0) {
+            return [];
+        }
+
+        const friendDocs = await firestore.collection('users').where(FieldValue.documentId(), 'in', user.friendIds).get();
+        return friendDocs.docs.map(doc => doc.data() as UserProfile);
+
+    } catch (error) {
+        console.error("Error fetching friends for user:", error);
+        return [];
+    }
+}
+
+export async function setActiveFriend(userId: string, friendId: string | null): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized || !userId) return { success: false, error: "User not authenticated."};
+
+    try {
+        const userRef = firestore.collection('users').doc(userId);
+        if (friendId) {
+            await userRef.update({ activeFriendId: friendId });
+        } else {
+            await userRef.update({ activeFriendId: FieldValue.delete() });
+        }
+        revalidatePath('/plando-friends');
+        return { success: true };
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to set active friend: ${errorMessage}` };
     }
 }

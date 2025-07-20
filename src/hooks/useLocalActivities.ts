@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -49,8 +50,12 @@ export function useLocalActivities(
                 ]);
                 break;
             case 'friends':
-                allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey, userProfile.id, connectedProfile?.id);
-                // For now, friends module doesn't track votes in the same way, so we show all.
+                 if (!connectedProfile) {
+                    setIsLoading(false);
+                    return;
+                }
+                allActivitiesForLocation = await getCustomFriendActivities(determinedLocationKey, userProfile.id, connectedProfile.id);
+                // TODO: Implement voting logic for friends
                 break;
             case 'meet':
                 allActivitiesForLocation = await getCustomMeetActivities(determinedLocationKey, userProfile.id);

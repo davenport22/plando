@@ -1,22 +1,23 @@
 
+
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Activity, UserProfile } from '@/types';
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Users, RotateCcw, MapPin, PlusCircle, UserPlus } from 'lucide-react';
+import { Loader2, Users, RotateCcw, MapPin, PlusCircle, UserPlus, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { plandoModules } from "@/config/plandoModules";
 import { useLocalActivities } from '@/hooks/useLocalActivities';
 import { useAuth } from '@/context/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
-import { addCustomFriendActivity, connectFriend, disconnectFriend, getUserProfile } from '@/lib/actions';
-import { FriendConnection } from '@/components/friends/FriendConnection';
+import { addCustomFriendActivity, getFriendsForUser } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
+import { FriendManager } from '@/components/friends/FriendManager';
 
 export default function PlandoFriendsPage() {
   const { toast } = useToast();
@@ -24,29 +25,34 @@ export default function PlandoFriendsPage() {
   const friendsModule = plandoModules.find(m => m.id === 'friends');
   const Icon = friendsModule?.Icon || Users;
 
-  const [connectedFriend, setConnectedFriend] = useState<UserProfile | null>(null);
+  const [friends, setFriends] = useState<UserProfile[]>([]);
+  const [activeFriend, setActiveFriend] = useState<UserProfile | null>(null);
 
-  // Load friend data and then pass it to the activity hook
-  useEffect(() => {
-    if (userProfile?.friendId) {
-        getUserProfile(userProfile.friendId).then(friend => {
-            if (friend) {
-                setConnectedFriend(friend);
-            }
-        });
-    } else {
-        setConnectedFriend(null);
+  const fetchFriends = useCallback(async () => {
+    if (userProfile) {
+      const fetchedFriends = await getFriendsForUser(userProfile.id);
+      setFriends(fetchedFriends);
+      if (userProfile.activeFriendId) {
+        const active = fetchedFriends.find(f => f.id === userProfile.activeFriendId);
+        setActiveFriend(active || null);
+      } else {
+        setActiveFriend(null);
+      }
     }
   }, [userProfile]);
 
+  useEffect(() => {
+    fetchFriends();
+  }, [fetchFriends]);
+
+
   const { 
     activities, 
-    setActivities, 
     isLoading, 
     locationStatusMessage, 
     currentLocationKey, 
     fetchActivities: fetchNewActivities 
-  } = useLocalActivities('friends', userProfile, connectedFriend);
+  } = useLocalActivities('friends', userProfile, activeFriend);
   
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [showEndOfList, setShowEndOfList] = useState(false);
@@ -55,11 +61,6 @@ export default function PlandoFriendsPage() {
   const [isActivityDetailDialogOpen, setIsActivityDetailDialogOpen] = useState(false);
 
   const [isCustomActivityOpen, setIsCustomActivityOpen] = useState(false);
-  
-  // Friend connection state
-  const [friendEmailInput, setFriendEmailInput] = useState("");
-  const [isConnectingFriend, setIsConnectingFriend] = useState(false);
-
 
   useEffect(() => {
     setCurrentActivityIndex(0);
@@ -108,50 +109,20 @@ export default function PlandoFriendsPage() {
       }
   };
 
-  const handleConnectFriend = async () => {
-    if (!friendEmailInput.trim() || !userProfile) {
-      toast({ title: "Error", description: "Please enter your friend's email.", variant: "destructive" });
-      return;
-    }
-    if (friendEmailInput.trim().toLowerCase() === userProfile.email.toLowerCase()) {
-      toast({ title: "Oops!", description: "You can't connect with yourself.", variant: "destructive" });
-      return;
-    }
-    setIsConnectingFriend(true);
-    
-    const result = await connectFriend(userProfile.id, friendEmailInput.trim().toLowerCase());
+  const onFriendsChanged = () => {
+      refreshUserProfile();
+      fetchFriends();
+  }
 
-    if (result.success && result.friend) {
-      await refreshUserProfile();
-      toast({ title: "Friend Connected!", description: `You are now connected with ${result.friend.name}.` });
-      setFriendEmailInput("");
-    } else {
-      toast({ title: "Connection Failed", description: result.error || "Please check the email and try again.", variant: "destructive" });
-    }
-    setIsConnectingFriend(false);
-  };
-
-  const handleDisconnectFriend = async () => {
-    if (connectedFriend && userProfile) {
-      const result = await disconnectFriend(userProfile.id);
-      if(result.success) {
-        toast({ title: "Friend Disconnected", description: `You are no longer connected with ${connectedFriend.name}.` });
-        await refreshUserProfile();
-      } else {
-        toast({ title: "Error", description: result.error || "Could not disconnect friend.", variant: "destructive" });
-      }
-    }
-  };
-  
   const currentActivity = !isLoading && !showEndOfList && activities.length > 0 
     ? activities[currentActivityIndex] 
     : null;
 
-  if (isLoading && activities.length === 0) {
+  if (authLoading) {
     return (
       <div className="container mx-auto py-12 px-4 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">{locationStatusMessage || "Loading local activities for friends..."}</p>
+        <p className="mt-4 text-lg text-muted-foreground">Loading profile...</p>
       </div>
     );
   }
@@ -165,20 +136,18 @@ export default function PlandoFriendsPage() {
           </div>
           <CardTitle className="text-3xl font-headline text-primary">{friendsModule?.name || "Plando Friends"}</CardTitle>
           <CardDescription className="text-md text-muted-foreground">
-             {connectedFriend 
-              ? `Finding activities for you and ${connectedFriend.name}!` 
-              : "Discover activities. Connect with a friend to share ideas!"}
+             {activeFriend 
+              ? `Finding activities for you and ${activeFriend.name}!` 
+              : "Connect with friends and pick one to start swiping!"}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center min-h-[520px] p-4 sm:p-6">
           <div className="mb-6 p-4 border rounded-lg bg-muted/30 w-full">
-             <FriendConnection
-              connectedFriend={connectedFriend}
-              isConnecting={isConnectingFriend}
-              friendEmailInput={friendEmailInput}
-              setFriendEmailInput={setFriendEmailInput}
-              handleConnectFriend={handleConnectFriend}
-              handleDisconnectFriend={handleDisconnectFriend}
+            <FriendManager
+              currentUser={userProfile}
+              friends={friends}
+              activeFriendId={userProfile?.activeFriendId}
+              onFriendsChanged={onFriendsChanged}
             />
           </div>
           
@@ -209,18 +178,18 @@ export default function PlandoFriendsPage() {
             </div>
           )}
           
-           {!connectedFriend ? (
+           {!activeFriend ? (
                 <div className="text-center text-muted-foreground space-y-4 py-8">
                     <UserPlus className="h-20 w-20 mx-auto text-primary/40" />
-                    <p className="text-xl font-semibold text-foreground">Connect with a friend</p>
+                    <p className="text-xl font-semibold text-foreground">No active friend selected</p>
                     <p>
-                        Please connect with a friend first to start swiping on activity ideas.
+                        Please select a friend from your list to start swiping on activity ideas.
                     </p>
                 </div>
-            ) : isLoading && activities.length > 0 ? ( 
+            ) : isLoading ? ( 
               <div className="flex flex-col items-center justify-center h-full">
                   <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  <p className="mt-3 text-sm text-muted-foreground">Reloading friend activities...</p>
+                  <p className="mt-3 text-sm text-muted-foreground">Loading activities for you and {activeFriend.name}...</p>
               </div>
           ) : !isLoading && currentActivity ? (
             <div className="w-full max-w-xs sm:max-w-sm">

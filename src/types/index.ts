@@ -13,7 +13,8 @@ export interface UserProfile extends User {
   interests: string[];
   avatarUrl?: string;
   partnerId?: string;
-  friendId?: string; // For 1:1 friend connection
+  friendIds?: string[]; // For many-to-many friend connections
+  activeFriendId?: string; // ID of the friend currently active for swiping
 }
 
 export type ItineraryGenerationRule = 'majority' | 'all';
