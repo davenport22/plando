@@ -15,7 +15,7 @@ import { useLocalActivities } from '@/hooks/useLocalActivities';
 import { useAuth } from '@/context/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
-import { addCustomFriendActivity, getFriendsForUser } from '@/lib/actions';
+import { addCustomFriendActivity, getFriendsForUser, setActiveFriend } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
 import { FriendManager } from '@/components/friends/FriendManager';
 
@@ -68,7 +68,6 @@ export default function PlandoFriendsPage() {
   }, [activities]);
 
   const handleVote = (activityId: string, liked: boolean) => {
-    // This is a placeholder for voting logic. For now, it just advances the card.
     const votedActivity = activities.find(act => act.id === activityId);
     if (votedActivity) {
         toast({
@@ -109,9 +108,9 @@ export default function PlandoFriendsPage() {
       }
   };
 
-  const onFriendsChanged = () => {
-      refreshUserProfile();
-      fetchFriends();
+  const onConnectionChanged = async () => {
+      await refreshUserProfile();
+      await fetchFriends();
   }
 
   const currentActivity = !isLoading && !showEndOfList && activities.length > 0 
@@ -147,7 +146,7 @@ export default function PlandoFriendsPage() {
               currentUser={userProfile}
               friends={friends}
               activeFriendId={userProfile?.activeFriendId}
-              onFriendsChanged={onFriendsChanged}
+              onConnectionChanged={onConnectionChanged}
             />
           </div>
           

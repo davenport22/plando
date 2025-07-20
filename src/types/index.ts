@@ -6,15 +6,32 @@ export interface User {
   email: string;
 }
 
+export interface ConnectionRequest {
+  fromUserId: string;
+  fromUserName: string;
+  fromUserEmail: string;
+  type: 'partner' | 'friend';
+  status: 'pending';
+  createdAt: string; // ISO String
+}
+
 export interface UserProfile extends User {
   bio: string;
-  location: string; // The user's home city, e.g., "Vienna, Austria". This is used to suggest local activities.
+  location: string;
   memberSince: string;
   interests: string[];
   avatarUrl?: string;
+  
+  // Plando Couples
   partnerId?: string;
-  friendIds?: string[]; // For many-to-many friend connections
-  activeFriendId?: string; // ID of the friend currently active for swiping
+  partnerRequest?: ConnectionRequest | null; // Incoming request
+  sentPartnerRequest?: ConnectionRequest | null; // Outgoing request
+
+  // Plando Friends
+  friendIds?: string[];
+  activeFriendId?: string;
+  friendRequests?: ConnectionRequest[]; // Incoming requests
+  sentFriendRequests?: ConnectionRequest[]; // Outgoing requests
 }
 
 export type ItineraryGenerationRule = 'majority' | 'all';
@@ -22,19 +39,19 @@ export type ItineraryGenerationRule = 'majority' | 'all';
 export interface Trip {
   id: string;
   name: string;
-  destination: string; // The destination city for the trip, e.g., "Paris, France"
+  destination: string;
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   ownerId: string;
   participantIds: string[];
   participants: UserProfile[]; // Will be populated for detailed views
-  invitedEmails?: string[]; // To show pending invitations
-  imageUrl?: string; // Main trip image
+  invitedEmails?: string[];
+  imageUrl?: string;
   itineraryGenerationRule?: ItineraryGenerationRule;
   latitude?: number;
   longitude?: number;
   placeId?: string;
-  syncLocalActivities?: boolean; // New flag to control syncing
+  syncLocalActivities?: boolean;
 }
 
 export interface Activity {
@@ -42,26 +59,24 @@ export interface Activity {
   tripId?: string;
   name: string;
   description?: string;
-  location: string; // The location of the activity, typically within the trip's destination city.
+  location: string;
   duration: number; // in hours
-  isLiked?: boolean; // This is for the CURRENT user's vote status
+  isLiked?: boolean;
   imageUrls: string[];
   category?: 'Must Do' | 'Recommended' | 'Optional';
   startTime?: string; // HH:mm
   likes: number;
   dislikes: number;
-  // Fields that can be enhanced by AI
   suggestedDurationHours?: number;
   bestTimeToVisit?: string;
   estimatedPriceRange?: string;
   address?: string;
   dataAiHint?: string; 
   createdBy?: string;
-  votes?: { [userId: string]: boolean }; // Stored in DB, used to calculate likes/dislikes
-  modules?: ('couples' | 'friends' | 'meet' | 'travel')[]; // An activity can belong to multiple modules
+  votes?: { [userId: string]: boolean };
+  modules?: ('couples' | 'friends' | 'meet' | 'travel')[];
 }
 
-// For AI Flow input
 export interface ActivityInput {
   name: string;
   duration: number;
@@ -79,7 +94,6 @@ export interface Itinerary {
   days: ItineraryDay[];
 }
 
-// For Plando Couples Matches
 export interface MatchedActivity extends Activity {
   matchedDate: string; 
   partnerAlsoLiked: boolean; 

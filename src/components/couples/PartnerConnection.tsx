@@ -3,28 +3,23 @@
 
 import type { UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, UserPlus, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import Link from 'next/link';
-import { findUserByEmail } from '@/lib/actions'; // Import the server action
+import { ConnectionManager } from '@/components/common/ConnectionManager';
 
 interface PartnerConnectionProps {
+    currentUser: UserProfile | null;
     connectedPartner: UserProfile | null;
-    isConnecting: boolean;
-    partnerEmailInput: string;
-    setPartnerEmailInput: (value: string) => void;
-    handleConnectPartner: () => Promise<void>; // Make it async
     handleDisconnectPartner: () => void;
+    onConnectionChanged: () => void;
 }
 
 export function PartnerConnection({
+    currentUser,
     connectedPartner,
-    isConnecting,
-    partnerEmailInput,
-    setPartnerEmailInput,
-    handleConnectPartner,
     handleDisconnectPartner,
+    onConnectionChanged
 }: PartnerConnectionProps) {
     if (connectedPartner) {
         return (
@@ -48,26 +43,12 @@ export function PartnerConnection({
             </div>
         );
     }
-
+    
     return (
-        <>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Connect with Your Partner</h3>
-            <form action={handleConnectPartner} className="flex flex-col sm:flex-row gap-2">
-                <Input
-                    type="email"
-                    name="partnerEmail"
-                    placeholder="Partner's email address"
-                    value={partnerEmailInput}
-                    onChange={(e) => setPartnerEmailInput(e.target.value)}
-                    disabled={isConnecting}
-                    className="flex-grow"
-                />
-                <Button type="submit" disabled={isConnecting || !partnerEmailInput.trim()} className="sm:w-auto">
-                    {isConnecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                    Connect
-                </Button>
-            </form>
-            <p className="text-xs text-muted-foreground mt-2">Enter your partner's Plando email to link accounts.</p>
-        </>
+        <ConnectionManager 
+            connectionType="partner"
+            currentUser={currentUser}
+            onConnectionChanged={onConnectionChanged}
+        />
     );
 }

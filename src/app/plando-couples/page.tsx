@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Activity, UserProfile } from '@/types';
 import { ActivityVotingCard } from '@/components/activities/ActivityVotingCard';
 import { ActivityDetailDialog } from '@/components/activities/ActivityDetailDialog';
@@ -15,7 +15,7 @@ import { plandoModules } from "@/config/plandoModules";
 import Link from 'next/link';
 import { PartnerConnection } from '@/components/couples/PartnerConnection';
 import { useLocalActivities } from '@/hooks/useLocalActivities';
-import { saveCoupleVote, getLikedCouplesActivityIds, connectPartner, disconnectPartner, getUserProfile, addCustomCoupleActivity } from '@/lib/actions';
+import { saveCoupleVote, getLikedCouplesActivityIds, disconnectPartner, getUserProfile, addCustomCoupleActivity } from '@/lib/actions';
 import { useAuth } from '@/context/AuthContext';
 import { CustomActivityForm } from '@/components/activities/CustomActivityForm';
 
@@ -34,32 +34,31 @@ export default function PlandoCouplesPage() {
   
   const [userLikedActivityIds, setUserLikedActivityIds] = useState<string[]>([]);
 
-  // Partner selection state
-  const [partnerEmailInput, setPartnerEmailInput] = useState("");
   const [connectedPartner, setConnectedPartner] = useState<UserProfile | null>(null);
-  const [isConnectingPartner, setIsConnectingPartner] = useState(false);
   const [partnerLikedActivityIds, setPartnerLikedActivityIds] = useState<string[]>([]);
 
-  // Match animation state
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   const [matchedAnimationActivityName, setMatchedAnimationActivityName] = useState<string>("");
 
   const [isCustomActivityOpen, setIsCustomActivityOpen] = useState(false);
 
-  // Load partner data and then pass it to the activity hook
-  useEffect(() => {
+  const fetchPartnerData = useCallback(async () => {
     if (userProfile?.partnerId) {
-        getUserProfile(userProfile.partnerId).then(partner => {
-            if (partner) {
-                setConnectedPartner(partner);
-                getLikedCouplesActivityIds(partner.id).then(setPartnerLikedActivityIds);
-            }
-        });
+        const partner = await getUserProfile(userProfile.partnerId);
+        if (partner) {
+            setConnectedPartner(partner);
+            const likedIds = await getLikedCouplesActivityIds(partner.id);
+            setPartnerLikedActivityIds(likedIds);
+        }
     } else {
         setConnectedPartner(null);
         setPartnerLikedActivityIds([]);
     }
   }, [userProfile]);
+  
+  useEffect(() => {
+    fetchPartnerData();
+  }, [fetchPartnerData]);
 
   const { 
     activities, 
@@ -71,19 +70,14 @@ export default function PlandoCouplesPage() {
     votedActivityIds
   } = useLocalActivities('couples', userProfile, connectedPartner);
   
-  // This effect will run when activities are loaded or reloaded by the hook
   useEffect(() => {
     setCurrentActivityIndex(0);
     setShowEndOfList(activities.length > 0 ? false : true);
   }, [activities]);
 
-  // Load initial data on mount
   useEffect(() => {
     if (userProfile) {
-      // Fetch user's liked IDs from DB
-      getLikedCouplesActivityIds(userProfile.id).then(ids => {
-        setUserLikedActivityIds(ids);
-      });
+      getLikedCouplesActivityIds(userProfile.id).then(setUserLikedActivityIds);
     }
   }, [userProfile]);
 
@@ -109,18 +103,15 @@ export default function PlandoCouplesPage() {
           newSet.delete(activityId);
           return newSet;
       });
-      return; // Stop processing if vote failed to save
+      return; 
     }
 
     if (liked) {
       setUserLikedActivityIds(prev => [...prev, activityId]);
-      // Check for match animation
       if (connectedPartner && partnerLikedActivityIds.includes(votedActivity.id)) {
         setMatchedAnimationActivityName(votedActivity.name);
         setShowMatchAnimation(true);
-        setTimeout(() => {
-          setShowMatchAnimation(false);
-        }, 3500); // Auto-close after 3.5 seconds
+        setTimeout(() => setShowMatchAnimation(false), 3500);
       }
     }
 
@@ -141,41 +132,23 @@ export default function PlandoCouplesPage() {
     fetchNewActivities();
   };
 
-  const handleConnectPartner = async () => {
-    if (!partnerEmailInput.trim() || !userProfile) {
-      toast({ title: "Error", description: "Please enter your partner's email.", variant: "destructive" });
-      return;
-    }
-    if (partnerEmailInput.trim().toLowerCase() === userProfile.email.toLowerCase()) {
-      toast({ title: "Oops!", description: "You can't connect with yourself. Please enter your partner's email.", variant: "destructive" });
-      return;
-    }
-    setIsConnectingPartner(true);
-    
-    const result = await connectPartner(userProfile.id, partnerEmailInput.trim().toLowerCase());
-
-    if (result.success && result.partner) {
-      await refreshUserProfile(); // Refresh auth context which will trigger useEffect to update state
-      toast({ title: "Partner Connected!", description: `You are now connected with ${result.partner.name}.` });
-      setPartnerEmailInput("");
-    } else {
-      toast({ title: "Connection Failed", description: result.error || "Please check the email and try again.", variant: "destructive" });
-    }
-    setIsConnectingPartner(false);
-  };
-
+  const onConnectionChanged = async () => {
+      await refreshUserProfile();
+      await fetchPartnerData();
+  }
+  
   const handleDisconnectPartner = async () => {
     if (connectedPartner && userProfile) {
       const result = await disconnectPartner(userProfile.id);
       if(result.success) {
         toast({ title: "Partner Disconnected", description: `You are no longer connected with ${connectedPartner.name}.` });
-        await refreshUserProfile(); // Refresh auth context which will trigger useEffect
+        onConnectionChanged();
       } else {
         toast({ title: "Error", description: result.error || "Could not disconnect partner.", variant: "destructive" });
       }
     }
   };
-
+  
   const handleAddCustomActivity = async (data: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'participants' | 'category' | 'startTime'>) => {
       if (!userProfile) return;
       const result = await addCustomCoupleActivity(userProfile.id, data);
@@ -185,7 +158,7 @@ export default function PlandoCouplesPage() {
               description: `"${result.activity.name}" has been added and liked. Your partner will see it soon!`,
           });
           setIsCustomActivityOpen(false);
-          fetchNewActivities(); // This function from the hook will refetch all activities
+          fetchNewActivities();
       } else {
           toast({ title: "Error", description: result.error || "Failed to add custom activity.", variant: "destructive" });
       }
@@ -199,11 +172,11 @@ export default function PlandoCouplesPage() {
     ? userLikedActivityIds.filter(id => partnerLikedActivityIds.includes(id)).length
     : 0;
 
-  if ((isLoading && activities.length === 0) || authLoading) { 
+  if (authLoading) { 
     return (
       <div className="container mx-auto py-12 px-4 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">{authLoading ? "Loading your profile..." : locationStatusMessage || "Loading local date ideas..."}</p>
+        <p className="mt-4 text-lg text-muted-foreground">Loading your profile...</p>
       </div>
     );
   }
@@ -226,12 +199,10 @@ export default function PlandoCouplesPage() {
         <CardContent className="px-4 sm:px-6 pb-4">
           <div className="mb-6 p-4 border rounded-lg bg-muted/30">
             <PartnerConnection
+              currentUser={userProfile}
               connectedPartner={connectedPartner}
-              isConnecting={isConnectingPartner}
-              partnerEmailInput={partnerEmailInput}
-              setPartnerEmailInput={setPartnerEmailInput}
-              handleConnectPartner={handleConnectPartner}
               handleDisconnectPartner={handleDisconnectPartner}
+              onConnectionChanged={onConnectionChanged}
             />
           </div>
           
@@ -277,10 +248,10 @@ export default function PlandoCouplesPage() {
                         Please connect with your partner first to start swiping on date ideas together.
                     </p>
                 </div>
-            ) : isLoading && activities.length > 0 ? ( 
+            ) : isLoading && activities.length === 0 ? ( 
               <div className="flex flex-col items-center justify-center h-full">
                   <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  <p className="mt-3 text-sm text-muted-foreground">Reloading date ideas...</p>
+                  <p className="mt-3 text-sm text-muted-foreground">Loading date ideas...</p>
               </div>
             ) : !isLoading && currentActivity ? (
               <div className="w-full max-w-xs sm:max-w-sm">
