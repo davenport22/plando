@@ -8,7 +8,7 @@ import { generateDestinationImage } from '@/ai/flows/generate-destination-image-
 import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-flow';
 import { extractActivityDetailsFromUrl, type ExtractActivityDetailsFromUrlOutput } from '@/ai/flows/extract-activity-details-from-url-flow';
 import { sendEmail } from '@/lib/emailService';
-import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule, type CompletedActivity, ConnectionRequest } from '@/types';
+import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule, type CompletedActivity, type ConnectionRequest } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
@@ -412,7 +412,7 @@ export async function resendInvitation(tripId: string, recipientEmail: string, i
       inviterName,
       tripId,
     });
-    await sendEmail({ to: recipientEmail, subject: emailContent.subject, html: emailContent.body });
+    await sendEmail({ to: email, subject: emailContent.subject, html: emailContent.body });
 
     revalidatePath(`/trips/${tripId}`);
     return { success: true };
@@ -662,24 +662,33 @@ async function internal_sendConnectionRequest(
         }
 
         const request: ConnectionRequest = {
-            fromUserId: fromUserId,
+            fromUserId: toUserId, // Note: This should be the person it's going TO. The receiver sees who it is FROM.
             fromUserName: fromUserProfile.name,
             fromUserEmail: fromUserProfile.email,
             type: type,
             status: 'pending',
             createdAt: new Date().toISOString(),
         };
-        
+
+        const sentRequest: ConnectionRequest = {
+            fromUserId: toUserId,
+            fromUserName: toUserProfile.name,
+            fromUserEmail: toUserProfile.email,
+            type: type,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+        };
+
         const fromUserRef = firestore.collection('users').doc(fromUserId);
         const toUserRef = firestore.collection('users').doc(toUserId);
         
         const batch = firestore.batch();
         
         if (type === 'partner') {
-            batch.update(fromUserRef, { sentPartnerRequest: request });
+            batch.update(fromUserRef, { sentPartnerRequest: sentRequest });
             batch.update(toUserRef, { partnerRequest: request });
         } else {
-            batch.update(fromUserRef, { sentFriendRequests: FieldValue.arrayUnion(request) });
+            batch.update(fromUserRef, { sentFriendRequests: FieldValue.arrayUnion(sentRequest) });
             batch.update(toUserRef, { friendRequests: FieldValue.arrayUnion(request) });
         }
         
