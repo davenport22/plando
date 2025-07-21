@@ -8,7 +8,7 @@ import { generateDestinationImage } from '@/ai/flows/generate-destination-image-
 import { generateInvitationEmail } from '@/ai/flows/generate-invitation-email-flow';
 import { extractActivityDetailsFromUrl, type ExtractActivityDetailsFromUrlOutput } from '@/ai/flows/extract-activity-details-from-url-flow';
 import { sendEmail } from '@/lib/emailService';
-import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule, type CompletedActivity } from '@/types';
+import { type ActivityInput, type Trip, type UserProfile, type Activity, type Itinerary, ItineraryGenerationRule, type CompletedActivity, type ConnectionRequest } from '@/types';
 import { firestore, isFirebaseInitialized } from '@/lib/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
@@ -17,7 +17,13 @@ import { format, parseISO } from 'date-fns';
 import { generateAndStoreActivityImage } from './aiUtils';
 import { getAuth } from 'firebase-admin/auth';
 
-
+/**
+ * Standardized error handler for AI-related operations.
+ * It logs the full error for debugging and returns a user-friendly message.
+ * @param error - The caught error object.
+ * @param defaultMessage - A default message describing the failed operation.
+ * @returns An object containing a user-friendly error string.
+ */
 const handleAIError = (error: unknown, defaultMessage: string): { error: string } => {
     console.error(defaultMessage, error);
     if (error instanceof Error) {
@@ -38,7 +44,15 @@ const handleAIError = (error: unknown, defaultMessage: string): { error: string 
     return { error: "An unknown error occurred." };
 }
 
-// This function will be called from client components to generate the itinerary.
+// =================================================================================
+// --- AI-Powered Actions ---
+// =================================================================================
+
+/**
+ * Generates a suggested itinerary for a trip based on activities that have been voted on by participants.
+ * @param tripId - The ID of the trip to generate an itinerary for.
+ * @returns A promise that resolves to the generated itinerary object or an error object.
+ */
 export async function suggestItineraryAction(
   tripId: string
 ): Promise<GenerateSuggestedItineraryOutput | { error: string }> {
@@ -57,14 +71,14 @@ export async function suggestItineraryAction(
     const rule = trip.itineraryGenerationRule || 'majority';
     const numParticipants = trip.participantIds.length;
     
+    // Filter activities based on the trip's itinerary generation rule.
     const qualifiedActivities = allActivities.filter(act => {
         if (act.likes === 0) return false;
 
         if (rule === 'all') {
             // All participants must have liked it. This implies everyone voted.
             return act.likes === numParticipants;
-        } else { // majority
-            // Of those who voted, a simple majority must have liked it.
+        } else { // 'majority' rule
             const hasMajorityOfVotes = act.likes > act.dislikes;
             
             // A quorum is required: at least half the participants must have voted.
@@ -106,6 +120,11 @@ export async function suggestItineraryAction(
   }
 }
 
+/**
+ * Extracts structured activity details from a given URL using an AI model.
+ * @param url - The URL of the webpage to parse.
+ * @returns A promise resolving to the extracted activity details or an error object.
+ */
 export async function extractActivityDetailsFromUrlAction(
   url: string
 ): Promise<ExtractActivityDetailsFromUrlOutput | { error: string }> {
@@ -125,7 +144,11 @@ export async function extractActivityDetailsFromUrlAction(
   }
 }
 
-// Type for data coming from the NewTripForm
+// =================================================================================
+// --- Trip Actions ---
+// =================================================================================
+
+// Zod schema for validating new trip data from the client.
 const NewTripDataSchema = z.object({
     name: z.string(),
     destination: z.string(),
@@ -136,7 +159,12 @@ const NewTripDataSchema = z.object({
     syncLocalActivities: z.boolean().optional(),
 });
 
-
+/**
+ * Creates a new trip, adds participants, and sends invitations.
+ * @param data - The data for the new trip, validated against NewTripDataSchema.
+ * @param ownerId - The UID of the user creating the trip.
+ * @returns A promise resolving to an object indicating success, with the new tripId or an error.
+ */
 export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerId: string): Promise<{ success: boolean; tripId?: string; error?: string }> {
     if (!isFirebaseInitialized) {
         return { success: false, error: 'Firebase is not initialized. Please check server credentials in .env file.' };
@@ -151,13 +179,11 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             return { success: false, error: "Trip creator's profile not found." };
         }
 
+        // Separate existing users from emails that need an invitation.
         const participantIds = new Set<string>([ownerId]);
         const emailsToInvite: string[] = [];
-
         for (const email of participantEmails) {
-            if (email.toLowerCase() === ownerProfile.email.toLowerCase()) {
-                continue;
-            }
+            if (email.toLowerCase() === ownerProfile.email.toLowerCase()) continue;
             const userToAdd = await findUserByEmail(email);
             if (userToAdd) {
                 participantIds.add(userToAdd.id);
@@ -166,36 +192,39 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
             }
         }
         
+        // Generate a destination image using an AI model.
+        const imageUrl = await generateDestinationImage({ destination: tripDetails.destination });
+
         const newTripData = {
             ...tripDetails,
-            ownerId: ownerId, 
+            ownerId,
             participantIds: Array.from(participantIds),
             invitedEmails: emailsToInvite,
-            imageUrl: `https://source.unsplash.com/1600x900/?${encodeURIComponent(tripDetails.destination)}`,
+            imageUrl,
         };
 
         const docRef = await firestore.collection('trips').add(newTripData);
         const tripId = docRef.id;
 
+        // Asynchronously send invitation emails to new users.
         if (emailsToInvite.length > 0) {
             emailsToInvite.forEach(email => {
                 generateInvitationEmail({
                     recipientEmail: email,
                     tripName: tripDetails.name,
                     inviterName: ownerProfile.name,
-                    tripId: tripId,
+                    tripId,
                 }).then(emailContent => {
                     sendEmail({ to: email, subject: emailContent.subject, html: emailContent.body });
                 }).catch(genError => {
-                    const aiError = handleAIError(genError, "Failed to generate invitation email");
-                    console.error(`Background email generation failed for ${email}: ${aiError.error}`);
+                    console.error(`Background email generation failed for ${email}:`, handleAIError(genError, "Failed to generate invitation email"));
                 });
             });
         }
 
         revalidatePath('/trips');
         revalidatePath(`/trips/${tripId}`);
-        return { success: true, tripId: tripId };
+        return { success: true, tripId };
 
     } catch (e) {
         console.error('Error creating trip:', e);
@@ -207,6 +236,11 @@ export async function createTrip(data: z.infer<typeof NewTripDataSchema>, ownerI
     }
 }
 
+/**
+ * Deletes a trip and all its associated subcollections (activities, itineraries).
+ * @param tripId - The ID of the trip to delete.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
 export async function deleteTrip(tripId: string): Promise<{ success: boolean; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Firebase is not initialized.' };
 
@@ -215,9 +249,9 @@ export async function deleteTrip(tripId: string): Promise<{ success: boolean; er
 
         const tripRef = firestore.collection('trips').doc(tripId);
         
+        // Recursively delete subcollections.
         const activitiesQuery = tripRef.collection('activities').limit(500);
         const itinerariesQuery = tripRef.collection('itineraries').limit(500);
-        
         await new Promise<number>((resolve, reject) => deleteQueryBatch(activitiesQuery, resolve, reject));
         await new Promise<number>((resolve, reject) => deleteQueryBatch(itinerariesQuery, resolve, reject));
         
@@ -232,6 +266,11 @@ export async function deleteTrip(tripId: string): Promise<{ success: boolean; er
 }
 
 
+/**
+ * Retrieves detailed information for a single trip, including populated participant profiles.
+ * @param tripId - The ID of the trip to fetch.
+ * @returns A promise resolving to the Trip object or null if not found.
+ */
 export async function getTrip(tripId: string): Promise<Trip | null> {
     try {
         const tripDoc = await firestore.collection('trips').doc(tripId).get();
@@ -240,6 +279,7 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
         }
         const data = tripDoc.data()!;
 
+        // Fetch profiles for all participant IDs.
         const participantIds = data.participantIds || [];
         const participantProfiles = await Promise.all(
             participantIds.map((id: string) => getUserProfile(id))
@@ -270,10 +310,15 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
     }
 }
 
+/**
+ * Fetches all trips that a given user is a participant of.
+ * @param userId - The UID of the user.
+ * @returns A promise resolving to an object with a list of trips or an error.
+ */
 export async function getTripsForUser(userId: string): Promise<{ success: boolean; trips?: Trip[]; error?: string }> {
     if (!isFirebaseInitialized) {
+        // Attempt to check for a connection error to provide a more helpful message.
         try {
-            const { firestore } = await import('@/lib/firebase');
             await firestore.listCollections();
         } catch (e: any) {
             return { success: false, error: e.message };
@@ -306,24 +351,27 @@ export async function getTripsForUser(userId: string): Promise<{ success: boolea
     }
 }
 
-
+/**
+ * Updates an existing trip's details.
+ * If the destination changes, it automatically generates a new header image.
+ * @param tripId - The ID of the trip to update.
+ * @param data - An object containing the trip fields to update.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
 export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{ success: boolean; error?: string }> {
     try {
-        if (!tripId) {
-            return { success: false, error: "Trip ID is required." };
-        }
+        if (!tripId) return { success: false, error: "Trip ID is required." };
         
         const tripRef = firestore.collection('trips').doc(tripId);
         const currentTripDoc = await tripRef.get();
-        if (!currentTripDoc.exists) {
-            return { success: false, error: "Trip not found." };
-        }
+        if (!currentTripDoc.exists) return { success: false, error: "Trip not found." };
 
         const updatedData = { ...data };
-
         const currentTripData = currentTripDoc.data() as Trip;
-        if (!currentTripData.imageUrl || currentTripData.destination !== updatedData.destination) {
-            updatedData.imageUrl = `https://source.unsplash.com/1600x900/?${encodeURIComponent(updatedData.destination || currentTripData.destination)}`;
+
+        // Generate a new image if the destination changes.
+        if (updatedData.destination && currentTripData.destination !== updatedData.destination) {
+            updatedData.imageUrl = await generateDestinationImage({ destination: updatedData.destination });
         }
 
         await tripRef.update(updatedData);
@@ -342,54 +390,62 @@ export async function updateTrip(tripId: string, data: Partial<Trip>): Promise<{
     }
 }
 
+// =================================================================================
+// --- Participant & Invitation Actions ---
+// =================================================================================
+
+/**
+ * Adds a participant to a trip by email. If the user exists, they are added directly.
+ * If not, an invitation email is sent.
+ * @param tripId - The ID of the trip.
+ * @param email - The email of the user to add/invite.
+ * @param inviterName - The name of the person sending the invitation.
+ * @returns A promise resolving to an object indicating success, with a message or an error.
+ */
 export async function addParticipantToTrip(tripId: string, email: string, inviterName: string): Promise<{ success: boolean; error?: string; message?: string }> {
     try {
         if (!email.trim() || !z.string().email().safeParse(email.trim()).success) {
             return { success: false, error: "Please enter a valid email address." };
         }
         
-        const userToAdd = await findUserByEmail(email);
         const tripRef = firestore.collection('trips').doc(tripId);
+        const tripDoc = await tripRef.get();
+        if (!tripDoc.exists) return { success: false, error: "Trip not found." };
+        const tripData = tripDoc.data() as Trip;
         
-        if (userToAdd) {
-            const tripDoc = await tripRef.get();
-            if (!tripDoc.exists) return { success: false, error: "Trip not found." };
-            const tripData = tripDoc.data() as Trip;
+        const userToAdd = await findUserByEmail(email);
+        
+        if (userToAdd) { // User exists
             if (tripData.participantIds.includes(userToAdd.id)) return { success: false, error: "This user is already a participant." };
     
             await tripRef.update({ 
                 participantIds: FieldValue.arrayUnion(userToAdd.id),
-                invitedEmails: FieldValue.arrayRemove(email)
+                invitedEmails: FieldValue.arrayRemove(email) // Remove from invited list if they were there
             });
     
             revalidatePath(`/trips/${tripId}`);
             return { success: true, message: `${userToAdd.name} has been added to the trip.` };
-        } else {
-            const tripDoc = await tripRef.get();
-            if (!tripDoc.exists) return { success: false, error: "Trip not found." };
-            const tripData = tripDoc.data() as Trip;
-            const tripName = tripData.name;
-
+        } else { // User does not exist, send invitation
             if (tripData.invitedEmails?.includes(email)) {
                 return { success: false, error: "This email has already been invited." };
             }
 
             await tripRef.update({ invitedEmails: FieldValue.arrayUnion(email) });
 
+            // Asynchronously generate and send email.
             generateInvitationEmail({
                 recipientEmail: email,
-                tripName: tripName,
-                inviterName: inviterName,
-                tripId: tripId,
+                tripName: tripData.name,
+                inviterName,
+                tripId,
             }).then(emailContent => {
                 sendEmail({ to: email, subject: emailContent.subject, html: emailContent.body });
             }).catch(genError => {
-                const aiError = handleAIError(genError, "Failed to generate invitation email");
-                console.error(`Background email generation failed for ${email}: ${aiError.error}`);
+                console.error(`Background email generation failed for ${email}:`, handleAIError(genError, "Failed to generate invitation email"));
             });
 
             revalidatePath(`/trips/${tripId}`);
-            return { success: true, message: `User not found. An invitation is being sent to ${email}.` };
+            return { success: true, message: `User not found. An invitation has been sent to ${email}.` };
         }
 
     } catch (error) {
@@ -398,20 +454,20 @@ export async function addParticipantToTrip(tripId: string, email: string, invite
     }
 }
 
+/**
+ * Re-sends an invitation email to a user who has not yet signed up.
+ * @param tripId - The ID of the trip.
+ * @param recipientEmail - The email to resend the invitation to.
+ * @param inviterName - The name of the person sending the invitation.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
 export async function resendInvitation(tripId: string, recipientEmail: string, inviterName: string): Promise<{ success: boolean; error?: string }> {
   try {
     const tripDoc = await firestore.collection('trips').doc(tripId).get();
-    if (!tripDoc.exists) {
-      return { success: false, error: 'Trip not found.' };
-    }
+    if (!tripDoc.exists) return { success: false, error: 'Trip not found.' };
     const tripName = tripDoc.data()!.name;
 
-    const emailContent = await generateInvitationEmail({
-      recipientEmail,
-      tripName,
-      inviterName,
-      tripId,
-    });
+    const emailContent = await generateInvitationEmail({ recipientEmail, tripName, inviterName, tripId });
     await sendEmail({ to: recipientEmail, subject: emailContent.subject, html: emailContent.body });
 
     revalidatePath(`/trips/${tripId}`);
@@ -425,6 +481,12 @@ export async function resendInvitation(tripId: string, recipientEmail: string, i
   }
 }
 
+/**
+ * Allows a logged-in user to join an existing trip using a Trip ID.
+ * @param tripId - The ID of the trip to join.
+ * @param userId - The UID of the user joining the trip.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
 export async function joinTripWithId(tripId: string, userId: string | null): Promise<{ success: boolean; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
     if (!userId) return { success: false, error: 'You must be logged in to join a trip.' };
@@ -432,20 +494,13 @@ export async function joinTripWithId(tripId: string, userId: string | null): Pro
     try {
         const tripRef = firestore.collection('trips').doc(tripId);
         const tripDoc = await tripRef.get();
-
-        if (!tripDoc.exists) {
-            return { success: false, error: 'Trip not found. Please check the ID and try again.' };
-        }
+        if (!tripDoc.exists) return { success: false, error: 'Trip not found. Please check the ID and try again.' };
         
         const tripData = tripDoc.data() as Trip;
-        if (tripData.participantIds.includes(userId)) {
-            return { success: false, error: "You are already a member of this trip." };
-        }
+        if (tripData.participantIds.includes(userId)) return { success: false, error: "You are already a member of this trip." };
         
         const userProfile = await getUserProfile(userId);
-        if (!userProfile) {
-            return { success: false, error: 'Your user profile could not be found.'};
-        }
+        if (!userProfile) return { success: false, error: 'Your user profile could not be found.'};
 
         await tripRef.update({ 
             participantIds: FieldValue.arrayUnion(userId),
@@ -462,121 +517,95 @@ export async function joinTripWithId(tripId: string, userId: string | null): Pro
     }
 }
 
-
-export async function importLocalActivitiesToTrip(tripId: string): Promise<{ success: boolean; error?: string; count: number; }> {
-    if (!isFirebaseInitialized) {
-        return { success: false, error: 'Firebase is not initialized. Cannot import activities.', count: 0 };
-    }
-
+/**
+ * Removes a participant from a trip. The owner cannot be removed.
+ * @param tripId - The ID of the trip.
+ * @param participantId - The UID of the participant to remove.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
+export async function removeParticipantFromTrip(tripId: string, participantId: string): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
     try {
-        const trip = await getTrip(tripId);
-        if (!trip) {
-            return { success: false, error: 'Trip not found.', count: 0 };
-        }
-        if (!trip.destination) {
-            return { success: false, error: 'Trip has no destination set.', count: 0 };
-        }
-        
-        const localActivities = await getCustomCouplesActivities(trip.destination);
-        const tripActivities = await getTripActivities(tripId, trip.ownerId);
+        if (!tripId || !participantId) return { success: false, error: "Trip ID and participant ID are required." };
 
-        const existingActivityNames = new Set(tripActivities.map(a => a.name));
-        const newActivitiesToImport = localActivities.filter(a => !existingActivityNames.has(a.name));
+        const tripRef = firestore.collection('trips').doc(tripId);
+        const tripDoc = await tripRef.get();
+        if (!tripDoc.exists) return { success: false, error: "Trip not found." };
 
-        if (newActivitiesToImport.length === 0) {
-            return { success: true, count: 0 };
-        }
-        
-        const batch = firestore.batch();
-        
-        newActivitiesToImport.forEach(activity => {
-            const newActivityRef = firestore.collection('trips').doc(tripId).collection('activities').doc();
-            const { id, isLiked, ...activityData } = activity;
-            const newTripActivity: Omit<Activity, 'id' | 'isLiked'> = {
-                ...activityData,
-                likes: 0,
-                dislikes: 0,
-                votes: {},
-            };
-            batch.set(newActivityRef, newTripActivity);
-        });
+        const tripData = tripDoc.data() as Trip;
+        if (tripData.ownerId === participantId) return { success: false, error: "The trip owner cannot be removed." };
 
-        await batch.commit();
+        await tripRef.update({ participantIds: FieldValue.arrayRemove(participantId) });
 
         revalidatePath(`/trips/${tripId}`);
-        return { success: true, count: newActivitiesToImport.length };
+        revalidatePath('/trips');
+        return { success: true };
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage, count: 0 };
+        return { success: false, error: errorMessage };
     }
 }
 
+// =================================================================================
+// --- User Profile Actions ---
+// =================================================================================
 
+/**
+ * Retrieves or creates a user profile in Firestore.
+ * If the user is new, it creates a profile with default values.
+ * If they exist, it returns their profile, potentially updating name/avatar from the auth provider.
+ * @param user - The Firebase Auth user object.
+ * @returns A promise resolving to the user's profile and a flag indicating if they were new.
+ */
 export async function getOrCreateUserProfile(user: {
   uid: string;
   email: string | null;
   name: string | null;
   photoURL: string | null;
-}, pendingTripId?: string | null): Promise<{ profile: UserProfile; isNewUser: boolean }> {
-  try {
-    if (!isFirebaseInitialized) {
-      throw new Error('Server not configured. Please ensure Firebase credentials are in your .env file.');
-    }
+}): Promise<{ profile: UserProfile; isNewUser: boolean }> {
+  if (!isFirebaseInitialized) throw new Error('Server not configured. Please ensure Firebase credentials are in your .env file.');
   
-    const userRef = firestore.collection('users').doc(user.uid);
-    const doc = await userRef.get();
+  const userRef = firestore.collection('users').doc(user.uid);
+  const doc = await userRef.get();
 
-    if (doc.exists) {
-      const existingProfile = doc.data() as UserProfile;
-      const updates: Partial<UserProfile> = {};
-      if (user.name && existingProfile.name === 'New User') {
-          updates.name = user.name;
-      }
-      if (user.photoURL && existingProfile.avatarUrl?.includes('avatar.vercel.sh')) {
-          updates.avatarUrl = user.photoURL;
-      }
-
-      if (Object.keys(updates).length > 0) {
-          await userRef.update(updates);
-          const updatedProfile = { ...existingProfile, ...updates };
-          return { profile: updatedProfile, isNewUser: false };
-      }
-
-      return { profile: existingProfile, isNewUser: false };
-    } else {
-      const newUserProfile: UserProfile = {
-        id: user.uid,
-        email: user.email || '',
-        name: user.name || 'New User',
-        avatarUrl: user.photoURL || `https://avatar.vercel.sh/${user.email || user.uid}.png`,
-        bio: '',
-        location: '',
-        memberSince: format(new Date(), 'MMMM yyyy'),
-        interests: [],
-      };
-      await userRef.set(newUserProfile);
-
-      if (pendingTripId) {
-        try {
-            await joinTripWithId(pendingTripId, user.uid);
-        } catch (tripError) {
-            console.error(`Failed to add new user ${user.uid} to trip ${pendingTripId} after registration.`, tripError);
-        }
-      }
-
-      return { profile: newUserProfile, isNewUser: true };
+  if (doc.exists) {
+    const existingProfile = doc.data() as UserProfile;
+    const updates: Partial<UserProfile> = {};
+    if (user.name && existingProfile.name === 'New User') {
+        updates.name = user.name;
     }
-  } catch (error: any) {
-    console.error(`Error getting or creating profile for user ${user.uid}:`, error);
-    if (error.code === 5 || (error.message && error.message.includes("NOT_FOUND"))) {
-        const helpfulError = `The server connected to Firebase, but could not find the Firestore database. Please check your Firestore database location is set to 'europe-west1'.`;
-        throw new Error(helpfulError);
+    if (user.photoURL && existingProfile.avatarUrl?.includes('avatar.vercel.sh')) {
+        updates.avatarUrl = user.photoURL;
     }
-    throw new Error(error instanceof Error ? error.message : "An unknown database error occurred.");
+
+    if (Object.keys(updates).length > 0) {
+        await userRef.update(updates);
+        return { profile: { ...existingProfile, ...updates }, isNewUser: false };
+    }
+
+    return { profile: existingProfile, isNewUser: false };
+  } else {
+    const newUserProfile: UserProfile = {
+      id: user.uid,
+      email: user.email || '',
+      name: user.name || 'New User',
+      avatarUrl: user.photoURL || `https://avatar.vercel.sh/${user.email || user.uid}.png`,
+      bio: '',
+      location: '',
+      memberSince: format(new Date(), 'MMMM yyyy'),
+      interests: [],
+    };
+    await userRef.set(newUserProfile);
+    return { profile: newUserProfile, isNewUser: true };
   }
 }
 
+/**
+ * Fetches a user's profile from Firestore by their UID.
+ * @param userId - The UID of the user to fetch.
+ * @returns A promise resolving to the UserProfile object or null if not found.
+ */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
     if (!isFirebaseInitialized) return null;
     try {
@@ -588,6 +617,12 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
 }
 
+/**
+ * Updates a user's profile in Firestore.
+ * @param userId - The UID of the user to update.
+ * @param dataToUpdate - An object containing the profile fields to update.
+ * @returns A promise resolving to an object with the updated profile or an error.
+ */
 export async function updateUserProfile(userId: string, dataToUpdate: Partial<UserProfile>): Promise<{ success: boolean; error?: string; updatedProfile?: UserProfile }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend is not configured.' };
     if (!userId) return { success: false, error: 'User ID is missing.' };
@@ -602,8 +637,7 @@ export async function updateUserProfile(userId: string, dataToUpdate: Partial<Us
         const updatedProfileDoc = await firestore.collection('users').doc(userId).get();
         const updatedProfile = updatedProfileDoc.data() as UserProfile;
         
-        revalidatePath('/profile');
-        revalidatePath(`/profile/edit`);
+        revalidatePath('/profile', 'layout');
         revalidatePath('/plando-friends');
 
         return { success: true, updatedProfile };
@@ -615,10 +649,14 @@ export async function updateUserProfile(userId: string, dataToUpdate: Partial<Us
     }
 }
 
-
+/**
+ * Finds a user profile by their email address.
+ * @param email - The email to search for.
+ * @returns A promise resolving to the UserProfile object or null if not found.
+ */
 export async function findUserByEmail(email: string): Promise<UserProfile | null> {
     try {
-        const snapshot = await firestore.collection('users').where('email', '==', email).limit(1).get();
+        const snapshot = await firestore.collection('users').where('email', '==', email.toLowerCase()).limit(1).get();
         if (snapshot.empty) return null;
         const userDoc = snapshot.docs[0];
         return { id: userDoc.id, ...userDoc.data() } as UserProfile;
@@ -629,77 +667,232 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
     }
 }
 
-export async function connectPartner(currentUserId: string, partnerEmail: string): Promise<{ success: boolean; error?: string; partner?: UserProfile }> {
+// =================================================================================
+// --- Plando Connection Actions (Partner & Friends) ---
+// =================================================================================
+
+/**
+ * Internal helper to send a connection request (partner or friend).
+ * This function validates the request before creating pending states on both users' documents.
+ * @param fromUserId - The UID of the user sending the request.
+ * @param toEmail - The email of the user to receive the request.
+ * @param type - The type of connection ('partner' or 'friend').
+ * @returns A promise resolving to an object indicating success or an error.
+ */
+async function internal_sendConnectionRequest(
+    fromUserId: string, 
+    toEmail: string, 
+    type: 'partner' | 'friend'
+): Promise<{ success: boolean; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-    if (!currentUserId || !partnerEmail) return { success: false, error: 'User ID and partner email are required.' };
+    if (!fromUserId || !toEmail) return { success: false, error: 'User ID and recipient email are required.' };
 
     try {
-        const [currentUserProfile, partnerProfile] = await Promise.all([
-            getUserProfile(currentUserId),
-            findUserByEmail(partnerEmail)
+        const [fromUserProfile, toUserProfile] = await Promise.all([
+            getUserProfile(fromUserId),
+            findUserByEmail(toEmail)
         ]);
         
-        if (!currentUserProfile) {
-            return { success: false, error: "Your user profile could not be found." };
-        }
+        // --- Start Validation ---
+        if (!fromUserProfile) return { success: false, error: "Your user profile could not be found." };
+        if (!toUserProfile) return { success: false, error: "Could not find a user with that email address." };
 
-        if (currentUserProfile.partnerId) {
-            const currentPartner = await getUserProfile(currentUserProfile.partnerId);
-            return { success: false, error: `You are already connected with ${currentPartner?.name || 'a partner'}. Please disconnect first.` };
+        const toUserId = toUserProfile.id;
+
+        if (fromUserId === toUserId) return { success: false, error: "You cannot send a request to yourself." };
+
+        if (type === 'partner') {
+            if (fromUserProfile.partnerId) return { success: false, error: "You are already connected with a partner." };
+            if (toUserProfile.partnerId) return { success: false, error: `${toUserProfile.name} is already connected with a partner.` };
+            if (fromUserProfile.sentPartnerRequest) return { success: false, error: `You already have a pending partner request sent to ${fromUserProfile.sentPartnerRequest.fromUserEmail}.` };
+            if (toUserProfile.partnerRequest) return { success: false, error: `${toUserProfile.name} already has a pending partner request.` };
+        } else { // 'friend' type
+            if (fromUserProfile.friendIds?.includes(toUserId)) return { success: false, error: `You are already friends with ${toUserProfile.name}.`};
+            if (fromUserProfile.sentFriendRequests?.some(r => r.fromUserId === toUserId)) return { success: false, error: `You have already sent a friend request to ${toUserProfile.name}.`};
+            if (fromUserProfile.friendRequests?.some(r => r.fromUserId === toUserId)) return { success: false, error: `You have a pending friend request from ${toUserProfile.name}. Please respond to it.`};
+        }
+        // --- End Validation ---
+
+        // Create the request object for the recipient
+        const requestForRecipient: ConnectionRequest = {
+            fromUserId: fromUserId, 
+            fromUserName: fromUserProfile.name,
+            fromUserEmail: fromUserProfile.email,
+            type,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+        };
+
+        // Create the request object for the sender to track
+        const requestForSender: ConnectionRequest = {
+            fromUserId: toUserId,
+            fromUserName: toUserProfile.name,
+            fromUserEmail: toUserProfile.email,
+            type,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+        };
+
+        const fromUserRef = firestore.collection('users').doc(fromUserId);
+        const toUserRef = firestore.collection('users').doc(toUserId);
+        
+        const batch = firestore.batch();
+        
+        if (type === 'partner') {
+            batch.update(fromUserRef, { sentPartnerRequest: requestForSender });
+            batch.update(toUserRef, { partnerRequest: requestForRecipient });
+        } else {
+            batch.update(fromUserRef, { sentFriendRequests: FieldValue.arrayUnion(requestForSender) });
+            batch.update(toUserRef, { friendRequests: FieldValue.arrayUnion(requestForRecipient) });
         }
         
-        if (!partnerProfile) {
-            return { success: false, error: "Could not find a user with that email address." };
-        }
+        await batch.commit();
 
-        if (partnerProfile.id === currentUserId) {
-            return { success: false, error: "You cannot connect with yourself." };
-        }
-
-        if (partnerProfile.partnerId) {
-            const theirPartner = await getUserProfile(partnerProfile.partnerId);
-            return { success: false, error: `${partnerProfile.name} is already connected with ${theirPartner?.name || 'someone'}.` };
-        }
-        
-        const userRef = firestore.collection('users').doc(currentUserId);
-        const partnerRef = firestore.collection('users').doc(partnerProfile.id);
-
-        await userRef.update({ partnerId: partnerProfile.id });
-        await partnerRef.update({ partnerId: currentUserId });
-
-        revalidatePath('/plando-couples');
-        
-        return { success: true, partner: partnerProfile };
+        revalidatePath(`/plando-${type === 'partner' ? 'couples' : 'friends'}`);
+        return { success: true };
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: `Failed to connect partner: ${errorMessage}` };
+        return { success: false, error: `Failed to send request: ${errorMessage}` };
     }
 }
 
+/**
+ * Sends a partner connection request from one user to another.
+ * @param fromUserId - The UID of the sender.
+ * @param toEmail - The email of the recipient.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
+export async function sendPartnerRequest(fromUserId: string, toEmail: string) {
+    return internal_sendConnectionRequest(fromUserId, toEmail, 'partner');
+}
 
+/**
+ * Sends a friend connection request from one user to another.
+ * @param fromUserId - The UID of the sender.
+ * @param toEmail - The email of the recipient.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
+export async function sendFriendRequest(fromUserId: string, toEmail: string) {
+    return internal_sendConnectionRequest(fromUserId, toEmail, 'friend');
+}
+
+/**
+ * Cancels a pending connection request sent by the current user.
+ * @param currentUserId - The UID of the user canceling the request.
+ * @param toUserId - The UID of the user the request was sent to.
+ * @param type - The type of connection ('partner' or 'friend').
+ * @returns A promise resolving to an object indicating success or an error.
+ */
+export async function cancelConnectionRequest(currentUserId: string, toUserId: string, type: 'partner' | 'friend'): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+    
+    try {
+        const fromUserRef = firestore.collection('users').doc(currentUserId);
+        const toUserRef = firestore.collection('users').doc(toUserId);
+        const batch = firestore.batch();
+
+        if (type === 'partner') {
+            batch.update(fromUserRef, { sentPartnerRequest: FieldValue.delete() });
+            batch.update(toUserRef, { partnerRequest: FieldValue.delete() });
+        } else {
+            const fromUserDoc = await fromUserRef.get();
+            const fromUserData = fromUserDoc.data() as UserProfile;
+            const updatedSentRequests = fromUserData.sentFriendRequests?.filter(req => req.fromUserId !== toUserId) || [];
+            batch.update(fromUserRef, { sentFriendRequests: updatedSentRequests });
+
+            const toUserDoc = await toUserRef.get();
+            const toUserData = toUserDoc.data() as UserProfile;
+            const updatedIncomingRequests = toUserData.friendRequests?.filter(req => req.fromUserId !== currentUserId) || [];
+            batch.update(toUserRef, { friendRequests: updatedIncomingRequests });
+        }
+
+        await batch.commit();
+        revalidatePath(`/plando-${type === 'partner' ? 'couples' : 'friends'}`);
+        return { success: true };
+    } catch(error) {
+         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to cancel request: ${errorMessage}` };
+    }
+}
+
+/**
+ * Responds to an incoming connection request.
+ * @param currentUserId - The UID of the user responding to the request.
+ * @param fromUserId - The UID of the user who sent the request.
+ * @param response - The response, either 'accepted' or 'declined'.
+ * @param type - The type of connection ('partner' or 'friend').
+ * @returns A promise resolving to an object indicating success or an error.
+ */
+export async function respondToConnectionRequest(currentUserId: string, fromUserId: string, response: 'accepted' | 'declined', type: 'partner' | 'friend'): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+
+    try {
+        const currentUserRef = firestore.collection('users').doc(currentUserId);
+        const fromUserRef = firestore.collection('users').doc(fromUserId);
+        const batch = firestore.batch();
+
+        if (type === 'partner') {
+            batch.update(currentUserRef, { partnerRequest: FieldValue.delete() });
+            batch.update(fromUserRef, { sentPartnerRequest: FieldValue.delete() });
+            
+            if (response === 'accepted') {
+                batch.update(currentUserRef, { partnerId: fromUserId });
+                batch.update(fromUserRef, { partnerId: currentUserId });
+            }
+        } else {
+            const currentUserDoc = await currentUserRef.get();
+            const fromUserDoc = await fromUserRef.get();
+            if (!currentUserDoc.exists || !fromUserDoc.exists) {
+                return { success: false, error: "One of the users in the request could not be found." };
+            }
+
+            const currentUserData = currentUserDoc.data() as UserProfile;
+            const updatedIncomingRequests = currentUserData.friendRequests?.filter(req => req.fromUserId !== fromUserId) || [];
+            batch.update(currentUserRef, { friendRequests: updatedIncomingRequests });
+
+            const fromUserData = fromUserDoc.data() as UserProfile;
+            const updatedSentRequests = fromUserData.sentFriendRequests?.filter(req => req.fromUserId !== currentUserId) || [];
+            batch.update(fromUserRef, { sentFriendRequests: updatedSentRequests });
+
+            if (response === 'accepted') {
+                batch.update(currentUserRef, { friendIds: FieldValue.arrayUnion(fromUserId) });
+                batch.update(fromUserRef, { friendIds: FieldValue.arrayUnion(currentUserId) });
+            }
+        }
+
+        await batch.commit();
+        revalidatePath(`/plando-${type === 'partner' ? 'couples' : 'friends'}`);
+        return { success: true };
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to respond to request: ${errorMessage}` };
+    }
+}
+
+/**
+ * Disconnects a partner connection between two users.
+ * @param currentUserId - The UID of the user initiating the disconnection.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
 export async function disconnectPartner(currentUserId: string): Promise<{ success: boolean; error?: string }> {
      if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
      if (!currentUserId) return { success: false, error: 'User ID is required.' };
     
     try {
         const currentUserDoc = await firestore.collection('users').doc(currentUserId).get();
-        if (!currentUserDoc.exists) {
-            return { success: false, error: 'Current user not found.' };
-        }
+        if (!currentUserDoc.exists) return { success: false, error: 'Current user not found.' };
 
         const currentUserProfile = currentUserDoc.data() as UserProfile;
         const partnerId = currentUserProfile.partnerId;
 
-        await firestore.collection('users').doc(currentUserId).update({
-            partnerId: FieldValue.delete()
-        });
-
+        // Atomically remove the partnerId from both users.
+        const batch = firestore.batch();
+        batch.update(firestore.collection('users').doc(currentUserId), { partnerId: FieldValue.delete() });
         if (partnerId) {
-            await firestore.collection('users').doc(partnerId).update({
-                partnerId: FieldValue.delete()
-            });
+            batch.update(firestore.collection('users').doc(partnerId), { partnerId: FieldValue.delete() });
         }
+        await batch.commit();
         
         revalidatePath('/plando-couples');
         return { success: true };
@@ -710,34 +903,93 @@ export async function disconnectPartner(currentUserId: string): Promise<{ succes
     }
 }
 
-export async function saveCoupleVote(userId: string, activityId: string, liked: boolean): Promise<{ success: boolean; error?: string }> {
+/**
+ * Disconnects a friend connection between two users.
+ * @param currentUserId - The UID of the user initiating the disconnection.
+ * @param friendId - The UID of the friend to disconnect from.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
+export async function disconnectFriend(currentUserId: string, friendId: string): Promise<{ success: boolean; error?: string }> {
+     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
+     if (!currentUserId || !friendId) return { success: false, error: 'User and friend IDs are required.' };
+    
     try {
-        await firestore.collection('users').doc(userId).collection('couplesVotes').doc(activityId).set({ liked, votedAt: new Date().toISOString() });
+        const userRef = firestore.collection('users').doc(currentUserId);
+        const friendRef = firestore.collection('users').doc(friendId);
+        
+        const batch = firestore.batch();
+        batch.update(userRef, { 
+            friendIds: FieldValue.arrayRemove(friendId),
+            activeFriendId: FieldValue.delete() // Also clear active friend if they are the one being removed.
+        });
+        batch.update(friendRef, { friendIds: FieldValue.arrayRemove(currentUserId) });
+        await batch.commit();
+        
+        revalidatePath('/plando-friends');
         return { success: true };
+
     } catch (error) {
-        return { success: false, error: 'Failed to save your vote to the database.' };
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to disconnect friend: ${errorMessage}` };
     }
 }
 
-export async function getLikedCouplesActivityIds(userId: string): Promise<string[]> {
+/**
+ * Fetches the profiles of all friends for a given user.
+ * @param userId - The UID of the user.
+ * @returns A promise resolving to an array of UserProfile objects.
+ */
+export async function getFriendsForUser(userId: string): Promise<UserProfile[]> {
+    if (!isFirebaseInitialized || !userId) return [];
     try {
-        const snapshot = await firestore.collection('users').doc(userId).collection('couplesVotes').where('liked', '==', true).get();
-        return snapshot.docs.map(doc => doc.id);
+        const user = await getUserProfile(userId);
+        if (!user || !user.friendIds || user.friendIds.length === 0) return [];
+
+        const friendDocs = await firestore.collection('users').where(FieldValue.documentId(), 'in', user.friendIds).get();
+        return friendDocs.docs.map(doc => doc.data() as UserProfile);
+
     } catch (error) {
+        console.error("Error fetching friends for user:", error);
         return [];
     }
 }
 
-export async function getVotedOnCouplesActivityIds(userId: string): Promise<string[]> {
+/**
+ * Sets or unsets the active friend for a user, used for Plando Friends swiping.
+ * @param userId - The UID of the current user.
+ * @param friendId - The UID of the friend to set as active, or null to deactivate.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
+export async function setActiveFriend(userId: string, friendId: string | null): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseInitialized || !userId) return { success: false, error: "User not authenticated."};
+
     try {
-        const snapshot = await firestore.collection('users').doc(userId).collection('couplesVotes').get();
-        return snapshot.docs.map(doc => doc.id);
-    } catch (error) {
-        console.error(`Error fetching voted-on couples activity IDs for user ${userId}:`, error);
-        return [];
+        const userRef = firestore.collection('users').doc(userId);
+        if (friendId) {
+            await userRef.update({ activeFriendId: friendId });
+        } else {
+            await userRef.update({ activeFriendId: FieldValue.delete() });
+        }
+        revalidatePath('/plando-friends');
+        return { success: true };
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to set active friend: ${errorMessage}` };
     }
 }
 
+// =================================================================================
+// --- Plando Local Modules (Couples, Friends, Meet) Actions ---
+// =================================================================================
+
+/**
+ * Internal helper to add a custom activity to the global `activities` collection.
+ * This activity will be available in the specified Plando module.
+ * @param userId - The UID of the user creating the activity.
+ * @param module - The module to associate the activity with.
+ * @param activityData - The core data for the new activity.
+ * @returns A promise resolving to the created Activity object or an error.
+ */
 async function internal_addCustomLocalActivity(
   userId: string,
   module: 'couples' | 'friends' | 'meet',
@@ -749,27 +1001,9 @@ async function internal_addCustomLocalActivity(
   try {
     const newActivityRef = firestore.collection('activities').doc();
     
-    let imageUrl: string;
-    try {
-        imageUrl = await generateAndStoreActivityImage(
-            activityData.name,
-            activityData.location,
-            activityData.dataAiHint,
-        );
-    } catch (aiError) {
-        console.warn(`AI image generation failed for activity "${activityData.name}", falling back to a placeholder.`, aiError);
-        imageUrl = `https://placehold.co/400x250.png`;
-    }
-
-    let enhancedDetails = {};
-    try {
-      enhancedDetails = await generateActivityDescription({
-        activityName: activityData.name,
-        location: activityData.location,
-      });
-    } catch(aiError) {
-      console.warn(`AI description generation failed for activity "${activityData.name}".`);
-    }
+    // Generate an image and description with AI.
+    const imageUrl = await generateAndStoreActivityImage(activityData.name, activityData.location, activityData.dataAiHint);
+    const enhancedDetails = await generateActivityDescription({ activityName: activityData.name, location: activityData.location });
 
     const newActivity: Activity = {
         ...(activityData as Omit<Activity, 'id'>),
@@ -784,6 +1018,7 @@ async function internal_addCustomLocalActivity(
 
     await newActivityRef.set(newActivity);
 
+    // If it's a couples activity, the creator automatically "likes" it.
     if (module === 'couples') {
       await saveCoupleVote(userId, newActivity.id, true);
     }
@@ -797,25 +1032,32 @@ async function internal_addCustomLocalActivity(
   }
 }
 
+/** Adds a custom activity for the Plando Couples module. */
 export async function addCustomCoupleActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'couples', data); }
+/** Adds a custom activity for the Plando Friends module. */
 export async function addCustomFriendActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'friends', data); }
+/** Adds a custom activity for the Plando Meet module. */
 export async function addCustomMeetActivity(userId: string, data: any) { return internal_addCustomLocalActivity(userId, 'meet', data); }
 
-async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location: string, userId?: string, partnerId?: string): Promise<Activity[]> {
+
+/**
+ * Internal helper to retrieve local activities for a specific module and location.
+ * It fetches activities created by the system, the current user, and their connected partner/friend.
+ * @param module - The module ('couples', 'friends', 'meet').
+ * @param location - The city to search for activities in.
+ * @param userId - The current user's UID.
+ * @param connectedId - The UID of the connected partner or friend.
+ * @returns A promise resolving to an array of Activity objects.
+ */
+async function internal_getCustomLocalActivities(module: 'couples' | 'friends' | 'meet', location: string, userId?: string, connectedId?: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
         const locationToQuery = location || "Vienna, Austria";
 
+        // Query activities created by the system, the user, or their connected partner/friend.
         const userIdsToQuery: string[] = ['system'];
         if (userId) userIdsToQuery.push(userId);
-        
-        if (module === 'couples' && partnerId) {
-            userIdsToQuery.push(partnerId);
-        }
-
-        if (module === 'friends' && partnerId) {
-            userIdsToQuery.push(partnerId);
-        }
+        if (connectedId) userIdsToQuery.push(connectedId);
 
         const q = firestore.collection('activities')
             .where('modules', 'array-contains', module)
@@ -831,10 +1073,67 @@ async function internal_getCustomLocalActivities(module: 'couples' | 'friends' |
     }
 }
 
+/** Fetches local activities for the Plando Couples module. */
 export async function getCustomCouplesActivities(location?: string, userId?: string, partnerId?: string) { return internal_getCustomLocalActivities('couples', location || "Vienna, Austria", userId, partnerId); }
+/** Fetches local activities for the Plando Friends module. */
 export async function getCustomFriendActivities(location?: string, userId?: string, friendId?: string) { return internal_getCustomLocalActivities('friends', location || "Vienna, Austria", userId, friendId); }
+/** Fetches local activities for the Plando Meet module. */
 export async function getCustomMeetActivities(location?: string, userId?: string) { return internal_getCustomLocalActivities('meet', location || "Vienna, Austria", userId); }
 
+
+/**
+ * Saves a user's vote (like/dislike) for a Plando Couples activity.
+ * @param userId - The UID of the user voting.
+ * @param activityId - The ID of the activity being voted on.
+ * @param liked - A boolean indicating if the activity was liked (true) or disliked (false).
+ * @returns A promise resolving to an object indicating success or an error.
+ */
+export async function saveCoupleVote(userId: string, activityId: string, liked: boolean): Promise<{ success: boolean; error?: string }> {
+    try {
+        await firestore.collection('users').doc(userId).collection('couplesVotes').doc(activityId).set({ liked, votedAt: new Date().toISOString() });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: 'Failed to save your vote to the database.' };
+    }
+}
+
+/**
+ * Retrieves a list of activity IDs that a user has liked in the Plando Couples module.
+ * @param userId - The UID of the user.
+ * @returns A promise resolving to an array of activity IDs.
+ */
+export async function getLikedCouplesActivityIds(userId: string): Promise<string[]> {
+    try {
+        const snapshot = await firestore.collection('users').doc(userId).collection('couplesVotes').where('liked', '==', true).get();
+        return snapshot.docs.map(doc => doc.id);
+    } catch (error) {
+        return [];
+    }
+}
+
+/**
+ * Retrieves a list of all activity IDs a user has voted on (liked or disliked) in Plando Couples.
+ * @param userId - The UID of the user.
+ * @returns A promise resolving to an array of activity IDs.
+ */
+export async function getVotedOnCouplesActivityIds(userId: string): Promise<string[]> {
+    try {
+        const snapshot = await firestore.collection('users').doc(userId).collection('couplesVotes').get();
+        return snapshot.docs.map(doc => doc.id);
+    } catch (error) {
+        console.error(`Error fetching voted-on couples activity IDs for user ${userId}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Marks a Plando Couples activity as completed for both partners and moves it to their history.
+ * @param userId - The UID of the current user.
+ * @param partnerId - The UID of the partner.
+ * @param activity - The activity object to mark as completed.
+ * @param wouldDoAgain - If true, removes the activity from their voted list so it can reappear in the future.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
 export async function markCoupleActivityAsCompleted(
   userId: string,
   partnerId: string,
@@ -842,9 +1141,7 @@ export async function markCoupleActivityAsCompleted(
   wouldDoAgain: boolean
 ): Promise<{ success: boolean; error?: string }> {
   if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-  if (!userId || !partnerId || !activity || !activity.id) {
-    return { success: false, error: 'Missing required IDs or activity data to complete this action.' };
-  }
+  if (!userId || !partnerId || !activity?.id) return { success: false, error: 'Missing required IDs or activity data.' };
 
   try {
     const batch = firestore.batch();
@@ -854,23 +1151,19 @@ export async function markCoupleActivityAsCompleted(
         completedDate: new Date().toISOString()
     };
     
-    const userCompletedRef = firestore.collection('users').doc(userId).collection('completedCouplesActivities').doc(activity.id);
-    const partnerCompletedRef = firestore.collection('users').doc(partnerId).collection('completedCouplesActivities').doc(activity.id);
-
-    batch.set(userCompletedRef, completedActivityData);
-    batch.set(partnerCompletedRef, completedActivityData);
+    // Add to both users' completed history
+    batch.set(firestore.collection('users').doc(userId).collection('completedCouplesActivities').doc(activity.id), completedActivityData);
+    batch.set(firestore.collection('users').doc(partnerId).collection('completedCouplesActivities').doc(activity.id), completedActivityData);
     
+    // If they would do it again, remove it from their voting history so it can reappear.
     if (wouldDoAgain) {
-      const userVoteRef = firestore.collection('users').doc(userId).collection('couplesVotes').doc(activity.id);
-      const partnerVoteRef = firestore.collection('users').doc(partnerId).collection('couplesVotes').doc(activity.id);
-      batch.delete(userVoteRef);
-      batch.delete(partnerVoteRef);
+      batch.delete(firestore.collection('users').doc(userId).collection('couplesVotes').doc(activity.id));
+      batch.delete(firestore.collection('users').doc(partnerId).collection('couplesVotes').doc(activity.id));
     }
     
     await batch.commit();
 
     revalidatePath('/plando-couples/matches');
-
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -879,6 +1172,11 @@ export async function markCoupleActivityAsCompleted(
   }
 }
 
+/**
+ * Fetches the list of completed activities for a user in the Plando Couples module.
+ * @param userId - The UID of the user.
+ * @returns A promise resolving to an array of CompletedActivity objects.
+ */
 export async function getCompletedCouplesActivities(userId: string): Promise<CompletedActivity[]> {
     if (!isFirebaseInitialized || !userId) return [];
     try {
@@ -890,8 +1188,17 @@ export async function getCompletedCouplesActivities(userId: string): Promise<Com
     }
 }
 
-// --- Trip Activities Actions ---
+// =================================================================================
+// --- Trip-Specific Activity Actions ---
+// =================================================================================
 
+/**
+ * Retrieves all activities for a given trip. This includes activities created specifically for the trip
+ * and, if enabled, local activities from the trip's destination.
+ * @param tripId - The ID of the trip.
+ * @param userId - The UID of the current user, used to determine their vote status on each activity.
+ * @returns A promise resolving to an array of Activity objects.
+ */
 export async function getTripActivities(tripId: string, userId: string): Promise<Activity[]> {
     if (!isFirebaseInitialized) return [];
     try {
@@ -904,32 +1211,29 @@ export async function getTripActivities(tripId: string, userId: string): Promise
 
         const activitiesMap = new Map<string, Activity>();
 
+        // 1. Get activities created specifically for this trip.
         const tripActivitiesSnapshot = await firestore.collection('trips').doc(tripId).collection('activities').get();
-        
         tripActivitiesSnapshot.docs.forEach(doc => {
             const data = doc.data();
-            const votes = data.votes || {};
-            const activity = { 
+            activitiesMap.set(doc.id, { 
                 ...data, 
                 id: doc.id,
                 likes: data.likes || 0,
                 dislikes: data.dislikes || 0,
-                isLiked: votes[userId],
-            } as Activity;
-            activitiesMap.set(doc.id, activity);
+                isLiked: data.votes?.[userId],
+            } as Activity);
         });
 
+        // 2. If enabled, also fetch and merge local activities from the destination city.
         if (tripData.syncLocalActivities && tripData.destination) {
             const localActivitiesSnapshot = await firestore.collection('activities').where('location', '==', tripData.destination).get();
-            
             localActivitiesSnapshot.docs.forEach(doc => {
                 if (!activitiesMap.has(doc.id)) {
-                     const localActivity = doc.data() as Activity;
                      activitiesMap.set(doc.id, {
-                        ...localActivity,
+                        ...(doc.data() as Activity),
                         id: doc.id,
-                        tripId: tripId,
-                        isLiked: undefined,
+                        tripId,
+                        isLiked: undefined, // Not yet voted on in the context of this trip
                         likes: 0,
                         dislikes: 0,
                         votes: {},
@@ -946,6 +1250,13 @@ export async function getTripActivities(tripId: string, userId: string): Promise
 }
 
 
+/**
+ * Adds a new custom activity to a specific trip's activity list.
+ * @param tripId - The ID of the trip.
+ * @param activityData - The core data for the new activity.
+ * @param creatorId - The UID of the user creating the activity.
+ * @returns A promise resolving to the created Activity object or an error.
+ */
 export async function addTripActivity(
   tripId: string,
   activityData: Omit<Activity, 'id' | 'isLiked' | 'tripId' | 'imageUrls' | 'likes' | 'dislikes' | 'votes' | 'category' | 'startTime' | 'participants' | 'modules'>,
@@ -953,38 +1264,16 @@ export async function addTripActivity(
 ): Promise<{ success: boolean; newActivity?: Activity; error?: string }> {
     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.'};
     try {
-        const { id, ...data } = activityData as any;
-        
-        let imageUrl: string; 
-        try {
-            imageUrl = await generateAndStoreActivityImage(
-                data.name,
-                data.location,
-                data.dataAiHint,
-            );
-        } catch(aiError) {
-             console.warn(`AI image generation failed for activity "${data.name}", falling back to a placeholder.`, aiError);
-             imageUrl = `https://placehold.co/400x250.png`;
-        }
-
-        let enhancedDetails = {};
-        try {
-          enhancedDetails = await generateActivityDescription({
-            activityName: data.name,
-            location: data.location,
-          });
-        } catch(aiError) {
-          console.warn(`AI description generation failed for activity "${data.name}".`);
-        }
+        const imageUrl = await generateAndStoreActivityImage(activityData.name, activityData.location, activityData.dataAiHint);
+        const enhancedDetails = await generateActivityDescription({ activityName: activityData.name, location: activityData.location });
 
         const docRef = firestore.collection('trips').doc(tripId).collection('activities').doc();
-
         const newActivityPayload: Activity = {
-            ...(data as Omit<Activity, 'id'>),
+            ...(activityData as Omit<Activity, 'id'>),
             ...enhancedDetails,
             id: docRef.id,
             imageUrls: [imageUrl],
-            likes: 1, 
+            likes: 1, // Creator automatically likes it.
             dislikes: 0,
             isLiked: true, 
             votes: { [creatorId]: true }
@@ -999,7 +1288,15 @@ export async function addTripActivity(
     }
 }
 
-
+/**
+ * Records a user's vote on a trip activity. If the activity doesn't exist yet in the trip's
+ * subcollection (i.e., it's a local activity being voted on for the first time), it's created first.
+ * @param tripId - The ID of the trip.
+ * @param activityId - The ID of the activity.
+ * @param userId - The UID of the user voting.
+ * @param vote - A boolean indicating the vote (true for like, false for dislike).
+ * @returns A promise resolving to the updated Activity object or an error.
+ */
 export async function voteOnTripActivity(
     tripId: string, 
     activityId: string, 
@@ -1011,22 +1308,19 @@ export async function voteOnTripActivity(
     const activityRef = firestore.collection('trips').doc(tripId).collection('activities').doc(activityId);
 
     try {
+        // First, check if the activity document exists within the trip's subcollection.
         let activityDoc = await activityRef.get();
         if (!activityDoc.exists) {
+            // If not, it's a local activity. We need to copy it into the trip's subcollection.
             const localActivityDoc = await firestore.collection('activities').doc(activityId).get();
-            if (!localActivityDoc.exists) throw new Error("Activity not found in any local collection.");
+            if (!localActivityDoc.exists) throw new Error("Activity not found in local or trip collection.");
             
             const activityToCreate = localActivityDoc.data() as Activity;
-            
-            const newActivityData = { 
-                ...activityToCreate, 
-                votes: {}, 
-                likes: 0, 
-                dislikes: 0 
-            };
+            const newActivityData = { ...activityToCreate, votes: {}, likes: 0, dislikes: 0 };
             await activityRef.set(newActivityData);
         }
 
+        // Use a transaction to safely update vote counts.
         await firestore.runTransaction(async (transaction) => {
             const docForUpdate = await transaction.get(activityRef);
             if (!docForUpdate.exists) throw new Error("Activity does not exist in trip collection.");
@@ -1035,23 +1329,16 @@ export async function voteOnTripActivity(
             const votes = data.votes || {};
             const previousVote = votes[userId];
 
-            if (previousVote === vote) {
-                return; 
-            }
+            if (previousVote === vote) return; // No change needed.
 
             let likesIncrement = 0;
             let dislikesIncrement = 0;
 
-            if (previousVote === undefined) {
+            if (previousVote === undefined) { // New vote
                 if (vote) likesIncrement = 1; else dislikesIncrement = 1;
-            } else {
-                if (vote) { 
-                    likesIncrement = 1;
-                    dislikesIncrement = -1;
-                } else { 
-                    likesIncrement = -1;
-                    dislikesIncrement = 1;
-                }
+            } else { // Changing vote
+                if (vote) { likesIncrement = 1; dislikesIncrement = -1; } 
+                else { likesIncrement = -1; dislikesIncrement = 1; }
             }
             
             transaction.update(activityRef, {
@@ -1061,20 +1348,16 @@ export async function voteOnTripActivity(
             });
         });
 
+        // Fetch the final state of the document to return.
         const updatedDoc = await activityRef.get();
         const updatedData = updatedDoc.data()!;
-        const finalVotes = updatedData.votes || {};
-        
         const updatedActivity: Activity = {
             ...(updatedData as Omit<Activity, 'id'>),
             id: updatedDoc.id,
-            likes: updatedData.likes || 0,
-            dislikes: updatedData.dislikes || 0,
-            isLiked: finalVotes[userId],
+            isLiked: updatedData.votes?.[userId],
         };
 
-        revalidatePath(`/trips/${tripId}`);
-        revalidatePath(`/trips/${tripId}/liked`);
+        revalidatePath(`/trips/${tripId}`, 'layout');
         return { success: true, updatedActivity };
 
     } catch (error) {
@@ -1084,7 +1367,11 @@ export async function voteOnTripActivity(
     }
 }
 
-
+/**
+ * Fetches all trips for a user that have already been completed (end date is in the past).
+ * @param userId - The UID of the user.
+ * @returns A promise resolving to an array of Trip objects.
+ */
 export async function getCompletedTripsForUser(userId: string): Promise<Trip[]> {
   if (!isFirebaseInitialized) return [];
   try {
@@ -1096,8 +1383,16 @@ export async function getCompletedTripsForUser(userId: string): Promise<Trip[]> 
   }
 }
 
+// =================================================================================
 // --- Itinerary Actions ---
+// =================================================================================
 
+/**
+ * Saves or overwrites the entire itinerary for a trip.
+ * @param tripId - The ID of the trip.
+ * @param itinerary - The full Itinerary object to save.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
 export async function saveItinerary(tripId: string, itinerary: Itinerary): Promise<{ success: boolean; error?: string }> {
     try {
         await firestore.collection('trips').doc(tripId).collection('itineraries').doc('default').set(itinerary);
@@ -1109,6 +1404,11 @@ export async function saveItinerary(tripId: string, itinerary: Itinerary): Promi
     }
 }
 
+/**
+ * Retrieves the saved itinerary for a trip.
+ * @param tripId - The ID of the trip.
+ * @returns A promise resolving to the Itinerary object or null if it doesn't exist.
+ */
 export async function getItinerary(tripId: string): Promise<Itinerary | null> {
     try {
         const doc = await firestore.collection('trips').doc(tripId).collection('itineraries').doc('default').get();
@@ -1119,26 +1419,27 @@ export async function getItinerary(tripId: string): Promise<Itinerary | null> {
     }
 }
 
+/**
+ * Adds a single activity to a specific day in an existing itinerary.
+ * @param tripId - The ID of the trip.
+ * @param activity - The activity object to add.
+ * @param date - The date string (YYYY-MM-DD) of the day to add the activity to.
+ * @returns A promise resolving to an object indicating success or an error.
+ */
 export async function addActivityToItineraryDay(tripId: string, activity: Activity, date: string): Promise<{ success: boolean; error?: string }> {
     try {
         const currentItinerary = await getItinerary(tripId);
-        if (!currentItinerary) {
-            return { success: false, error: "No itinerary found for this trip. Please generate one first." };
-        }
+        if (!currentItinerary) return { success: false, error: "No itinerary found. Please generate one first." };
 
         const newItinerary: Itinerary = JSON.parse(JSON.stringify(currentItinerary));
         const dayIndex = newItinerary.days.findIndex(d => d.date === date);
-
-        if (dayIndex === -1) {
-            return { success: false, error: "The selected day does not exist in the itinerary." };
-        }
+        if (dayIndex === -1) return { success: false, error: "The selected day does not exist in the itinerary." };
         
         newItinerary.days[dayIndex].activities.push(activity);
         
         await saveItinerary(tripId, newItinerary);
 
-        revalidatePath(`/trips/${tripId}`);
-        revalidatePath(`/trips/${tripId}/liked`);
+        revalidatePath(`/trips/${tripId}`, 'layout');
         return { success: true };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -1146,42 +1447,44 @@ export async function addActivityToItineraryDay(tripId: string, activity: Activi
     }
 }
 
+// =================================================================================
+// --- Admin & Utility Actions ---
+// =================================================================================
 
 /**
- * Deletes all documents from a collection or subcollection in batches.
- * @param query The query for the collection/subcollection to delete.
- * @param batchSize The number of documents to delete in each batch.
- * @returns The total number of documents deleted.
+ * Helper function to recursively delete all documents in a collection/subcollection in batches.
+ * @param query - The Firestore query for the documents to delete.
+ * @param resolve - The promise resolve function.
+ * @param reject - The promise reject function.
+ * @param deletedCount - The running total of deleted documents.
  */
 async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (count: number) => void, reject: (reason?: any) => void, deletedCount: number = 0) {
     try {
         const snapshot = await query.get();
-
         if (snapshot.size === 0) {
             resolve(deletedCount);
             return;
         }
 
         const batch = firestore.batch();
-        snapshot.docs.forEach((doc) => {
-            batch.delete(doc.ref);
-        });
+        snapshot.docs.forEach((doc) => batch.delete(doc.ref));
         await batch.commit();
 
         deletedCount += snapshot.size;
 
-        if (snapshot.size > 0) {
-            process.nextTick(() => {
-                deleteQueryBatch(query, resolve, reject, deletedCount);
-            });
-        } else {
-            resolve(deletedCount);
-        }
+        process.nextTick(() => {
+            deleteQueryBatch(query, resolve, reject, deletedCount);
+        });
     } catch(error) {
         reject(error);
     }
 }
 
+/**
+ * Clears local discovery activities from the database. Can target a specific city or all cities.
+ * @param city - Optional city name to clear. If omitted, all local activities and votes are cleared.
+ * @returns A promise resolving to an object with the total count of deleted documents.
+ */
 export async function clearLocalActivities(city?: string): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
     if (!isFirebaseInitialized) {
         return { success: false, error: 'Firebase is not initialized. Cannot clear data.' };
@@ -1197,8 +1500,8 @@ export async function clearLocalActivities(city?: string): Promise<{ success: bo
         
         const count = await new Promise<number>((resolve, reject) => deleteQueryBatch(query.limit(500), resolve, reject));
         totalDeleted += count;
-        console.log(`Cleared ${count} documents from the activities collection for city: ${city || 'all'}.`);
         
+        // If clearing all cities, also clear user votes.
         if (!city) {
             const usersSnapshot = await firestore.collection('users').get();
             for (const userDoc of usersSnapshot.docs) {
@@ -1226,7 +1529,8 @@ export async function clearLocalActivities(city?: string): Promise<{ success: bo
 
 
 /**
- * Server action to clear all trip data.
+ * Admin action to clear all trip data from the database.
+ * @returns A promise resolving to an object with the total count of deleted documents.
  */
 export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
     if (!isFirebaseInitialized) {
@@ -1237,7 +1541,6 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
     try {
         const tripsSnapshot = await firestore.collection('trips').get();
         for (const tripDoc of tripsSnapshot.docs) {
-            const tripId = tripDoc.id;
             const activitiesQuery = tripDoc.ref.collection('activities').limit(500);
             const itinerariesQuery = tripDoc.ref.collection('itineraries').limit(500);
 
@@ -1257,122 +1560,5 @@ export async function clearAllTrips(): Promise<{ success: boolean; deletedCount?
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         console.error('Error clearing all data:', error);
         return { success: false, error: `Failed to clear data: ${errorMessage}` };
-    }
-}
-
-export async function removeParticipantFromTrip(tripId: string, participantId: string): Promise<{ success: boolean; error?: string }> {
-    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-    try {
-        if (!tripId || !participantId) {
-            return { success: false, error: "Trip ID and participant ID are required." };
-        }
-
-        const tripRef = firestore.collection('trips').doc(tripId);
-        const tripDoc = await tripRef.get();
-
-        if (!tripDoc.exists) return { success: false, error: "Trip not found." };
-
-        const tripData = tripDoc.data() as Trip;
-        if (tripData.ownerId === participantId) return { success: false, error: "The trip owner cannot be removed." };
-
-        await tripRef.update({ participantIds: FieldValue.arrayRemove(participantId) });
-
-        revalidatePath(`/trips/${tripId}`);
-        revalidatePath('/trips');
-        return { success: true };
-
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
-// --- Plando Friends Actions ---
-
-export async function connectFriend(currentUserId: string, friendEmail: string): Promise<{ success: boolean; error?: string; friend?: UserProfile }> {
-    if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-    if (!currentUserId || !friendEmail) return { success: false, error: 'User ID and friend email are required.' };
-
-    try {
-        const [currentUserProfile, friendProfile] = await Promise.all([
-            getUserProfile(currentUserId),
-            findUserByEmail(friendEmail)
-        ]);
-        
-        if (!currentUserProfile) return { success: false, error: "Your user profile could not be found." };
-        if (!friendProfile) return { success: false, error: "Could not find a user with that email address." };
-        if (friendProfile.id === currentUserId) return { success: false, error: "You cannot connect with yourself." };
-        if (currentUserProfile.friendIds?.includes(friendProfile.id)) return { success: false, error: `You are already friends with ${friendProfile.name}.`};
-        
-        const userRef = firestore.collection('users').doc(currentUserId);
-        const friendRef = firestore.collection('users').doc(friendProfile.id);
-
-        await userRef.update({ friendIds: FieldValue.arrayUnion(friendProfile.id) });
-        await friendRef.update({ friendIds: FieldValue.arrayUnion(currentUserId) });
-
-        revalidatePath('/plando-friends');
-        return { success: true, friend: friendProfile };
-
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: `Failed to connect friend: ${errorMessage}` };
-    }
-}
-
-export async function disconnectFriend(currentUserId: string, friendId: string): Promise<{ success: boolean; error?: string }> {
-     if (!isFirebaseInitialized) return { success: false, error: 'Backend not configured.' };
-     if (!currentUserId || !friendId) return { success: false, error: 'User and friend IDs are required.' };
-    
-    try {
-        const userRef = firestore.collection('users').doc(currentUserId);
-        const friendRef = firestore.collection('users').doc(friendId);
-        
-        await userRef.update({ 
-            friendIds: FieldValue.arrayRemove(friendId),
-            activeFriendId: FieldValue.delete()
-        });
-        await friendRef.update({ friendIds: FieldValue.arrayRemove(currentUserId) });
-        
-        revalidatePath('/plando-friends');
-        return { success: true };
-
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: `Failed to disconnect friend: ${errorMessage}` };
-    }
-}
-
-export async function getFriendsForUser(userId: string): Promise<UserProfile[]> {
-    if (!isFirebaseInitialized || !userId) return [];
-    try {
-        const user = await getUserProfile(userId);
-        if (!user || !user.friendIds || user.friendIds.length === 0) {
-            return [];
-        }
-
-        const friendDocs = await firestore.collection('users').where(FieldValue.documentId(), 'in', user.friendIds).get();
-        return friendDocs.docs.map(doc => doc.data() as UserProfile);
-
-    } catch (error) {
-        console.error("Error fetching friends for user:", error);
-        return [];
-    }
-}
-
-export async function setActiveFriend(userId: string, friendId: string | null): Promise<{ success: boolean; error?: string }> {
-    if (!isFirebaseInitialized || !userId) return { success: false, error: "User not authenticated."};
-
-    try {
-        const userRef = firestore.collection('users').doc(userId);
-        if (friendId) {
-            await userRef.update({ activeFriendId: friendId });
-        } else {
-            await userRef.update({ activeFriendId: FieldValue.delete() });
-        }
-        revalidatePath('/plando-friends');
-        return { success: true };
-    } catch(error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: `Failed to set active friend: ${errorMessage}` };
     }
 }

@@ -190,7 +190,7 @@ export default function VotedActivitiesPage() {
 
   const hasVotes = likedActivities.length > 0 || dislikedActivities.length > 0;
   const itineraryDays = trip?.startDate && trip?.endDate 
-    ? Array.from({ length: new Date(trip.endDate).getDate() - new Date(trip.startDate).getDate() + 1 }, (_, i) => {
+    ? Array.from({ length: differenceInCalendarDays(parseISO(trip.endDate), parseISO(trip.startDate)) + 1 }, (_, i) => {
         const date = new Date(trip.startDate);
         date.setDate(date.getDate() + i);
         return date.toISOString().split('T')[0];
@@ -316,5 +316,3 @@ export default function VotedActivitiesPage() {
     </div>
   );
 }
-
-    

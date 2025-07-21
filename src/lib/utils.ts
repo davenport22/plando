@@ -6,6 +6,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Calculates the total duration of a trip in days, inclusive of start and end dates.
+ * @param startDateStr - The start date in 'YYYY-MM-DD' format.
+ * @param endDateStr - The end date in 'YYYY-MM-DD' format.
+ * @returns A formatted string like "1 day" or "5 days", or an empty string if dates are invalid.
+ */
 export function calculateTripDuration(startDateStr: string, endDateStr: string): string {
   try {
     const start = parseISO(startDateStr);
@@ -21,7 +27,7 @@ export function calculateTripDuration(startDateStr: string, endDateStr: string):
 
     if (diffDays < 1) {
       // This case should ideally be prevented by form validation (end date >= start date)
-      return "Invalid dates"; 
+      return ""; 
     }
     if (diffDays === 1) {
       return "1 day";

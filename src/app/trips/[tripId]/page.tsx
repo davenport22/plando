@@ -279,27 +279,39 @@ export default function TripDetailPage() {
       </Button>
 
       <Card className="mb-8 overflow-hidden shadow-xl">
-        <div className="relative h-64 w-full md:h-80 bg-muted flex flex-col justify-end">
-          <PlaneTakeoff className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-32 w-32 text-muted-foreground/20" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-          <div className="relative z-10 p-8">
-            <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
-            <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>
-            <div className="flex items-center gap-4 mt-2">
-              <p className="text-md text-primary-foreground/80 shadow-sm">
-                {trip.startDate ? format(parseISO(trip.startDate), "PPP") : 'N/A'} to {trip.endDate ? format(parseISO(trip.endDate), "PPP") : 'N/A'}
-                {tripDuration && <span className="ml-2">({tripDuration})</span>}
-              </p>
-              <div className="flex items-center -space-x-2">
-                {trip.participants?.map(p => (
-                  <Avatar key={p.id} className="h-8 w-8 border-2 border-background" title={p.name}>
-                    <AvatarImage src={p.avatarUrl} alt={p.name} />
-                    <AvatarFallback>{p.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
+        <div className="relative h-64 w-full md:h-80 bg-muted">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent z-10" />
+            {trip.imageUrl && (
+              <Image
+                  src={trip.imageUrl}
+                  alt={trip.name}
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  priority
+                  data-ai-hint="travel background"
+              />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center">
+                <PlaneTakeoff className="h-32 w-32 text-white/20" />
             </div>
-          </div>
+            <div className="relative z-20 flex flex-col justify-end h-full p-8">
+                <h1 className="text-4xl md:text-5xl font-headline font-bold text-white shadow-lg">{trip.name}</h1>
+                <p className="text-xl text-primary-foreground/90 mt-2 shadow-sm">{trip.destination}</p>
+                <div className="flex items-center gap-4 mt-2">
+                <p className="text-md text-primary-foreground/80 shadow-sm">
+                    {trip.startDate ? format(parseISO(trip.startDate), "PPP") : 'N/A'} to {trip.endDate ? format(parseISO(trip.endDate), "PPP") : 'N/A'}
+                    {tripDuration && <span className="ml-2">({tripDuration})</span>}
+                </p>
+                <div className="flex items-center -space-x-2">
+                    {trip.participants?.map(p => (
+                    <Avatar key={p.id} className="h-8 w-8 border-2 border-background" title={p.name}>
+                        <AvatarImage src={p.avatarUrl} alt={p.name} />
+                        <AvatarFallback>{p.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    ))}
+                </div>
+                </div>
+            </div>
         </div>
       </Card>
 
